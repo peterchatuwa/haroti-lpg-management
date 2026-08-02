@@ -1,0 +1,381 @@
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcryptjs';
+import { Repository } from 'typeorm';
+import {
+  CustomerType,
+  CylinderOwnership,
+  CylinderStatus,
+  ProductCategory,
+  StationStatus,
+  UserRole,
+} from '../common/enums';
+import { Customer } from '../customers/customer.entity';
+import { Cylinder } from '../cylinders/cylinder.entity';
+import { PriceList } from '../pricing/price-list.entity';
+import { Product } from '../products/product.entity';
+import { Station } from '../stations/station.entity';
+import { Supplier } from '../suppliers/supplier.entity';
+import { User } from '../users/user.entity';
+
+const STATIONS = [
+  {
+    code: 'SAL-01',
+    name: 'Salima Central',
+    district: 'Salima',
+    tankCapacityKg: 10000,
+    currentStockKg: 4200,
+  },
+  {
+    code: 'LLW-01',
+    name: 'Lilongwe Area 25',
+    district: 'Lilongwe',
+    tankCapacityKg: 15000,
+    currentStockKg: 7800,
+  },
+  {
+    code: 'LLW-02',
+    name: 'Lilongwe Kawale',
+    district: 'Lilongwe',
+    tankCapacityKg: 12000,
+    currentStockKg: 6100,
+  },
+  {
+    code: 'LLW-03',
+    name: 'Lilongwe Area 3',
+    district: 'Lilongwe',
+    tankCapacityKg: 12000,
+    currentStockKg: 5400,
+  },
+  {
+    code: 'BT-01',
+    name: 'Blantyre Chichiri',
+    district: 'Blantyre',
+    tankCapacityKg: 18000,
+    currentStockKg: 9200,
+  },
+  {
+    code: 'BT-02',
+    name: 'Blantyre Limbe',
+    district: 'Blantyre',
+    tankCapacityKg: 15000,
+    currentStockKg: 7100,
+  },
+  {
+    code: 'BT-03',
+    name: 'Blantyre Ndirande',
+    district: 'Blantyre',
+    tankCapacityKg: 10000,
+    currentStockKg: 3900,
+  },
+  {
+    code: 'BT-04',
+    name: 'Blantyre Zingwangwa',
+    district: 'Blantyre',
+    tankCapacityKg: 10000,
+    currentStockKg: 4500,
+  },
+];
+
+@Injectable()
+export class SeedService implements OnModuleInit {
+  private readonly logger = new Logger(SeedService.name);
+
+  constructor(
+    @InjectRepository(Station) private readonly stationsRepo: Repository<Station>,
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    @InjectRepository(Supplier) private readonly suppliersRepo: Repository<Supplier>,
+    @InjectRepository(Product) private readonly productsRepo: Repository<Product>,
+    @InjectRepository(Customer) private readonly customersRepo: Repository<Customer>,
+    @InjectRepository(Cylinder) private readonly cylindersRepo: Repository<Cylinder>,
+    @InjectRepository(PriceList) private readonly pricesRepo: Repository<PriceList>,
+  ) {}
+
+  async onModuleInit() {
+    const count = await this.stationsRepo.count();
+    if (count > 0) {
+      this.logger.log('Database already seeded');
+      return;
+    }
+    await this.seed();
+  }
+
+  async seed() {
+    this.logger.log('Seeding Haroti Holdings demo data...');
+
+    const stations = await this.stationsRepo.save(
+      STATIONS.map((s) =>
+        this.stationsRepo.create({
+          code: s.code,
+          name: s.name,
+          district: s.district,
+          address: `${s.name}, ${s.district}, Malawi`,
+          managerName: `${s.district} Manager`,
+          tankCapacityKg: s.tankCapacityKg.toFixed(3),
+          currentStockKg: s.currentStockKg.toFixed(3),
+          status: StationStatus.ACTIVE,
+          openingTime: '07:00:00',
+          closingTime: '18:00:00',
+          lastSyncedAt: new Date(),
+        }),
+      ),
+    );
+
+    const passwordHash = await bcrypt.hash('Password123!', 10);
+
+    const users = [
+      {
+        username: 'admin',
+        fullName: 'System Administrator',
+        role: UserRole.SYSTEM_ADMIN,
+        stationId: null as string | null,
+        canOverridePrice: true,
+        discountLimitPercent: '100',
+      },
+      {
+        username: 'director',
+        fullName: 'Haroti Director',
+        role: UserRole.DIRECTOR,
+        stationId: null,
+        canOverridePrice: true,
+        discountLimitPercent: '50',
+      },
+      {
+        username: 'ops.manager',
+        fullName: 'Operations Manager',
+        role: UserRole.OPERATIONS_MANAGER,
+        stationId: null,
+        canOverridePrice: true,
+        discountLimitPercent: '20',
+      },
+      {
+        username: 'finance',
+        fullName: 'Finance Manager',
+        role: UserRole.FINANCE_MANAGER,
+        stationId: null,
+        canOverridePrice: false,
+        discountLimitPercent: '0',
+      },
+      {
+        username: 'llw01.manager',
+        fullName: 'LLW-01 Station Manager',
+        role: UserRole.STATION_MANAGER,
+        stationId: stations.find((s) => s.code === 'LLW-01')!.id,
+        canOverridePrice: false,
+        discountLimitPercent: '5',
+      },
+      {
+        username: 'llw01.attendant',
+        fullName: 'LLW-01 Attendant',
+        role: UserRole.ATTENDANT,
+        stationId: stations.find((s) => s.code === 'LLW-01')!.id,
+        canOverridePrice: false,
+        discountLimitPercent: '0',
+      },
+      {
+        username: 'bt01.manager',
+        fullName: 'BT-01 Station Manager',
+        role: UserRole.STATION_MANAGER,
+        stationId: stations.find((s) => s.code === 'BT-01')!.id,
+        canOverridePrice: false,
+        discountLimitPercent: '5',
+      },
+      {
+        username: 'bt01.attendant',
+        fullName: 'BT-01 Attendant',
+        role: UserRole.ATTENDANT,
+        stationId: stations.find((s) => s.code === 'BT-01')!.id,
+        canOverridePrice: false,
+        discountLimitPercent: '0',
+      },
+      {
+        username: 'sal01.attendant',
+        fullName: 'SAL-01 Attendant',
+        role: UserRole.ATTENDANT,
+        stationId: stations.find((s) => s.code === 'SAL-01')!.id,
+        canOverridePrice: false,
+        discountLimitPercent: '0',
+      },
+      {
+        username: 'storekeeper',
+        fullName: 'Central Storekeeper',
+        role: UserRole.STOREKEEPER,
+        stationId: stations.find((s) => s.code === 'LLW-01')!.id,
+        canOverridePrice: false,
+        discountLimitPercent: '0',
+      },
+      {
+        username: 'safety',
+        fullName: 'Safety Officer',
+        role: UserRole.SAFETY_OFFICER,
+        stationId: null,
+        canOverridePrice: false,
+        discountLimitPercent: '0',
+      },
+      {
+        username: 'auditor',
+        fullName: 'Internal Auditor',
+        role: UserRole.AUDITOR,
+        stationId: null,
+        canOverridePrice: false,
+        discountLimitPercent: '0',
+      },
+    ];
+
+    await this.usersRepo.save(
+      users.map((u) =>
+        this.usersRepo.create({
+          ...u,
+          username: u.username.toLowerCase(),
+          email: `${u.username}@haroti.mw`,
+          phone: '+265999000000',
+          passwordHash,
+          isActive: true,
+        }),
+      ),
+    );
+
+    await this.suppliersRepo.save([
+      this.suppliersRepo.create({
+        code: 'SUP-001',
+        name: 'National Petroleum LPG',
+        phone: '+265991111111',
+        depotName: 'Lilongwe Depot',
+        address: 'Kanengo Industrial Area',
+      }),
+      this.suppliersRepo.create({
+        code: 'SUP-002',
+        name: 'Southern Gas Distributors',
+        phone: '+265992222222',
+        depotName: 'Blantyre Depot',
+        address: 'Makata Industrial Area',
+      }),
+    ]);
+
+    const cylinderSizes = [3, 5, 6, 9, 12, 14, 19, 45];
+    await this.productsRepo.save([
+      this.productsRepo.create({
+        sku: 'LPG-KG',
+        name: 'LPG Refill (per kg)',
+        category: ProductCategory.LPG_REFILL,
+        unitPrice: '0',
+        pricePerKg: '1850.00',
+      }),
+      ...cylinderSizes.map((size) =>
+        this.productsRepo.create({
+          sku: `CYL-${size}KG`,
+          name: `${size} kg Cylinder Refill`,
+          category: ProductCategory.LPG_REFILL,
+          unitPrice: (size * 1850).toFixed(2),
+          pricePerKg: '1850.00',
+          nominalKg: size.toFixed(3),
+        }),
+      ),
+      this.productsRepo.create({
+        sku: 'REG-STD',
+        name: 'Standard Regulator',
+        category: ProductCategory.ACCESSORY,
+        unitPrice: '8500.00',
+      }),
+      this.productsRepo.create({
+        sku: 'HOSE-1.5M',
+        name: 'LPG Hose 1.5m',
+        category: ProductCategory.ACCESSORY,
+        unitPrice: '4500.00',
+      }),
+      this.productsRepo.create({
+        sku: 'BURNER-STD',
+        name: 'Single Burner Stove',
+        category: ProductCategory.ACCESSORY,
+        unitPrice: '22000.00',
+      }),
+      this.productsRepo.create({
+        sku: 'VALVE-STD',
+        name: 'Cylinder Valve',
+        category: ProductCategory.ACCESSORY,
+        unitPrice: '12000.00',
+      }),
+    ]);
+
+    await this.pricesRepo.save(
+      this.pricesRepo.create({
+        stationId: null,
+        pricePerKg: '1850.00',
+        effectiveFrom: new Date('2026-01-01'),
+        isActive: true,
+        notes: 'National standard LPG price',
+      }),
+    );
+
+    const walkIn = await this.customersRepo.save(
+      this.customersRepo.create({
+        customerCode: 'WALK-IN',
+        fullName: 'Walk-in Customer',
+        type: CustomerType.HOUSEHOLD,
+        phone: 'N/A',
+      }),
+    );
+
+    await this.customersRepo.save([
+      this.customersRepo.create({
+        customerCode: 'COM-001',
+        fullName: 'Capital Hotel Restaurant',
+        type: CustomerType.COMMERCIAL,
+        phone: '+265993333333',
+        location: 'Lilongwe City Centre',
+        creditLimit: '500000.00',
+        paymentTermsDays: 30,
+        contractPricePerKg: '1750.00',
+        stationId: stations.find((s) => s.code === 'LLW-01')!.id,
+      }),
+      this.customersRepo.create({
+        customerCode: 'COM-002',
+        fullName: 'Queen Elizabeth Hospital',
+        type: CustomerType.INSTITUTIONAL,
+        phone: '+265994444444',
+        location: 'Blantyre',
+        creditLimit: '1000000.00',
+        paymentTermsDays: 45,
+        contractPricePerKg: '1700.00',
+        stationId: stations.find((s) => s.code === 'BT-01')!.id,
+      }),
+      this.customersRepo.create({
+        customerCode: 'HH-001',
+        fullName: 'Grace Phiri',
+        type: CustomerType.HOUSEHOLD,
+        phone: '+265995555555',
+        location: 'Area 25, Lilongwe',
+        stationId: stations.find((s) => s.code === 'LLW-01')!.id,
+      }),
+    ]);
+
+    let cylIndex = 1;
+    for (const station of stations) {
+      for (const size of [6, 9, 12, 19]) {
+        for (let i = 0; i < 3; i++) {
+          await this.cylindersRepo.save(
+            this.cylindersRepo.create({
+              serialNumber: `HH-${station.code}-${String(cylIndex).padStart(4, '0')}`,
+              barcode: `QR${String(cylIndex).padStart(8, '0')}`,
+              sizeKg: size.toFixed(3),
+              manufacturer: 'Haroti Cylinders',
+              manufacturingDate: '2023-06-01',
+              lastInspectionDate: '2025-12-01',
+              nextInspectionDate: '2026-12-01',
+              ownership: CylinderOwnership.COMPANY,
+              status: i % 2 === 0 ? CylinderStatus.AVAILABLE : CylinderStatus.EMPTY,
+              depositValue: (size * 5000).toFixed(2),
+              stationId: station.id,
+            }),
+          );
+          cylIndex += 1;
+        }
+      }
+    }
+
+    this.logger.log(
+      `Seed complete: ${stations.length} stations, walk-in customer ${walkIn.customerCode}`,
+    );
+    this.logger.log('Default password for all users: Password123!');
+  }
+}

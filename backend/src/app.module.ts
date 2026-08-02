@@ -1,0 +1,84 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './auth/auth.module';
+import { AuditLog } from './audit/audit-log.entity';
+import { CashDeposit } from './banking/cash-deposit.entity';
+import { CatalogModule } from './catalog/catalog.module';
+import { Customer } from './customers/customer.entity';
+import { Cylinder } from './cylinders/cylinder.entity';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { DeliveriesModule } from './deliveries/deliveries.module';
+import { Delivery } from './deliveries/delivery.entity';
+import { Expense } from './expenses/expense.entity';
+import { ExpensesModule } from './expenses/expenses.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { StockMovement } from './inventory/stock-movement.entity';
+import { PriceList } from './pricing/price-list.entity';
+import { Product } from './products/product.entity';
+import { SaleItem } from './sales/sale-item.entity';
+import { SalePayment } from './sales/sale-payment.entity';
+import { Sale } from './sales/sale.entity';
+import { SalesModule } from './sales/sales.module';
+import { SeedModule } from './seed/seed.module';
+import { Shift } from './shifts/shift.entity';
+import { ShiftsModule } from './shifts/shifts.module';
+import { Station } from './stations/station.entity';
+import { StationsModule } from './stations/stations.module';
+import { Supplier } from './suppliers/supplier.entity';
+import { TransferItem } from './transfers/transfer-item.entity';
+import { Transfer } from './transfers/transfer.entity';
+import { TransfersModule } from './transfers/transfers.module';
+import { User } from './users/user.entity';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres' as const,
+        host: config.get<string>('DATABASE_HOST', 'localhost'),
+        port: Number(config.get<string>('DATABASE_PORT', '5432')),
+        username: config.get<string>('DATABASE_USER', 'haroti'),
+        password: config.get<string>('DATABASE_PASSWORD', 'haroti_dev'),
+        database: config.get<string>('DATABASE_NAME', 'haroti_lpg'),
+        entities: [
+          Station,
+          User,
+          Customer,
+          Supplier,
+          Product,
+          StockMovement,
+          Delivery,
+          Sale,
+          SaleItem,
+          SalePayment,
+          Shift,
+          Cylinder,
+          Transfer,
+          TransferItem,
+          Expense,
+          CashDeposit,
+          PriceList,
+          AuditLog,
+        ],
+        synchronize: true,
+        logging: config.get('NODE_ENV') === 'development',
+      }),
+    }),
+    AuthModule,
+    StationsModule,
+    InventoryModule,
+    SalesModule,
+    ShiftsModule,
+    DeliveriesModule,
+    TransfersModule,
+    ExpensesModule,
+    CatalogModule,
+    DashboardModule,
+    SeedModule,
+  ],
+})
+export class AppModule {}

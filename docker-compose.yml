@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: haroti-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: haroti
+      POSTGRES_PASSWORD: haroti_dev
+      POSTGRES_DB: haroti_lpg
+    ports:
+      - "5432:5432"
+    volumes:
+      - haroti_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U haroti -d haroti_lpg"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: haroti-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - haroti_redis_data:/data
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: haroti-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: haroti
+      DATABASE_PASSWORD: haroti_dev
+      DATABASE_NAME: haroti_lpg
+      JWT_SECRET: change-me-in-production-haroti-lpg-2026
+      JWT_EXPIRES_IN: 12h
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CORS_ORIGIN: http://localhost:5173,http://localhost:8080
+    ports:
+      - "3000:3000"
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: haroti-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+volumes:
+  haroti_pg_data:
+  haroti_redis_data:
