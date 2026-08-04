@@ -155,6 +155,36 @@ export interface CapitalProjectPortfolio {
   }>;
 }
 
+export interface CapitalProjectDetail {
+  id: string;
+  projectCode: string;
+  name: string;
+  type: string;
+  status: string;
+  approvedBudget: string;
+  spentToDate: string;
+  grantReference?: string;
+  currency: string;
+  startDate?: string;
+  targetEndDate?: string;
+  station?: { id: string; code: string; name: string } | null;
+  milestones: Array<{
+    id: string;
+    name: string;
+    dueDate?: string;
+    isCompleted: boolean;
+    budgetAllocation: string;
+  }>;
+  expenditures: Array<{
+    id: string;
+    description: string;
+    amount: string;
+    expenseDate: string;
+    vendorName?: string;
+    isCwip: boolean;
+  }>;
+}
+
 export interface FranchiseAgreementRow {
   id: string;
   agreementCode: string;

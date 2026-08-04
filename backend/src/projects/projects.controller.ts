@@ -28,13 +28,23 @@ export class ProjectsController {
   }
 
   @Post()
-  @Roles(UserRole.DIRECTOR, UserRole.FINANCE_MANAGER, UserRole.OPERATIONS_MANAGER)
+  @Roles(
+    UserRole.DIRECTOR,
+    UserRole.FINANCE_MANAGER,
+    UserRole.OPERATIONS_MANAGER,
+    UserRole.SYSTEM_ADMIN,
+  )
   create(@Body() dto: CreateProjectDto) {
     return this.projectsService.create(dto);
   }
 
   @Post(':id/expenditures')
-  @Roles(UserRole.FINANCE_MANAGER, UserRole.OPERATIONS_MANAGER)
+  @Roles(
+    UserRole.FINANCE_MANAGER,
+    UserRole.OPERATIONS_MANAGER,
+    UserRole.SYSTEM_ADMIN,
+    UserRole.DIRECTOR,
+  )
   addExpenditure(@Param('id') id: string, @Body() dto: CreateExpenditureDto) {
     return this.projectsService.addExpenditure(id, dto);
   }
