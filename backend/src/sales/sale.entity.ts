@@ -1,6 +1,11 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { BaseEntity } from '../common/entities/base.entity';
-import { PaymentMethod, SaleStatus } from '../common/enums';
+import {
+  CommercialStream,
+  PaymentMethod,
+  SaleStatus,
+  SalesChannel,
+} from '../common/enums';
 import { Customer } from '../customers/customer.entity';
 import { Station } from '../stations/station.entity';
 import { User } from '../users/user.entity';
@@ -91,6 +96,22 @@ export class Sale extends BaseEntity {
 
   @Column({ name: 'sold_at', type: 'timestamptz', default: () => 'NOW()' })
   soldAt!: Date;
+
+  @Column({
+    name: 'sales_channel',
+    type: 'enum',
+    enum: SalesChannel,
+    default: SalesChannel.RETAIL_LIST,
+  })
+  salesChannel!: SalesChannel;
+
+  @Column({
+    name: 'commercial_stream',
+    type: 'enum',
+    enum: CommercialStream,
+    default: CommercialStream.RETAIL_FORECOURT,
+  })
+  commercialStream!: CommercialStream;
 
   @OneToMany(() => SaleItem, (item) => item.sale, { cascade: true })
   items!: SaleItem[];

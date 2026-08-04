@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import { formatKg, formatMoney } from '../lib/format';
 
@@ -10,12 +11,10 @@ export function CylindersPage() {
 
   return (
     <div className="stack">
-      <div className="topbar" style={{ marginBottom: 0 }}>
-        <div>
-          <h2>Cylinder register</h2>
-          <p>Track company cylinders by serial, size, status and location</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Cylinder register"
+        subtitle="Track company cylinders by serial, size, status and location"
+      />
 
       <div className="panel">
         {isLoading ? (

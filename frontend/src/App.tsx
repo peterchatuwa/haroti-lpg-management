@@ -1,13 +1,19 @@
 import { useEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { AccessoriesPage } from './pages/AccessoriesPage';
 import { CylindersPage } from './pages/CylindersPage';
+import { CustomersPage } from './pages/CustomersPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DeliveriesPage } from './pages/DeliveriesPage';
 import { ExpensesPage } from './pages/ExpensesPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
+import { MaintenancePage } from './pages/MaintenancePage';
+import { PaycPage } from './pages/PaycPage';
 import { PosPage } from './pages/PosPage';
+import { ProcurementPage } from './pages/ProcurementPage';
+import { ReportsPage } from './pages/ReportsPage';
 import { ShiftsPage } from './pages/ShiftsPage';
 import { StationsPage } from './pages/StationsPage';
 import { TransfersPage } from './pages/TransfersPage';
@@ -67,12 +73,18 @@ export default function App() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="pos" element={<PosPage />} />
+        <Route path="accessories" element={<AccessoriesPage />} />
         <Route path="shifts" element={<ShiftsPage />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="deliveries" element={<DeliveriesPage />} />
+        <Route path="procurement" element={<ProcurementPage />} />
         <Route path="transfers" element={<TransfersPage />} />
         <Route path="cylinders" element={<CylindersPage />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="payc" element={<PaycPage />} />
+        <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="stations" element={<StationsPage />} />
       </Route>

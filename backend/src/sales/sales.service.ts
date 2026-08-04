@@ -6,12 +6,17 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, IsNull, Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { AccessoriesService } from '../accessories/accessories.service';
+import { CustomersService } from '../customers/customers.service';
 import { asDecimal, round2, round3, toNumber } from '../common/decimal';
 import {
+  CommercialStream,
   PaymentMethod,
   SaleStatus,
+  SalesChannel,
   StockMovementType,
 } from '../common/enums';
+import { FinanceService } from '../finance/finance.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { PriceList } from '../pricing/price-list.entity';
 import { StationsService } from '../stations/stations.service';
@@ -29,6 +34,9 @@ export class SalesService {
     private readonly inventoryService: InventoryService,
     private readonly stationsService: StationsService,
     private readonly auditService: AuditService,
+    private readonly accessoriesService: AccessoriesService,
+    private readonly financeService: FinanceService,
+    private readonly customersService: CustomersService,
   ) {}
 
   async getActivePrice(stationId: string) {
@@ -70,14 +78,37 @@ export class SalesService {
       }
     }
 
-    if (!dto.items?.length) {
+    if (!dto.items?.length && !dto.bundleId) {
       throw new BadRequestException('Sale must include at least one item');
     }
 
     const station = await this.stationsService.findOne(dto.stationId);
     const activePrice = await this.getActivePrice(dto.stationId);
+    const salesChannel = dto.salesChannel ?? SalesChannel.RETAIL_LIST;
+    const commercialStream =
+      station.commercialStream ?? CommercialStream.RETAIL_FORECOURT;
 
-    const items: Partial<SaleItem>[] = dto.items.map((item) => {
+    let saleItems = dto.items ?? [];
+
+    if (dto.bundleId) {
+      const components = await this.accessoriesService.explodeBundle(dto.bundleId);
+      const bundles = await this.accessoriesService.listBundles();
+      const bundle = bundles.find((b) => b.id === dto.bundleId);
+      saleItems = [
+        {
+          itemName: bundle?.name ?? 'Starter Kit',
+          unitPrice: toNumber(bundle?.bundlePrice ?? 0),
+          quantity: 1,
+        },
+      ];
+      await this.accessoriesService.deductForSale(
+        dto.stationId,
+        components.map((c) => ({ productId: c.productId, quantity: c.quantity })),
+      );
+    }
+
+    const items: Partial<SaleItem>[] = [];
+    for (const item of saleItems) {
       let lpgQty = item.lpgQuantityKg ?? 0;
       if (
         item.emptyWeightKg !== undefined &&
@@ -91,14 +122,22 @@ export class SalesService {
         }
       }
 
-      const unitPrice =
-        lpgQty > 0 && !item.productId ? activePrice : item.unitPrice;
+      let unitPrice = item.unitPrice;
+      if (lpgQty > 0 && !item.productId) {
+        unitPrice = activePrice;
+      } else if (item.productId && item.unitPrice === 0) {
+        unitPrice = await this.accessoriesService.getPrice(
+          item.productId,
+          salesChannel,
+        );
+      }
+
       const lineTotal =
         lpgQty > 0
           ? round2(lpgQty * unitPrice)
-          : round2(item.unitPrice * item.quantity);
+          : round2(unitPrice * item.quantity);
 
-      return {
+      items.push({
         productId: item.productId,
         itemName: item.itemName,
         cylinderSizeKg:
@@ -118,8 +157,8 @@ export class SalesService {
         unitPrice: asDecimal(unitPrice, 2),
         lineTotal: asDecimal(lineTotal, 2),
         quantity: item.quantity,
-      };
-    });
+      });
+    }
 
     const subtotal = round2(
       items.reduce((sum, i) => sum + toNumber(i.lineTotal), 0),
@@ -142,6 +181,16 @@ export class SalesService {
       );
     }
 
+    const hasCredit = dto.payments.some(
+      (p) => p.method === PaymentMethod.CUSTOMER_ACCOUNT,
+    );
+    if (hasCredit) {
+      if (!dto.customerId) {
+        throw new BadRequestException('Customer required for credit sales');
+      }
+      await this.customersService.checkCredit(dto.customerId, total);
+    }
+
     let paymentMethod = PaymentMethod.MIXED;
     if (dto.payments.length === 1) {
       paymentMethod = dto.payments[0].method;
@@ -159,6 +208,8 @@ export class SalesService {
       lpgQuantityKg: asDecimal(lpgQuantityKg),
       paymentMethod,
       status: SaleStatus.COMPLETED,
+      salesChannel,
+      commercialStream,
       notes: dto.notes,
       clientTxnId: dto.clientTxnId,
       soldAt: new Date(),
@@ -187,6 +238,35 @@ export class SalesService {
           ? `stock-${dto.clientTxnId}`
           : undefined,
       });
+      await this.financeService.postLpgRefillSale(
+        round2(lpgQuantityKg * activePrice),
+        saved.id,
+      );
+    }
+
+    const accessoryLines = items.filter(
+      (i) => i.productId && toNumber(i.lpgQuantityKg) === 0 && toNumber(i.lineTotal) > 0,
+    );
+    if (accessoryLines.length) {
+      const cogs = await this.accessoriesService.deductForSale(
+        dto.stationId,
+        accessoryLines.map((i) => ({
+          productId: i.productId!,
+          quantity: i.quantity ?? 1,
+        })),
+      );
+      const accessoryTotal = round2(
+        accessoryLines.reduce((s, i) => s + toNumber(i.lineTotal), 0),
+      );
+      await this.financeService.postAccessoryRetailSale(
+        accessoryTotal,
+        cogs,
+        saved.id,
+      );
+    }
+
+    if (hasCredit && dto.customerId) {
+      await this.customersService.applyCredit(dto.customerId, total);
     }
 
     await this.stationsService.touchSync(dto.stationId);

@@ -1,6 +1,23 @@
 # Haroti Holdings LPG Management System
 
-Centralized multi-station LPG operations and retail management for **Haroti Holdings Limited** — covering Salima, Lilongwe and Blantyre stations with offline-capable station POS, stock control, shifts, transfers and management dashboards.
+Centralized multi-station LPG operations and retail management for **Haroti Holdings Limited** (trading as **Haroti Gas**) — covering Salima, Lilongwe and Blantyre stations with offline-capable station POS, stock control, shifts, transfers, management dashboards, and **ERP charter modules** aligned to the Haroti Gas Project Charter (Aug 2026).
+
+## ERP charter alignment (Phase 1)
+
+| Charter module | Status in this build |
+|----------------|----------------------|
+| Core Financials (GL journal stubs) | Active — auto-posting on sales, GRN, PAYC burn |
+| Sales Management (LPG + accessories) | Active — unified POS, credit limits, channels |
+| Inventory & Gas Loss | Active — bulk LPG + accessory stock |
+| PAYC & IoT | Integration stub — meter fleet + telemetry API |
+| Procurement & Landed Cost | Active — PO workflow, freight/duty allocation |
+| Expense & Cash | Active |
+| Budgeting & BI | Partial — budget lines + executive report |
+| Asset Management (CMMS) | Partial — hydro-test work orders |
+| Capital Projects | Planned (Phase 3) |
+| Accessories & Merchandising | Active — channel pricing, bundles, consignment stock |
+
+See **Executive BI** in the app for live module rollout status.
 
 ## Network
 
@@ -47,7 +64,7 @@ Centralized multi-station LPG operations and retail management for **Haroti Hold
 docker compose up --build
 ```
 
-- Web app: http://localhost:8080  
+- Web app: http://localhost:8088  
 - API: http://localhost:3000/api  
 - Swagger: http://localhost:3000/api/docs  
 

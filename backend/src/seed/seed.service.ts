@@ -3,13 +3,22 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Repository } from 'typeorm';
 import {
+  CommercialStream,
   CustomerType,
   CylinderOwnership,
   CylinderStatus,
   ProductCategory,
+  SalesChannel,
   StationStatus,
   UserRole,
+  WarehouseType,
 } from '../common/enums';
+import { AccessoryStock } from '../accessories/accessory-stock.entity';
+import { ChannelPrice } from '../accessories/channel-price.entity';
+import { ProductBundleItem } from '../accessories/product-bundle-item.entity';
+import { ProductBundle } from '../accessories/product-bundle.entity';
+import { BudgetLine } from '../finance/budget-line.entity';
+import { PaycMeter } from '../payc/payc-meter.entity';
 import { Customer } from '../customers/customer.entity';
 import { Cylinder } from '../cylinders/cylinder.entity';
 import { PriceList } from '../pricing/price-list.entity';
@@ -89,15 +98,33 @@ export class SeedService implements OnModuleInit {
     @InjectRepository(Customer) private readonly customersRepo: Repository<Customer>,
     @InjectRepository(Cylinder) private readonly cylindersRepo: Repository<Cylinder>,
     @InjectRepository(PriceList) private readonly pricesRepo: Repository<PriceList>,
+    @InjectRepository(ProductBundle)
+    private readonly bundlesRepo: Repository<ProductBundle>,
+    @InjectRepository(ProductBundleItem)
+    private readonly bundleItemsRepo: Repository<ProductBundleItem>,
+    @InjectRepository(ChannelPrice)
+    private readonly channelPricesRepo: Repository<ChannelPrice>,
+    @InjectRepository(AccessoryStock)
+    private readonly accessoryStockRepo: Repository<AccessoryStock>,
+    @InjectRepository(PaycMeter)
+    private readonly paycRepo: Repository<PaycMeter>,
+    @InjectRepository(BudgetLine)
+    private readonly budgetRepo: Repository<BudgetLine>,
   ) {}
 
   async onModuleInit() {
     const count = await this.stationsRepo.count();
-    if (count > 0) {
-      this.logger.log('Database already seeded');
+    if (count === 0) {
+      await this.seed();
       return;
     }
-    await this.seed();
+    const bundleCount = await this.bundlesRepo.count();
+    if (bundleCount === 0) {
+      const stations = await this.stationsRepo.find();
+      await this.seedCharterExtensions(stations);
+    } else {
+      this.logger.log('Database already seeded');
+    }
   }
 
   async seed() {
@@ -377,5 +404,184 @@ export class SeedService implements OnModuleInit {
       `Seed complete: ${stations.length} stations, walk-in customer ${walkIn.customerCode}`,
     );
     this.logger.log('Default password for all users: Password123!');
+    await this.seedCharterExtensions(stations);
+  }
+
+  async seedCharterExtensions(stations: Station[]) {
+    this.logger.log('Seeding Haroti Gas ERP charter extensions...');
+
+    const central = stations.find((s) => s.code === 'LLW-01')!;
+    await this.stationsRepo.update(central.id, {
+      warehouseType: WarehouseType.CENTRAL_DEPOT,
+      commercialStream: CommercialStream.ACCESSORIES,
+    });
+    const franchise = stations.find((s) => s.code === 'BT-02');
+    if (franchise) {
+      await this.stationsRepo.update(franchise.id, {
+        isFranchise: true,
+        warehouseType: WarehouseType.FRANCHISE_OUTLET,
+        commercialStream: CommercialStream.FRANCHISE,
+      });
+    }
+
+    const accessories = await this.productsRepo.find({
+      where: { category: ProductCategory.ACCESSORY },
+    });
+    const accessoryUpdates: Record<string, Partial<Product>> = {
+      'REG-STD': { barcode: '8901000010001', costPrice: '6200.00', serialTracked: false, batchTracked: true },
+      'HOSE-1.5M': { barcode: '8901000010002', costPrice: '3100.00', batchTracked: true },
+      'BURNER-STD': { barcode: '8901000010003', costPrice: '16500.00', serialTracked: true },
+      'VALVE-STD': { barcode: '8901000010004', costPrice: '8900.00', batchTracked: true },
+    };
+    for (const p of accessories) {
+      const patch = accessoryUpdates[p.sku];
+      if (patch) await this.productsRepo.update(p.id, patch);
+    }
+
+    const extraProducts = [
+      { sku: 'REG-HP', name: 'High-Pressure Regulator', price: 12500, cost: 9200, barcode: '8901000010005' },
+      { sku: 'LEAK-DET', name: 'Gas Leak Detector', price: 18500, cost: 14000, barcode: '8901000010006', serial: true },
+      { sku: 'METER-PAYC', name: 'PAYC Smart Meter', price: 85000, cost: 62000, barcode: '8901000010007', serial: true },
+      { sku: 'BURNER-DBL', name: 'Double Burner Stove', price: 32000, cost: 24000, barcode: '8901000010008' },
+      { sku: 'CLAMP-PR', name: 'Hose Clamps (pair)', price: 1500, cost: 800, barcode: '8901000010009', batch: true },
+    ];
+    for (const ep of extraProducts) {
+      const exists = await this.productsRepo.findOne({ where: { sku: ep.sku } });
+      if (!exists) {
+        await this.productsRepo.save(
+          this.productsRepo.create({
+            sku: ep.sku,
+            name: ep.name,
+            category: ProductCategory.ACCESSORY,
+            unitPrice: ep.price.toFixed(2),
+            costPrice: ep.cost.toFixed(2),
+            barcode: ep.barcode,
+            serialTracked: ep.serial ?? false,
+            batchTracked: ep.batch ?? false,
+          }),
+        );
+      }
+    }
+
+    const allAccessories = await this.productsRepo.find({
+      where: { category: ProductCategory.ACCESSORY },
+    });
+
+    for (const product of allAccessories) {
+      for (const [channel, factor] of [
+        [SalesChannel.RETAIL_LIST, 1],
+        [SalesChannel.WHOLESALE, 0.85],
+        [SalesChannel.FRANCHISE_PURCHASE, 0.9],
+        [SalesChannel.AGENT_COMMISSION, 1],
+      ] as const) {
+        const exists = await this.channelPricesRepo.findOne({
+          where: { productId: product.id, channel },
+        });
+        if (!exists) {
+          await this.channelPricesRepo.save(
+            this.channelPricesRepo.create({
+              productId: product.id,
+              channel,
+              unitPrice: (Number(product.unitPrice) * factor).toFixed(2),
+              commissionPercent: channel === SalesChannel.AGENT_COMMISSION ? '8.00' : '0',
+            }),
+          );
+        }
+      }
+    }
+
+    for (const station of stations.slice(0, 4)) {
+      for (const product of allAccessories.slice(0, 6)) {
+        const exists = await this.accessoryStockRepo.findOne({
+          where: { stationId: station.id, productId: product.id },
+        });
+        if (!exists) {
+          await this.accessoryStockRepo.save(
+            this.accessoryStockRepo.create({
+              stationId: station.id,
+              productId: product.id,
+              quantity: 15 + Math.floor(Math.random() * 20),
+              reorderLevel: 5,
+            }),
+          );
+        }
+      }
+    }
+
+    const reg = allAccessories.find((p) => p.sku === 'REG-STD');
+    const hose = allAccessories.find((p) => p.sku === 'HOSE-1.5M');
+    const burner = allAccessories.find((p) => p.sku === 'BURNER-DBL') ?? allAccessories.find((p) => p.sku === 'BURNER-STD');
+    const clamp = allAccessories.find((p) => p.sku === 'CLAMP-PR');
+
+    if (reg && hose && burner && clamp) {
+      const bundleExists = await this.bundlesRepo.findOne({ where: { sku: 'KIT-HOME-STD' } });
+      if (!bundleExists) {
+        const bundle = await this.bundlesRepo.save(
+          this.bundlesRepo.create({
+            sku: 'KIT-HOME-STD',
+            name: 'Standard Home Starter Kit',
+            description: '6kg cylinder refill + regulator + hose + clamps + double burner',
+            bundlePrice: '89500.00',
+          }),
+        );
+        await this.bundleItemsRepo.save([
+          { bundleId: bundle.id, productId: reg.id, quantity: 1 },
+          { bundleId: bundle.id, productId: hose.id, quantity: 1 },
+          { bundleId: bundle.id, productId: burner.id, quantity: 1 },
+          { bundleId: bundle.id, productId: clamp.id, quantity: 1 },
+        ].map((i) => this.bundleItemsRepo.create(i)));
+      }
+    }
+
+    const paycCount = await this.paycRepo.count();
+    if (paycCount === 0) {
+      const households = await this.customersRepo.find({ take: 3 });
+      await this.paycRepo.save([
+        this.paycRepo.create({
+          meterSerial: 'PAYC-LLW-001',
+          imei: '359012345678901',
+          customerId: households[0]?.id,
+          stationId: central.id,
+          creditBalanceKg: '2.500',
+          deferredRevenue: '4625.00',
+          dailyBurnKg: '0.350',
+          location: 'Area 25, Lilongwe',
+          cylinderSerial: 'HH-LLW-01-0001',
+        }),
+        this.paycRepo.create({
+          meterSerial: 'PAYC-LLW-002',
+          imei: '359012345678902',
+          customerId: households[1]?.id,
+          stationId: central.id,
+          creditBalanceKg: '0.400',
+          deferredRevenue: '740.00',
+          dailyBurnKg: '0.280',
+          location: 'Kawale, Lilongwe',
+        }),
+        this.paycRepo.create({
+          meterSerial: 'PAYC-BT-001',
+          imei: '359012345678903',
+          stationId: stations.find((s) => s.code === 'BT-01')!.id,
+          creditBalanceKg: '5.100',
+          deferredRevenue: '9435.00',
+          dailyBurnKg: '0.420',
+          location: 'Chichiri, Blantyre',
+        }),
+      ]);
+    }
+
+    const budgetCount = await this.budgetRepo.count();
+    if (budgetCount === 0) {
+      const year = new Date().getFullYear();
+      const month = new Date().getMonth() + 1;
+      await this.budgetRepo.save([
+        { category: 'Retail LPG Sales', commercialStream: CommercialStream.RETAIL_FORECOURT, fiscalYear: year, fiscalMonth: month, budgetAmount: '15000000.00' },
+        { category: 'Accessory Merchandising', commercialStream: CommercialStream.ACCESSORIES, fiscalYear: year, fiscalMonth: month, budgetAmount: '3500000.00' },
+        { category: 'PAYC Revenue', commercialStream: CommercialStream.PAYC, fiscalYear: year, fiscalMonth: month, budgetAmount: '2000000.00' },
+        { category: 'Wholesale Bulk', commercialStream: CommercialStream.BULK_WHOLESALE, fiscalYear: year, fiscalMonth: month, budgetAmount: '8000000.00' },
+      ].map((b) => this.budgetRepo.create(b)));
+    }
+
+    this.logger.log('Charter ERP extensions seeded');
   }
 }

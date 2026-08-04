@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import { formatKg } from '../lib/format';
 
@@ -71,12 +72,10 @@ export function TransfersPage() {
 
   return (
     <div className="stack">
-      <div className="topbar" style={{ marginBottom: 0 }}>
-        <div>
-          <h2>Station transfers</h2>
-          <p>Dispatch and confirm LPG moves between stations</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Station transfers"
+        subtitle="Dispatch and confirm LPG moves between stations"
+      />
       {message && <div className="success">{message}</div>}
 
       <div className="grid two">

@@ -23,9 +23,9 @@ async function bootstrap() {
   app.enableCors({ origin: origins, credentials: true });
 
   const swagger = new DocumentBuilder()
-    .setTitle('Haroti Holdings LPG Management API')
+    .setTitle('Haroti Gas ERP API')
     .setDescription(
-      'Centralized multi-station LPG operations and retail management system',
+      'Enterprise LPG operations — multi-station POS, accessories, procurement, PAYC & GL integration',
     )
     .setVersion('1.0')
     .addBearerAuth()

@@ -9,7 +9,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { PaymentMethod } from '../../common/enums';
+import { PaymentMethod, SalesChannel } from '../../common/enums';
 
 export class SaleItemDto {
   @IsOptional()
@@ -95,4 +95,12 @@ export class CreateSaleDto {
   @IsOptional()
   @IsString()
   clientTxnId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  bundleId?: string;
+
+  @IsOptional()
+  @IsEnum(SalesChannel)
+  salesChannel?: SalesChannel;
 }

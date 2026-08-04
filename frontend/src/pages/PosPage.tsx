@@ -1,11 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import { formatMoney } from '../lib/format';
 import { useAuthStore } from '../store/auth';
 import { useOfflineStore } from '../store/offline';
 
 const SIZES = [3, 5, 6, 9, 12, 14, 19, 45];
+
+const PAYMENTS = [
+  { value: 'CASH', label: 'Cash' },
+  { value: 'AIRTEL_MONEY', label: 'Airtel' },
+  { value: 'TNM_MPAMBA', label: 'Mpamba' },
+  { value: 'BANK_TRANSFER', label: 'Bank' },
+  { value: 'CARD', label: 'Card' },
+  { value: 'CUSTOMER_ACCOUNT', label: 'Credit' },
+];
 
 export function PosPage() {
   const user = useAuthStore((s) => s.user);
@@ -21,6 +32,12 @@ export function PosPage() {
   const [discount, setDiscount] = useState(0);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [lastReceipt, setLastReceipt] = useState('');
+  const [burst, setBurst] = useState(false);
+  const [posMode, setPosMode] = useState<'refill' | 'accessory' | 'bundle'>('refill');
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [selectedBundle, setSelectedBundle] = useState('');
+  const [accessoryQty, setAccessoryQty] = useState(1);
 
   const { data: stations } = useQuery({
     queryKey: ['stations'],
@@ -28,8 +45,10 @@ export function PosPage() {
   });
 
   const [selectedStation, setSelectedStation] = useState(stationId);
-
   const activeStationId = selectedStation || stationId || stations?.[0]?.id;
+  const activeStation = (stations ?? []).find(
+    (s: { id: string }) => s.id === activeStationId,
+  );
 
   const { data: priceData } = useQuery({
     queryKey: ['price', activeStationId],
@@ -48,35 +67,96 @@ export function PosPage() {
         .data,
   });
 
+  const { data: accessories } = useQuery({
+    queryKey: ['accessory-catalog'],
+    queryFn: async () => (await api.get('/accessories/catalog')).data as Array<{
+      id: string;
+      sku: string;
+      name: string;
+      unitPrice: string;
+    }>,
+  });
+
+  const { data: bundles } = useQuery({
+    queryKey: ['pos-bundles'],
+    queryFn: async () => (await api.get('/accessories/bundles')).data as Array<{
+      id: string;
+      sku: string;
+      name: string;
+      bundlePrice: string;
+    }>,
+  });
+
+  const accessoryProduct = (accessories ?? []).find((p) => p.id === selectedProduct);
+  const bundleProduct = (bundles ?? []).find((b) => b.id === selectedBundle);
+  const accessoryTotal = accessoryProduct
+    ? Number(accessoryProduct.unitPrice) * accessoryQty
+    : 0;
+  const bundleTotal = bundleProduct ? Number(bundleProduct.bundlePrice) : 0;
+
   const lpgQty = useMemo(
     () => Math.max(0, Number((filledWeight - emptyWeight).toFixed(3))),
     [emptyWeight, filledWeight],
   );
   const pricePerKg = priceData?.pricePerKg ?? 1850;
   const subtotal = Number((lpgQty * pricePerKg).toFixed(2));
-  const total = Math.max(0, Number((subtotal - discount).toFixed(2)));
+  const total =
+    posMode === 'accessory'
+      ? Math.max(0, Number(accessoryTotal.toFixed(2)))
+      : posMode === 'bundle'
+        ? Math.max(0, Number(bundleTotal.toFixed(2)))
+        : Math.max(0, Number((subtotal - discount).toFixed(2)));
 
   const saleMutation = useMutation({
     mutationFn: async () => {
       const clientTxnId = crypto.randomUUID();
-      const payload = {
-        stationId: activeStationId,
-        shiftId: shift?.id,
-        discountAmount: discount,
-        clientTxnId,
-        items: [
-          {
-            itemName: `${size} kg LPG Refill`,
-            cylinderSizeKg: size,
-            emptyWeightKg: emptyWeight,
-            filledWeightKg: filledWeight,
-            lpgQuantityKg: lpgQty,
-            unitPrice: pricePerKg,
-            quantity: 1,
-          },
-        ],
-        payments: [{ method: paymentMethod, amount: total }],
-      };
+      let payload: Record<string, unknown>;
+
+      if (posMode === 'bundle' && selectedBundle) {
+        payload = {
+          stationId: activeStationId,
+          shiftId: shift?.id,
+          bundleId: selectedBundle,
+          clientTxnId,
+          items: [],
+          payments: [{ method: paymentMethod, amount: total }],
+        };
+      } else if (posMode === 'accessory' && selectedProduct) {
+        payload = {
+          stationId: activeStationId,
+          shiftId: shift?.id,
+          salesChannel: 'RETAIL_LIST',
+          clientTxnId,
+          items: [
+            {
+              productId: selectedProduct,
+              itemName: accessoryProduct?.name ?? 'Accessory',
+              unitPrice: Number(accessoryProduct?.unitPrice ?? 0),
+              quantity: accessoryQty,
+            },
+          ],
+          payments: [{ method: paymentMethod, amount: total }],
+        };
+      } else {
+        payload = {
+          stationId: activeStationId,
+          shiftId: shift?.id,
+          discountAmount: discount,
+          clientTxnId,
+          items: [
+            {
+              itemName: `${size} kg LPG Refill`,
+              cylinderSizeKg: size,
+              emptyWeightKg: emptyWeight,
+              filledWeightKg: filledWeight,
+              lpgQuantityKg: lpgQty,
+              unitPrice: pricePerKg,
+              quantity: 1,
+            },
+          ],
+          payments: [{ method: paymentMethod, amount: total }],
+        };
+      }
 
       if (!online) {
         enqueue({
@@ -92,12 +172,15 @@ export function PosPage() {
       return data;
     },
     onSuccess: (data) => {
+      setLastReceipt(data.receiptNumber);
       setMessage(
         data.offline
-          ? `Saved offline as ${data.receiptNumber}. Will sync when online.`
-          : `Sale completed · Receipt ${data.receiptNumber}`,
+          ? `Saved offline · ${data.receiptNumber}`
+          : `Sale complete · ${data.receiptNumber}`,
       );
       setError('');
+      setBurst(true);
+      window.setTimeout(() => setBurst(false), 600);
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
     },
@@ -116,8 +199,16 @@ export function PosPage() {
       setError('Select a station');
       return;
     }
-    if (lpgQty <= 0) {
+    if (lpgQty <= 0 && posMode === 'refill') {
       setError('Filled weight must exceed empty weight');
+      return;
+    }
+    if (posMode === 'accessory' && !selectedProduct) {
+      setError('Select an accessory');
+      return;
+    }
+    if (posMode === 'bundle' && !selectedBundle) {
+      setError('Select a starter kit');
       return;
     }
     saleMutation.mutate();
@@ -125,11 +216,31 @@ export function PosPage() {
 
   return (
     <div className="stack">
-      <div className="topbar" style={{ marginBottom: 0 }}>
-        <div>
-          <h2>Refill POS</h2>
-          <p>Fast cylinder refill sales with weight-based LPG calculation</p>
-        </div>
+      <PageHeader
+        title="Unified POS"
+        subtitle="LPG refills, accessories & starter kits — single tax invoice (Charter §10.4)"
+        action={
+          !shift ? (
+            <Link className="btn btn-ghost" to="/shifts">
+              Open a shift first
+            </Link>
+          ) : (
+            <span className="badge">Shift open</span>
+          )
+        }
+      />
+
+      <div className="pay-chips">
+        {(['refill', 'accessory', 'bundle'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            className={posMode === m ? 'active' : ''}
+            onClick={() => setPosMode(m)}
+          >
+            {m === 'refill' ? 'LPG Refill' : m === 'accessory' ? 'Accessory' : 'Starter Kit'}
+          </button>
+        ))}
       </div>
 
       {message && <div className="success">{message}</div>}
@@ -144,18 +255,22 @@ export function PosPage() {
                 value={activeStationId}
                 onChange={(e) => setSelectedStation(e.target.value)}
               >
-                {(stations ?? []).map((s: { id: string; code: string; name: string }) => (
-                  <option key={s.id} value={s.id}>
-                    {s.code} — {s.name}
-                  </option>
-                ))}
+                {(stations ?? []).map(
+                  (s: { id: string; code: string; name: string }) => (
+                    <option key={s.id} value={s.id}>
+                      {s.code} — {s.name}
+                    </option>
+                  ),
+                )}
               </select>
             </label>
           )}
 
+          {posMode === 'refill' && (
+            <>
           <div>
-            <strong>Quick cylinder sizes</strong>
-            <div className="quick-sizes" style={{ marginTop: '0.6rem' }}>
+            <strong>Cylinder size</strong>
+            <div className="quick-sizes" style={{ marginTop: '0.65rem' }}>
               {SIZES.map((s) => (
                 <button
                   type="button"
@@ -169,7 +284,10 @@ export function PosPage() {
             </div>
           </div>
 
-          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+          <div
+            className="grid"
+            style={{ gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}
+          >
             <label>
               Empty weight (kg)
               <input
@@ -193,21 +311,6 @@ export function PosPage() {
           </div>
 
           <label>
-            Payment method
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-            >
-              <option value="CASH">Cash</option>
-              <option value="AIRTEL_MONEY">Airtel Money</option>
-              <option value="TNM_MPAMBA">TNM Mpamba</option>
-              <option value="BANK_TRANSFER">Bank transfer</option>
-              <option value="CARD">Card</option>
-              <option value="CUSTOMER_ACCOUNT">Customer account</option>
-            </select>
-          </label>
-
-          <label>
             Discount (MWK)
             <input
               type="number"
@@ -216,39 +319,153 @@ export function PosPage() {
               onChange={(e) => setDiscount(Number(e.target.value))}
             />
           </label>
-
-          <button className="btn btn-accent" disabled={saleMutation.isPending}>
-            {saleMutation.isPending ? 'Processing…' : 'Complete sale'}
-          </button>
-          {!shift && (
-            <p className="muted">
-              Tip: open a shift first for proper cash reconciliation.
-            </p>
+            </>
           )}
+
+          {posMode === 'accessory' && (
+            <>
+              <label>
+                Accessory SKU
+                <select
+                  value={selectedProduct}
+                  onChange={(e) => setSelectedProduct(e.target.value)}
+                >
+                  <option value="">Select…</option>
+                  {(accessories ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.sku} — {p.name} ({formatMoney(Number(p.unitPrice))})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Quantity
+                <input
+                  type="number"
+                  min={1}
+                  value={accessoryQty}
+                  onChange={(e) => setAccessoryQty(Number(e.target.value))}
+                />
+              </label>
+            </>
+          )}
+
+          {posMode === 'bundle' && (
+            <label>
+              Starter kit
+              <select
+                value={selectedBundle}
+                onChange={(e) => setSelectedBundle(e.target.value)}
+              >
+                <option value="">Select…</option>
+                {(bundles ?? []).map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} — {formatMoney(Number(b.bundlePrice))}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <div>
+            <strong>Payment</strong>
+            <div className="pay-chips" style={{ marginTop: '0.55rem' }}>
+              {PAYMENTS.map((p) => (
+                <button
+                  type="button"
+                  key={p.value}
+                  className={paymentMethod === p.value ? 'active' : ''}
+                  onClick={() => setPaymentMethod(p.value)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            className="btn btn-accent"
+            disabled={saleMutation.isPending}
+            style={{ fontSize: '1.05rem', padding: '1rem' }}
+          >
+            {saleMutation.isPending
+              ? 'Processing…'
+              : `Charge ${formatMoney(total)}`}
+          </button>
         </div>
 
-        <div className="panel stack">
-          <h3 style={{ marginTop: 0 }}>Sale summary</h3>
-          <div className="stat-card">
-            <h3>LPG quantity</h3>
-            <div className="value">{lpgQty.toFixed(3)} kg</div>
-            <div className="hint">
-              Filled {filledWeight} − Empty {emptyWeight}
+        <div className={`receipt-ticket ${burst ? 'sale-burst' : ''}`}>
+          <h3>Haroti Gas</h3>
+          <p className="center muted" style={{ margin: '0.2rem 0 1rem' }}>
+            {activeStation?.code ?? 'Station'} ·{' '}
+            {posMode === 'refill'
+              ? 'LPG refill'
+              : posMode === 'accessory'
+                ? 'Accessory sale'
+                : 'Starter kit'}
+          </p>
+          {posMode === 'refill' && (
+            <>
+          <div className="receipt-line">
+            <span>Cylinder</span>
+            <strong>{size} kg</strong>
+          </div>
+          <div className="receipt-line">
+            <span>Empty → Filled</span>
+            <strong>
+              {emptyWeight} → {filledWeight}
+            </strong>
+          </div>
+          <div className="receipt-line">
+            <span>LPG sold</span>
+            <strong>{lpgQty.toFixed(3)} kg</strong>
+          </div>
+          <div className="receipt-line">
+            <span>Price / kg</span>
+            <strong>{formatMoney(pricePerKg)}</strong>
+          </div>
+            </>
+          )}
+          {posMode === 'accessory' && accessoryProduct && (
+            <div className="receipt-line">
+              <span>{accessoryProduct.name}</span>
+              <strong>
+                ×{accessoryQty} @ {formatMoney(Number(accessoryProduct.unitPrice))}
+              </strong>
             </div>
-          </div>
-          <div className="stat-card">
-            <h3>Price / kg</h3>
-            <div className="value">{formatMoney(pricePerKg)}</div>
-            <div className="hint">Head-office controlled price</div>
-          </div>
-          <div className="stat-card">
-            <h3>Total due</h3>
-            <div className="value">{formatMoney(total)}</div>
-            <div className="hint">
-              Subtotal {formatMoney(subtotal)}
-              {discount > 0 ? ` − discount ${formatMoney(discount)}` : ''}
+          )}
+          {posMode === 'bundle' && bundleProduct && (
+            <div className="receipt-line">
+              <span>{bundleProduct.name}</span>
+              <strong>{formatMoney(Number(bundleProduct.bundlePrice))}</strong>
             </div>
+          )}
+          <div className="receipt-line">
+            <span>Payment</span>
+            <strong>
+              {PAYMENTS.find((p) => p.value === paymentMethod)?.label}
+            </strong>
           </div>
+          {discount > 0 && (
+            <div className="receipt-line">
+              <span>Discount</span>
+              <strong>-{formatMoney(discount)}</strong>
+            </div>
+          )}
+          <div className="receipt-total">
+            <span>Total</span>
+            <span>{formatMoney(total)}</span>
+          </div>
+          {lastReceipt && (
+            <p className="center muted" style={{ marginTop: '1rem', marginBottom: 0 }}>
+              Last receipt: {lastReceipt}
+            </p>
+          )}
+          {!online && (
+            <p className="center" style={{ marginTop: '0.75rem', color: 'var(--warn)', fontWeight: 700 }}>
+              Offline — sale will sync later
+            </p>
+          )}
         </div>
       </form>
     </div>

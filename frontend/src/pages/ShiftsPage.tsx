@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import { formatKg, formatMoney } from '../lib/format';
 import { useAuthStore } from '../store/auth';
@@ -78,12 +79,10 @@ export function ShiftsPage() {
 
   return (
     <div className="stack">
-      <div className="topbar" style={{ marginBottom: 0 }}>
-        <div>
-          <h2>Shift management</h2>
-          <p>Open and close attendant shifts with cash and stock reconciliation</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Shift control"
+        subtitle="Open and close attendant shifts with cash and stock reconciliation"
+      />
       {message && <div className="success">{message}</div>}
 
       <div className="grid two">

@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
-import { formatKg, formatMoney } from '../lib/format';
+import { formatKg } from '../lib/format';
 import { useAuthStore } from '../store/auth';
 
 export function DeliveriesPage() {
@@ -46,7 +47,15 @@ export function DeliveriesPage() {
         })
       ).data,
     onSuccess: (data) => {
-      setMessage(`Delivery ${data.deliveryNumber} received and stock updated`);
+      setMessage(`Delivery ${data.deliveryNumber} created — advance workflow to receive stock`);
+      queryClient.invalidateQueries({ queryKey: ['deliveries'] });
+    },
+  });
+
+  const advanceMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/deliveries/${id}/advance`),
+    onSuccess: () => {
+      setMessage('Delivery advanced to next workflow step');
       queryClient.invalidateQueries({ queryKey: ['deliveries'] });
       queryClient.invalidateQueries({ queryKey: ['stations'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -60,12 +69,10 @@ export function DeliveriesPage() {
 
   return (
     <div className="stack">
-      <div className="topbar" style={{ marginBottom: 0 }}>
-        <div>
-          <h2>Supplier deliveries</h2>
-          <p>Record bulk LPG receipts and update station tank stock</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Supplier deliveries"
+        subtitle="Record bulk LPG receipts and update station tank stock"
+      />
       {message && <div className="success">{message}</div>}
 
       <div className="grid two">
@@ -102,8 +109,9 @@ export function DeliveriesPage() {
                 <tr>
                   <th>Number</th>
                   <th>Station</th>
+                  <th>Status</th>
                   <th>Received</th>
-                  <th>Buy price</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -111,15 +119,30 @@ export function DeliveriesPage() {
                   (d: {
                     id: string;
                     deliveryNumber: string;
+                    status: string;
                     quantityReceivedKg: string;
-                    buyingPricePerKg: string;
                     station?: { code: string };
                   }) => (
                     <tr key={d.id}>
                       <td>{d.deliveryNumber}</td>
                       <td>{d.station?.code}</td>
+                      <td>
+                        <span className="badge">{d.status.replaceAll('_', ' ')}</span>
+                      </td>
                       <td>{formatKg(d.quantityReceivedKg)}</td>
-                      <td>{formatMoney(d.buyingPricePerKg)}</td>
+                      <td>
+                        {d.status !== 'INVENTORY_UPDATED' &&
+                          d.status !== 'ACCOUNTS_PAYABLE' &&
+                          d.status !== 'CANCELLED' && (
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => advanceMutation.mutate(d.id)}
+                            >
+                              Advance
+                            </button>
+                          )}
+                      </td>
                     </tr>
                   ),
                 )}

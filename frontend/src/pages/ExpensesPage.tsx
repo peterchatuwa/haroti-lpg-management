@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import { formatMoney } from '../lib/format';
 import { useAuthStore } from '../store/auth';
@@ -76,12 +77,10 @@ export function ExpensesPage() {
 
   return (
     <div className="stack">
-      <div className="topbar" style={{ marginBottom: 0 }}>
-        <div>
-          <h2>Cash & expenses</h2>
-          <p>Station expenses and bank deposit tracking</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Cash & expenses"
+        subtitle="Station expenses and bank deposit tracking"
+      />
       {message && <div className="success">{message}</div>}
 
       <div className="grid two">

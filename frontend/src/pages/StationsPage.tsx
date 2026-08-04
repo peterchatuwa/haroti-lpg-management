@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { PageHeader } from '../components/PageHeader';
+import { TankGauge } from '../components/TankGauge';
 import api from '../lib/api';
 import { formatKg } from '../lib/format';
 import type { Station } from '../lib/types';
@@ -9,46 +11,71 @@ export function StationsPage() {
     queryFn: async () => (await api.get<Station[]>('/stations')).data,
   });
 
+  const grouped = (stations ?? []).reduce(
+    (acc, s) => {
+      (acc[s.district] ??= []).push(s);
+      return acc;
+    },
+    {} as Record<string, Station[]>,
+  );
+
   return (
     <div className="stack">
-      <div className="topbar" style={{ marginBottom: 0 }}>
-        <div>
-          <h2>Stations</h2>
-          <p>Haroti Holdings network — Salima, Lilongwe and Blantyre</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Station network"
+        subtitle="Eight Haroti Holdings sites across Malawi — one operating picture"
+      />
 
-      <div className="grid stats">
-        {(stations ?? []).map((s) => {
-          const stock = Number(s.currentStockKg);
-          const capacity = Number(s.tankCapacityKg);
-          const fill = capacity > 0 ? Math.round((stock / capacity) * 100) : 0;
-          return (
-            <div className="panel stat-card" key={s.id}>
-              <h3>
-                {s.code} · {s.district}
-              </h3>
-              <div className="value" style={{ fontSize: '1.35rem' }}>
-                {s.name}
-              </div>
-              <div className="hint">{formatKg(stock)} / {formatKg(capacity)}</div>
-              <div className="progress" style={{ marginTop: '0.75rem' }}>
-                <span style={{ width: `${fill}%` }} />
-              </div>
-              <div className="row" style={{ marginTop: '0.6rem' }}>
-                <span className="badge">{s.status}</span>
-                <small className="muted">
-                  Synced{' '}
-                  {s.lastSyncedAt
-                    ? new Date(s.lastSyncedAt).toLocaleString()
-                    : 'never'}
-                </small>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {isLoading && <p>Loading stations…</p>}
+      {isLoading && <div className="panel">Loading stations…</div>}
+
+      {Object.entries(grouped).map(([district, list]) => (
+        <section key={district} className="stack">
+          <div className="row">
+            <h3 style={{ margin: 0, fontFamily: 'Fraunces, serif' }}>{district}</h3>
+            <span className="badge">{list.length} stations</span>
+          </div>
+          <div className="station-network">
+            {list.map((s, i) => {
+              const stock = Number(s.currentStockKg);
+              const capacity = Number(s.tankCapacityKg);
+              const fill = capacity > 0 ? (stock / capacity) * 100 : 0;
+              return (
+                <article
+                  className="station-tile"
+                  key={s.id}
+                  style={{ animationDelay: `${i * 0.06}s` }}
+                >
+                  <div className="row" style={{ justifyContent: 'space-between' }}>
+                    <div>
+                      <div className="code">{s.code}</div>
+                      <div className="name">{s.name}</div>
+                    </div>
+                    <span className="badge">{s.status}</span>
+                  </div>
+                  <div className="row" style={{ alignItems: 'center', gap: '1rem' }}>
+                    <TankGauge
+                      fillPercent={fill}
+                      label={formatKg(stock)}
+                      sublabel={`of ${formatKg(capacity)}`}
+                      size={100}
+                    />
+                    <div className="stack" style={{ gap: '0.35rem', flex: 1 }}>
+                      <small className="muted">Manager</small>
+                      <strong>{s.managerName ?? '—'}</strong>
+                      <small className="muted">
+                        Synced{' '}
+                        {s.lastSyncedAt
+                          ? new Date(s.lastSyncedAt).toLocaleString()
+                          : 'never'}
+                      </small>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

@@ -1,6 +1,10 @@
 import { Column, Entity, OneToMany } from 'typeorm';
 import { BaseEntity } from '../common/entities/base.entity';
-import { StationStatus } from '../common/enums';
+import {
+  CommercialStream,
+  StationStatus,
+  WarehouseType,
+} from '../common/enums';
 import { User } from '../users/user.entity';
 
 @Entity('stations')
@@ -53,6 +57,25 @@ export class Station extends BaseEntity {
 
   @Column({ name: 'last_synced_at', type: 'timestamptz', nullable: true })
   lastSyncedAt?: Date;
+
+  @Column({
+    name: 'commercial_stream',
+    type: 'enum',
+    enum: CommercialStream,
+    default: CommercialStream.RETAIL_FORECOURT,
+  })
+  commercialStream!: CommercialStream;
+
+  @Column({
+    name: 'warehouse_type',
+    type: 'enum',
+    enum: WarehouseType,
+    default: WarehouseType.OWNED_STATION,
+  })
+  warehouseType!: WarehouseType;
+
+  @Column({ name: 'is_franchise', default: false })
+  isFranchise!: boolean;
 
   @OneToMany(() => User, (user) => user.station)
   users!: User[];

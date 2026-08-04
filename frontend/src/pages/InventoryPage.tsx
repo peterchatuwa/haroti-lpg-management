@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import { formatKg } from '../lib/format';
 import { useAuthStore } from '../store/auth';
@@ -57,12 +58,10 @@ export function InventoryPage() {
 
   return (
     <div className="stack">
-      <div className="topbar" style={{ marginBottom: 0 }}>
-        <div>
-          <h2>LPG inventory</h2>
-          <p>Track stock movements and expected versus physical closing stock</p>
-        </div>
-      </div>
+      <PageHeader
+        title="LPG inventory"
+        subtitle="Track stock movements and expected versus physical closing stock"
+      />
       {message && <div className="success">{message}</div>}
 
       <div className="grid stats">

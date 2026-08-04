@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AccessoriesModule } from '../accessories/accessories.module';
 import { AuditLog } from '../audit/audit-log.entity';
 import { AuditService } from '../audit/audit.service';
+import { CustomersModule } from '../customers/customers.module';
+import { FinanceModule } from '../finance/finance.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { PriceList } from '../pricing/price-list.entity';
 import { StationsModule } from '../stations/stations.module';
@@ -16,6 +19,9 @@ import { SalesService } from './sales.service';
     TypeOrmModule.forFeature([Sale, SaleItem, SalePayment, PriceList, AuditLog]),
     InventoryModule,
     StationsModule,
+    AccessoriesModule,
+    FinanceModule,
+    CustomersModule,
   ],
   controllers: [SalesController],
   providers: [SalesService, AuditService],

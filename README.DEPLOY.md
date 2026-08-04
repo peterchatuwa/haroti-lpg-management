@@ -8,6 +8,18 @@ Isolated Docker stack on `server1.aircargo.mw`. Does not use host ports 80/443/3
 - Public URL: `https://lpg.aircargo.mw`
 - Local proxy target: `http://127.0.0.1:18088`
 
+## DNS (required for public subdomain)
+
+Authoritative NS for `aircargo.mw`: `nyala.sdnp.org.mw`, `domwe.sdn.mw` (not this VPS).
+
+Add an A record at SDN / your DNS host:
+
+```text
+lpg.aircargo.mw  →  104.207.70.23
+```
+
+The cPanel zone on this server already contains that A record, but public resolvers will not see it until SDN publishes it. After DNS propagates, AutoSSL / cPanel SSL for the subdomain can finish.
+
 ## Start / stop (Haroti only)
 
 ```bash
@@ -27,3 +39,7 @@ docker compose -f docker-compose.prod.yml --env-file .env down
 ```
 
 Existing cPanel sites, mail, MariaDB and host Redis are unaffected.
+
+## Demo login
+
+`admin` / `Password123!`
