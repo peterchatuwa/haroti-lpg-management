@@ -7,6 +7,7 @@ import { ChannelPrice } from './accessories/channel-price.entity';
 import { ProductBundleItem } from './accessories/product-bundle-item.entity';
 import { ProductBundle } from './accessories/product-bundle.entity';
 import { AuthModule } from './auth/auth.module';
+import { StationScopeModule } from './auth/station-scope.module';
 import { AuditLog } from './audit/audit-log.entity';
 import { CashDeposit } from './banking/cash-deposit.entity';
 import { CatalogModule } from './catalog/catalog.module';
@@ -22,13 +23,15 @@ import { BudgetLine } from './finance/budget-line.entity';
 import { FinanceModule } from './finance/finance.module';
 import { JournalEntry } from './finance/journal-entry.entity';
 import { JournalLine } from './finance/journal-line.entity';
-import { InventoryModule } from './inventory/inventory.module';
-import { StockMovement } from './inventory/stock-movement.entity';
 import { AgentCommission } from './franchise/agent-commission.entity';
 import { FranchiseAgreement } from './franchise/franchise-agreement.entity';
 import { FranchiseModule } from './franchise/franchise.module';
 import { FranchiseSettlementLine } from './franchise/franchise-settlement-line.entity';
 import { FranchiseSettlement } from './franchise/franchise-settlement.entity';
+import { ENTITIES } from './database/entities';
+import { ImmutableRecordSubscriber } from './database/immutable-record.subscriber';
+import { InventoryModule } from './inventory/inventory.module';
+import { StockMovement } from './inventory/stock-movement.entity';
 import { Asset } from './maintenance/asset.entity';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { MaintenanceWorkOrder } from './maintenance/work-order.entity';
@@ -74,51 +77,15 @@ import { User } from './users/user.entity';
         username: config.get<string>('DATABASE_USER', 'haroti'),
         password: config.get<string>('DATABASE_PASSWORD', 'haroti_dev'),
         database: config.get<string>('DATABASE_NAME', 'haroti_lpg'),
-        entities: [
-          Station,
-          User,
-          Customer,
-          Supplier,
-          Product,
-          StockMovement,
-          Delivery,
-          Sale,
-          SaleItem,
-          SalePayment,
-          Shift,
-          Cylinder,
-          Transfer,
-          TransferItem,
-          Expense,
-          CashDeposit,
-          PriceList,
-          AuditLog,
-          AccessoryStock,
-          ChannelPrice,
-          ProductBundle,
-          ProductBundleItem,
-          PurchaseOrder,
-          PurchaseOrderLine,
-          JournalEntry,
-          JournalLine,
-          BudgetLine,
-          PaycMeter,
-          PaycTelemetry,
-          PaycCreditTransaction,
-          MaintenanceWorkOrder,
-          Asset,
-          CapitalProject,
-          ProjectMilestone,
-          ProjectExpenditure,
-          FranchiseAgreement,
-          FranchiseSettlement,
-          FranchiseSettlementLine,
-          AgentCommission,
-        ],
-        synchronize: true,
+        entities: ENTITIES,
+        subscribers: [ImmutableRecordSubscriber],
+        migrations: [__dirname + '/database/migrations/*.{ts,js}'],
+        migrationsRun: config.get('DATABASE_SYNC') !== 'true',
+        synchronize: config.get('DATABASE_SYNC') === 'true',
         logging: config.get('NODE_ENV') === 'development',
       }),
     }),
+    StationScopeModule,
     AuthModule,
     StationsModule,
     InventoryModule,

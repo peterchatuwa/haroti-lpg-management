@@ -179,4 +179,7 @@ export class Shift extends BaseEntity {
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'approved_by_id' })
   approvedBy?: User | null;
+
+  @Column({ name: 'locked_at', type: 'timestamptz', nullable: true })
+  lockedAt?: Date | null;
 }

@@ -1,17 +1,30 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { asDecimal, round2, round3, toNumber } from '../common/decimal';
-import { ExpenseStatus, PaymentMethod, ShiftStatus } from '../common/enums';
+import {
+  ExpenseStatus,
+  PaymentMethod,
+  ShiftStatus,
+  UserRole,
+} from '../common/enums';
 import { Expense } from '../expenses/expense.entity';
 import { Sale } from '../sales/sale.entity';
 import { StationsService } from '../stations/stations.service';
 import { CloseShiftDto, OpenShiftDto } from './dto/shift.dto';
 import { Shift } from './shift.entity';
+
+const SHIFT_APPROVER_ROLES = new Set<UserRole>([
+  UserRole.SYSTEM_ADMIN,
+  UserRole.DIRECTOR,
+  UserRole.OPERATIONS_MANAGER,
+  UserRole.STATION_MANAGER,
+]);
 
 @Injectable()
 export class ShiftsService {
@@ -22,6 +35,38 @@ export class ShiftsService {
     private readonly expensesRepo: Repository<Expense>,
     private readonly stationsService: StationsService,
   ) {}
+
+  isShiftLocked(shift: Shift): boolean {
+    return (
+      shift.status !== ShiftStatus.OPEN ||
+      shift.lockedAt != null
+    );
+  }
+
+  async requireOpenShiftForSale(
+    shiftId: string,
+    stationId: string,
+    attendantId: string,
+  ): Promise<Shift> {
+    const shift = await this.shiftsRepo.findOne({ where: { id: shiftId } });
+    if (!shift) {
+      throw new BadRequestException('Shift not found');
+    }
+    if (shift.status !== ShiftStatus.OPEN) {
+      throw new BadRequestException(
+        'Sales require an open shift; this shift is closed or pending approval',
+      );
+    }
+    if (shift.stationId !== stationId) {
+      throw new BadRequestException('Shift does not belong to this station');
+    }
+    if (shift.attendantId !== attendantId) {
+      throw new BadRequestException(
+        'Sale must be recorded on your own open shift',
+      );
+    }
+    return shift;
+  }
 
   async openShift(dto: OpenShiftDto, attendantId: string) {
     const open = await this.shiftsRepo.findOne({
@@ -116,10 +161,17 @@ export class ShiftsService {
     );
     const stockVariance = round3(dto.physicalLpgStockKg - expectedLpg);
 
-    shift.status =
-      Math.abs(cashVariance) > 100 || Math.abs(stockVariance) > 2
-        ? ShiftStatus.PENDING_APPROVAL
-        : ShiftStatus.CLOSED;
+    const hasVariance =
+      Math.abs(cashVariance) > 0.01 || Math.abs(stockVariance) > 0.01;
+
+    if (hasVariance) {
+      shift.status = ShiftStatus.PENDING_APPROVAL;
+    } else {
+      shift.status = ShiftStatus.CLOSED;
+      shift.approvedById = userId;
+      shift.lockedAt = new Date();
+    }
+
     shift.closedAt = new Date();
     shift.cashSales = asDecimal(cashSales, 2);
     shift.mobileMoneySales = asDecimal(mobileMoneySales, 2);
@@ -136,10 +188,31 @@ export class ShiftsService {
     shift.stockVarianceKg = asDecimal(stockVariance);
     shift.closingCylinderCount = dto.closingCylinderCount;
     shift.varianceNotes = dto.varianceNotes;
-    if (shift.status === ShiftStatus.CLOSED) {
-      shift.approvedById = userId;
+
+    return this.shiftsRepo.save(shift);
+  }
+
+  async approveShift(id: string, approverId: string, approverRole: UserRole) {
+    if (!SHIFT_APPROVER_ROLES.has(approverRole)) {
+      throw new ForbiddenException('Insufficient role to approve shifts');
     }
 
+    const shift = await this.shiftsRepo.findOne({ where: { id } });
+    if (!shift) {
+      throw new NotFoundException('Shift not found');
+    }
+    if (shift.status !== ShiftStatus.PENDING_APPROVAL) {
+      throw new BadRequestException('Shift is not awaiting approval');
+    }
+    if (shift.attendantId === approverId) {
+      throw new ForbiddenException(
+        'Cashier cannot approve their own shift variance',
+      );
+    }
+
+    shift.status = ShiftStatus.CLOSED;
+    shift.approvedById = approverId;
+    shift.lockedAt = new Date();
     return this.shiftsRepo.save(shift);
   }
 

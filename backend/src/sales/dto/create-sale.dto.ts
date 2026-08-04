@@ -69,9 +69,8 @@ export class CreateSaleDto {
   @IsUUID()
   customerId?: string;
 
-  @IsOptional()
   @IsUUID()
-  shiftId?: string;
+  shiftId!: string;
 
   @IsArray()
   @ValidateNested({ each: true })

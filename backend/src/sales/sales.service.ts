@@ -20,6 +20,7 @@ import { FinanceService } from '../finance/finance.service';
 import { FranchiseService } from '../franchise/franchise.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { PriceList } from '../pricing/price-list.entity';
+import { ShiftsService } from '../shifts/shifts.service';
 import { StationsService } from '../stations/stations.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { SaleItem } from './sale-item.entity';
@@ -39,6 +40,7 @@ export class SalesService {
     private readonly financeService: FinanceService,
     private readonly customersService: CustomersService,
     private readonly franchiseService: FranchiseService,
+    private readonly shiftsService: ShiftsService,
   ) {}
 
   async getActivePrice(stationId: string) {
@@ -85,6 +87,11 @@ export class SalesService {
     }
 
     const station = await this.stationsService.findOne(dto.stationId);
+    await this.shiftsService.requireOpenShiftForSale(
+      dto.shiftId,
+      dto.stationId,
+      attendantId,
+    );
     const activePrice = await this.getActivePrice(dto.stationId);
     const salesChannel = dto.salesChannel ?? SalesChannel.RETAIL_LIST;
     const commercialStream =
@@ -243,6 +250,7 @@ export class SalesService {
       await this.financeService.postLpgRefillSale(
         round2(lpgQuantityKg * activePrice),
         saved.id,
+        lpgQuantityKg,
       );
     }
 

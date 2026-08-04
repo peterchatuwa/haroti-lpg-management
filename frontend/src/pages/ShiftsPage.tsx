@@ -48,6 +48,15 @@ export function ShiftsPage() {
     },
   });
 
+  const approveMutation = useMutation({
+    mutationFn: async (shiftId: string) =>
+      (await api.post(`/shifts/${shiftId}/approve`)).data,
+    onSuccess: () => {
+      setMessage('Shift approved and locked');
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+    },
+  });
+
   const closeMutation = useMutation({
     mutationFn: async () =>
       (
@@ -66,6 +75,10 @@ export function ShiftsPage() {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
     },
   });
+
+  const canApprove = ['STATION_MANAGER', 'OPERATIONS_MANAGER', 'SYSTEM_ADMIN', 'DIRECTOR'].includes(
+    user?.role ?? '',
+  );
 
   function onOpen(e: FormEvent) {
     e.preventDefault();
@@ -147,6 +160,7 @@ export function ShiftsPage() {
                   <th>Status</th>
                   <th>Cash var</th>
                   <th>Stock var</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -161,10 +175,22 @@ export function ShiftsPage() {
                     <tr key={s.id}>
                       <td>{s.station?.code}</td>
                       <td>
-                        <span className="badge">{s.status}</span>
+                        <span className="badge">{s.status.replaceAll('_', ' ')}</span>
                       </td>
                       <td>{formatMoney(s.cashVariance ?? 0)}</td>
                       <td>{formatKg(s.stockVarianceKg ?? 0)}</td>
+                      <td>
+                        {canApprove && s.status === 'PENDING_APPROVAL' && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            disabled={approveMutation.isPending}
+                            onClick={() => approveMutation.mutate(s.id)}
+                          >
+                            Approve
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ),
                 )}

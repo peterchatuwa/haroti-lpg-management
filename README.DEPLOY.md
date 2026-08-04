@@ -29,6 +29,14 @@ docker compose -f docker-compose.prod.yml --env-file .env ps
 docker compose -f docker-compose.prod.yml --env-file .env down
 ```
 
+Migrations run automatically on API startup (`migrationsRun: true`). For manual runs inside the API container:
+
+```bash
+docker exec haroti-api node -e "require('./dist/database/data-source').default.initialize().then(d=>d.runMigrations()).then(r=>console.log(r)).finally(()=>process.exit())"
+```
+
+Fresh local dev (optional): set `DATABASE_SYNC=true` in `.env` to use TypeORM synchronize instead of migrations.
+
 ## Rollback
 
 ```bash

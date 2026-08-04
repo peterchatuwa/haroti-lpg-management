@@ -20,11 +20,15 @@ export const GL_ACCOUNTS = {
   REVENUE_BUNDLE: { code: '4110', name: 'Revenue: Accessory Bundles' },
   REVENUE_LPG: { code: '4200', name: 'Revenue: LPG Refill Sales' },
   REVENUE_PAYC: { code: '4300', name: 'Revenue: PAYC Burn' },
+  COGS_LPG: { code: '5200', name: 'COGS: LPG Refill Sales' },
   COGS_ACCESSORY: { code: '5100', name: 'COGS: Accessories' },
   DEFERRED_PAYC: { code: '2300', name: 'Deferred Revenue: PAYC Credit' },
   CWIP: { code: '1400', name: 'Capital Work-in-Progress (CWIP)' },
   COMMISSION_PAYABLE: { code: '2200', name: 'Commission Payable: Agents' },
 } as const;
+
+/** Default bulk LPG inventory cost (MWK/kg) until tank costing is implemented. */
+export const DEFAULT_LPG_COST_PER_KG = 1200;
 
 @Injectable()
 export class FinanceService {
@@ -98,8 +102,8 @@ export class FinanceService {
     }
   }
 
-  async postLpgRefillSale(amount: number, refId: string) {
-    return this.postEntry({
+  async postLpgRefillSale(amount: number, refId: string, cogsKg = 0) {
+    await this.postEntry({
       eventType: JournalEventType.LPG_REFILL_SALE,
       description: `LPG refill sale ${refId}`,
       referenceType: 'Sale',
@@ -109,6 +113,20 @@ export class FinanceService {
         { account: GL_ACCOUNTS.REVENUE_LPG, credit: amount },
       ],
     });
+
+    const cogs = round2(cogsKg * DEFAULT_LPG_COST_PER_KG);
+    if (cogs > 0) {
+      await this.postEntry({
+        eventType: JournalEventType.LPG_COGS,
+        description: `LPG COGS ${refId}`,
+        referenceType: 'Sale',
+        referenceId: refId,
+        lines: [
+          { account: GL_ACCOUNTS.COGS_LPG, debit: cogs },
+          { account: GL_ACCOUNTS.INVENTORY_BULK_LPG, credit: cogs },
+        ],
+      });
+    }
   }
 
   async postAccessoryGrn(amount: number, refId: string) {

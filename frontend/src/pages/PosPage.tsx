@@ -109,6 +109,9 @@ export function PosPage() {
 
   const saleMutation = useMutation({
     mutationFn: async () => {
+      if (!shift?.id) {
+        throw new Error('Open a shift before recording sales (Shifts page).');
+      }
       const clientTxnId = crypto.randomUUID();
       let payload: Record<string, unknown>;
 
@@ -184,7 +187,10 @@ export function PosPage() {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
     },
-    onError: () => setError('Could not complete sale'),
+    onError: (err: { response?: { data?: { message?: string | string[] } } }) => {
+      const msg = err.response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Could not complete sale');
+    },
   });
 
   function applySize(next: number) {
@@ -195,6 +201,10 @@ export function PosPage() {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!shift?.id) {
+      setError('Open a shift before recording sales');
+      return;
+    }
     if (!activeStationId) {
       setError('Select a station');
       return;

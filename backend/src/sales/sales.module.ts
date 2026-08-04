@@ -8,6 +8,7 @@ import { FinanceModule } from '../finance/finance.module';
 import { FranchiseModule } from '../franchise/franchise.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { PriceList } from '../pricing/price-list.entity';
+import { ShiftsModule } from '../shifts/shifts.module';
 import { StationsModule } from '../stations/stations.module';
 import { SaleItem } from './sale-item.entity';
 import { SalePayment } from './sale-payment.entity';
@@ -20,6 +21,7 @@ import { SalesService } from './sales.service';
     TypeOrmModule.forFeature([Sale, SaleItem, SalePayment, PriceList, AuditLog]),
     InventoryModule,
     StationsModule,
+    ShiftsModule,
     AccessoriesModule,
     FinanceModule,
     CustomersModule,
