@@ -62,7 +62,7 @@ export class Requisition extends BaseEntity {
   @Column({ name: 'paid_at', type: 'timestamptz', nullable: true })
   paidAt?: Date | null;
 
-  @Column({ name: 'payment_reference', length: 80, nullable: true })
+  @Column({ name: 'payment_reference', type: 'varchar', length: 80, nullable: true })
   paymentReference?: string | null;
 
   @Column({ name: 'rejection_reason', type: 'text', nullable: true })
