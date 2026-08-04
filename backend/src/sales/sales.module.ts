@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { CustomersModule } from '../customers/customers.module';
 import { FinanceModule } from '../finance/finance.module';
 import { FranchiseModule } from '../franchise/franchise.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { PriceList } from '../pricing/price-list.entity';
 import { ShiftsModule } from '../shifts/shifts.module';
@@ -27,6 +28,7 @@ import { SalesService } from './sales.service';
     FinanceModule,
     CustomersModule,
     FranchiseModule,
+    NotificationsModule,
   ],
   controllers: [SalesController],
   providers: [SalesService, AuditService],

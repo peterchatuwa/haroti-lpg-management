@@ -189,43 +189,32 @@ Workflow: **DRAFT** (+ Quotation) → submit → **PENDING_APPROVAL** → approv
 
 ## Tier D — Remaining (next phase)
 
-- SMS/customer notifications
-- Hardware scale integration
-- PDF export for procurement documents
-- Advanced franchise consignment settlement
+| Spec ID | Requirement | Code | Test | Status |
+|---------|-------------|------|------|--------|
+| NOTIF-001 | SMS on payment / credit / hydro WO | `notifications/notifications.service.ts` | `tier-d-plus.e2e-spec.ts` | DONE |
+| PROC-004 | PDF export for procurement docs | `procurement/procurement-documents.service.ts` | `tier-d-plus.e2e-spec.ts` | DONE |
+| FRN-002 | Franchise consignment GL auto-post | `finance/finance.service.ts`, `franchise/franchise.service.ts` | manual | DONE |
+| POS-001 | Hardware scale (Web Serial) on POS | `frontend/src/lib/useSerialScale.ts`, `PosPage.tsx` | manual | DONE |
 
-
+Configure SMS in production `.env`: `SMS_ENABLED=true`, `SMS_API_URL`, `SMS_API_KEY`, optional `SMS_OPS_PHONE`.
 
 ---
-
-
 
 ## Manual pilot checklist (before station go-live)
 
+- [x] Open shift → verify tank reading recorded
+- [x] Complete refill sale → journal entry for revenue + COGS at station WAC
+- [x] Credit customer sale → AR balance increases, GL 1310/4200
+- [x] Record customer payment → AR balance decreases, GL 1100/1310
+- [x] Supplier delivery → station WAC updated
+- [x] Generate franchise settlement → status INVOICED + GL 1300/4350 (+ consignment 1300/1220)
+- [x] Hydro cylinders due → work orders auto-created daily
+- [x] Offline sale replay with changed payload → 409 conflict surfaced in UI
+- [x] Register customer as vendor → create PO → walk through to PAID with all 4 documents
 
-
-- [ ] Open shift → verify tank reading recorded
-
-- [ ] Complete refill sale → journal entry for revenue + COGS at station WAC
-
-- [ ] Credit customer sale → AR balance increases, GL 1310/4200
-
-- [ ] Record customer payment → AR balance decreases, GL 1100/1310
-
-- [ ] Supplier delivery → station WAC updated
-
-- [ ] Generate franchise settlement → status INVOICED + GL 1300/4350
-
-- [ ] Hydro cylinders due → work orders auto-created daily
-
-- [ ] Offline sale replay with changed payload → 409 conflict surfaced in UI
-- [ ] Register customer as vendor → create PO → walk through to PAID with all 4 documents
-
-
+Run automated pilot: `node scripts/pilot-checklist.mjs http://169.58.127.129/api`
 
 ---
 
-
-
-*Last updated: Tier D procurement & vendors. Regenerate when adding next phase items.*
+*Last updated: Tier D+ (SMS, PDF, consignment GL, scale).*
 

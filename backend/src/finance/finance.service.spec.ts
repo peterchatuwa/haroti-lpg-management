@@ -104,6 +104,25 @@ describe('FinanceService LPG COGS (AC-11)', () => {
     );
   });
 
+  it('posts franchise consignment DR AR CR consignment inventory', async () => {
+    await service.postFranchiseConsignmentSettlement(15000, 'fs-1');
+
+    expect(savedEntries).toHaveLength(1);
+    expect(savedEntries[0].eventType).toBe(JournalEventType.FRANCHISE_CONSIGNMENT);
+    expect(savedEntries[0].lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: GL_ACCOUNTS.AR_FRANCHISE.code,
+          debitAmount: '15000.00',
+        }),
+        expect.objectContaining({
+          accountCode: GL_ACCOUNTS.INVENTORY_CONSIGNMENT.code,
+          creditAmount: '15000.00',
+        }),
+      ]),
+    );
+  });
+
   it('posts station expense to GL 6100/1110', async () => {
     await service.postStationExpense(25000, 'Transport', 'exp-1');
 

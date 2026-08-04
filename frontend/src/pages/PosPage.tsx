@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import { formatMoney } from '../lib/format';
+import { readScaleWeight, serialScaleSupported } from '../lib/useSerialScale';
 import { useAuthStore } from '../store/auth';
 import { useOfflineStore } from '../store/offline';
 
@@ -38,6 +39,8 @@ export function PosPage() {
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedBundle, setSelectedBundle] = useState('');
   const [accessoryQty, setAccessoryQty] = useState(1);
+  const [scaleBusy, setScaleBusy] = useState(false);
+  const [scaleTarget, setScaleTarget] = useState<'empty' | 'filled' | null>(null);
 
   const { data: stations } = useQuery({
     queryKey: ['stations'],
@@ -239,6 +242,23 @@ export function PosPage() {
     setFilledWeight(Number((next * 1.15 + next).toFixed(1)));
   }
 
+  async function readFromScale(target: 'empty' | 'filled') {
+    setScaleBusy(true);
+    setScaleTarget(target);
+    setError('');
+    try {
+      const weight = await readScaleWeight();
+      if (target === 'empty') setEmptyWeight(Number(weight.toFixed(3)));
+      else setFilledWeight(Number(weight.toFixed(3)));
+      setMessage(`Scale: ${weight.toFixed(3)} kg (${target})`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Scale read failed');
+    } finally {
+      setScaleBusy(false);
+      setScaleTarget(null);
+    }
+  }
+
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!shift?.id) {
@@ -347,6 +367,17 @@ export function PosPage() {
                 onChange={(e) => setEmptyWeight(Number(e.target.value))}
                 required
               />
+              {serialScaleSupported() && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ marginTop: '0.35rem' }}
+                  disabled={scaleBusy}
+                  onClick={() => readFromScale('empty')}
+                >
+                  {scaleBusy && scaleTarget === 'empty' ? 'Reading…' : 'Read scale'}
+                </button>
+              )}
             </label>
             <label>
               Filled weight (kg)
@@ -357,6 +388,17 @@ export function PosPage() {
                 onChange={(e) => setFilledWeight(Number(e.target.value))}
                 required
               />
+              {serialScaleSupported() && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ marginTop: '0.35rem' }}
+                  disabled={scaleBusy}
+                  onClick={() => readFromScale('filled')}
+                >
+                  {scaleBusy && scaleTarget === 'filled' ? 'Reading…' : 'Read scale'}
+                </button>
+              )}
             </label>
           </div>
 

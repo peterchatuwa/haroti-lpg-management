@@ -114,12 +114,29 @@ export class FranchiseService {
             unitAmount: asDecimal(royaltyDue, 2),
             lineTotal: asDecimal(royaltyDue, 2),
           }),
+          ...(consignmentValue > 0
+            ? [
+                this.linesRepo.create({
+                  description: 'Consignment stock on hand',
+                  quantity: 1,
+                  unitAmount: asDecimal(consignmentValue, 2),
+                  lineTotal: asDecimal(consignmentValue, 2),
+                }),
+              ]
+            : []),
         ],
       }),
     );
 
     if (royaltyDue > 0) {
       await this.financeService.postFranchiseSettlement(royaltyDue, settlement.id);
+    }
+
+    if (consignmentValue > 0) {
+      await this.financeService.postFranchiseConsignmentSettlement(
+        consignmentValue,
+        settlement.id,
+      );
     }
 
     return settlement;

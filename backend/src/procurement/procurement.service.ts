@@ -241,4 +241,12 @@ export class ProcurementService {
   getDocument(id: string) {
     return this.documentsService.findOne(id);
   }
+
+  async getDocumentPdf(id: string) {
+    const doc = await this.documentsService.findOne(id);
+    if (!doc) throw new NotFoundException('Document not found');
+    const buffer = await this.documentsService.generatePdf(doc);
+    const filename = `${doc.documentNumber.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
+    return { buffer, filename };
+  }
 }

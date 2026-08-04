@@ -21,7 +21,12 @@ export class FranchiseController {
   }
 
   @Post('settlements/generate')
-  @Roles(UserRole.FINANCE_MANAGER, UserRole.OPERATIONS_MANAGER)
+  @Roles(
+    UserRole.FINANCE_MANAGER,
+    UserRole.OPERATIONS_MANAGER,
+    UserRole.SYSTEM_ADMIN,
+    UserRole.DIRECTOR,
+  )
   generate(
     @Body()
     body: { agreementId: string; periodStart: string; periodEnd: string },
@@ -34,7 +39,7 @@ export class FranchiseController {
   }
 
   @Post('settlements/:id/invoice')
-  @Roles(UserRole.FINANCE_MANAGER)
+  @Roles(UserRole.FINANCE_MANAGER, UserRole.SYSTEM_ADMIN, UserRole.DIRECTOR)
   invoice(@Param('id') id: string) {
     return this.franchiseService.invoiceSettlement(id);
   }

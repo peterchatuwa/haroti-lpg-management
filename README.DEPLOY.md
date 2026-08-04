@@ -1,26 +1,26 @@
-# Haroti LPG — Aircargo VPS deploy notes
+# Haroti LPG — Deployment notes
 
-Isolated Docker stack on `server1.aircargo.mw`. Does not use host ports 80/443/3306/6379.
+> **Production VPS:** `169.58.127.129` (Debian 13, dedicated)  
+> **Previous host decommissioned:** Aircargo VPS no longer runs Haroti.
+
+Isolated Docker stack at `/opt/haroti-lpg`.
+
+## Access
+
+- **Web UI:** http://169.58.127.129/
+- **API:** http://169.58.127.129/api/
+- **Swagger:** http://169.58.127.129/api/docs
+- **Demo login:** `admin` / `Password123!`
+
+Production secrets live in `/opt/haroti-lpg/.env` on the server (not in git).
 
 ## Paths
 
 - App: `/opt/haroti-lpg`
-- Public URL: `https://lpg.aircargo.mw`
-- Local proxy target: `http://127.0.0.1:18088`
+- Web: port `80` (public on dedicated VPS)
+- Postgres: internal Docker network only
 
-## DNS (required for public subdomain)
-
-Authoritative NS for `aircargo.mw`: `nyala.sdnp.org.mw`, `domwe.sdn.mw` (not this VPS).
-
-Add an A record at SDN / your DNS host:
-
-```text
-lpg.aircargo.mw  →  104.207.70.23
-```
-
-The cPanel zone on this server already contains that A record, but public resolvers will not see it until SDN publishes it. After DNS propagates, AutoSSL / cPanel SSL for the subdomain can finish.
-
-## Start / stop (Haroti only)
+## Start / stop
 
 ```bash
 cd /opt/haroti-lpg
@@ -29,25 +29,21 @@ docker compose -f docker-compose.prod.yml --env-file .env ps
 docker compose -f docker-compose.prod.yml --env-file .env down
 ```
 
-Migrations run automatically on API startup (`migrationsRun: true`). For manual runs inside the API container:
+Migrations run automatically on API startup (`migrationsRun: true`).
 
-```bash
-docker exec haroti-api node -e "require('./dist/database/data-source').default.initialize().then(d=>d.runMigrations()).then(r=>console.log(r)).finally(()=>process.exit())"
-```
+## Fresh deploy on a new VPS
 
-Fresh local dev (optional): set `DATABASE_SYNC=true` in `.env` to use TypeORM synchronize instead of migrations.
+1. Install Docker Engine (`curl -fsSL https://get.docker.com | sh`)
+2. Clone `https://github.com/peterchatuwa/haroti-lpg-management` to `/opt/haroti-lpg`
+3. Copy `.env.production.example` → `.env` and set strong `DATABASE_PASSWORD` + `JWT_SECRET`
+4. For dedicated VPS, bind web to `80:80` in `docker-compose.prod.yml`
+5. `docker compose -f docker-compose.prod.yml --env-file .env up -d --build`
+6. Open firewall: `ufw allow 80/tcp && ufw allow 443/tcp && ufw allow OpenSSH`
 
-## Rollback
+## Teardown
 
 ```bash
 cd /opt/haroti-lpg
-docker compose -f docker-compose.prod.yml --env-file .env down
-# Optional: remove DB volume (destructive)
-# docker volume rm haroti_haroti_pg_data
+docker compose -f docker-compose.prod.yml --env-file .env down -v --remove-orphans
+rm -rf /opt/haroti-lpg
 ```
-
-Existing cPanel sites, mail, MariaDB and host Redis are unaffected.
-
-## Demo login
-
-`admin` / `Password123!`

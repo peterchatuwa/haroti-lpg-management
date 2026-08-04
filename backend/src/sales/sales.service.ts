@@ -22,6 +22,7 @@ import {
 import { FinanceService } from '../finance/finance.service';
 import { FranchiseService } from '../franchise/franchise.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PriceList } from '../pricing/price-list.entity';
 import { ShiftsService } from '../shifts/shifts.service';
 import { StationsService } from '../stations/stations.service';
@@ -54,6 +55,7 @@ export class SalesService {
     private readonly customersService: CustomersService,
     private readonly franchiseService: FranchiseService,
     private readonly shiftsService: ShiftsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getActivePrice(stationId: string) {
@@ -440,6 +442,14 @@ export class SalesService {
 
     if (hasCredit && dto.customerId) {
       await this.customersService.applyCredit(dto.customerId, total);
+      const customer = await this.customersService.findOne(dto.customerId);
+      void this.notificationsService.notifyCreditSale({
+        phone: customer.phone,
+        customerName: customer.fullName,
+        amount: total,
+        receiptNumber: saved.receiptNumber,
+        balance: toNumber(customer.outstandingBalance),
+      });
     }
 
     if (

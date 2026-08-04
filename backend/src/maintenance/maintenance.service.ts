@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CylinderStatus, WorkOrderStatus, WorkOrderType } from '../common/enums';
 import { Cylinder } from '../cylinders/cylinder.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Asset } from './asset.entity';
 import { MaintenanceWorkOrder } from './work-order.entity';
 
@@ -18,6 +19,7 @@ export class MaintenanceService {
     private readonly cylindersRepo: Repository<Cylinder>,
     @InjectRepository(Asset)
     private readonly assetsRepo: Repository<Asset>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   findAll(status?: WorkOrderStatus) {
@@ -72,6 +74,10 @@ export class MaintenanceService {
         }),
       );
       created.push(wo);
+      void this.notificationsService.notifyHydroWorkOrder({
+        serialNumber: cyl.serialNumber,
+        stationCode: cyl.station?.code,
+      });
     }
     return created;
   }

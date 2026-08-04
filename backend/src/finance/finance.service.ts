@@ -224,6 +224,28 @@ export class FinanceService {
     });
   }
 
+  async postFranchiseConsignmentSettlement(amount: number, refId: string) {
+    const existing = await this.entriesRepo.findOne({
+      where: {
+        referenceType: 'FranchiseSettlement',
+        referenceId: refId,
+        eventType: JournalEventType.FRANCHISE_CONSIGNMENT,
+      },
+    });
+    if (existing) return existing;
+
+    return this.postEntry({
+      eventType: JournalEventType.FRANCHISE_CONSIGNMENT,
+      description: `Franchise consignment due ${refId}`,
+      referenceType: 'FranchiseSettlement',
+      referenceId: refId,
+      lines: [
+        { account: GL_ACCOUNTS.AR_FRANCHISE, debit: amount },
+        { account: GL_ACCOUNTS.INVENTORY_CONSIGNMENT, credit: amount },
+      ],
+    });
+  }
+
   async postAccessoryGrn(amount: number, refId: string) {
     return this.postEntry({
       eventType: JournalEventType.ACCESSORY_GRN,

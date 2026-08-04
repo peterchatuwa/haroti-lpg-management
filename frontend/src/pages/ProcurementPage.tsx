@@ -131,13 +131,32 @@ function DocumentViewer({
         <strong>Total: {formatMoney(payload.totalAmount)}</strong>
       </div>
       {payload.notes && <p className="muted">Notes: {payload.notes}</p>}
-      <button
-        className="btn btn-primary"
-        onClick={() => window.print()}
-        type="button"
-      >
-        Print document
-      </button>
+      <div className="row" style={{ gap: '0.75rem' }}>
+        <button
+          className="btn btn-primary"
+          onClick={() => window.print()}
+          type="button"
+        >
+          Print document
+        </button>
+        <button
+          className="btn btn-ghost"
+          type="button"
+          onClick={async () => {
+            const res = await api.get(`/procurement/documents/${docId}/pdf`, {
+              responseType: 'blob',
+            });
+            const url = URL.createObjectURL(res.data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${payload.documentNumber}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          Download PDF
+        </button>
+      </div>
     </div>
   );
 }
