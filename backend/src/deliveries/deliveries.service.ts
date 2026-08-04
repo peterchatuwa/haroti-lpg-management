@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { asDecimal, round3, toNumber } from '../common/decimal';
+import { asDecimal, round2, round3, toNumber } from '../common/decimal';
 import { DeliveryStatus, StockMovementType } from '../common/enums';
 import { InventoryService } from '../inventory/inventory.service';
 import { JournalEventType } from '../common/enums';
@@ -108,6 +108,13 @@ export class DeliveriesService {
           toNumber(delivery.quantityReceivedKg) *
             toNumber(delivery.buyingPricePerKg) +
             toNumber(delivery.transportCost),
+        );
+        const qty = toNumber(delivery.quantityReceivedKg);
+        const landedPerKg = qty > 0 ? round2(landedCost / qty) : 0;
+        await this.stationsService.updateWeightedAvgCost(
+          delivery.stationId,
+          qty,
+          landedPerKg,
         );
         await this.financeService.postEntry({
           eventType: JournalEventType.LPG_DELIVERY,

@@ -18,6 +18,7 @@ describe('FinanceService LPG COGS (AC-11)', () => {
       });
       return { ...e, id: `je-${savedEntries.length}` };
     }),
+    findOne: jest.fn(async () => null),
   };
   const linesRepo = { create: jest.fn((l) => l) };
   const budgetRepo = {};
@@ -48,6 +49,56 @@ describe('FinanceService LPG COGS (AC-11)', () => {
         expect.objectContaining({
           accountCode: GL_ACCOUNTS.INVENTORY_BULK_LPG.code,
           creditAmount: '14400.00',
+        }),
+      ]),
+    );
+  });
+
+  it('uses station WAC for COGS when costPerKg provided', async () => {
+    await service.postLpgRefillSale(10000, 'sale-wac', 10, 1500);
+
+    expect(savedEntries[1].lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: GL_ACCOUNTS.COGS_LPG.code,
+          debitAmount: '15000.00',
+        }),
+      ]),
+    );
+  });
+
+  it('posts credit sale to AR and revenue', async () => {
+    await service.postCreditSale(5000, 'sale-credit', 5, 1200);
+
+    expect(savedEntries[0].eventType).toBe(JournalEventType.CUSTOMER_CREDIT_SALE);
+    expect(savedEntries[0].lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: GL_ACCOUNTS.AR_CUSTOMER.code,
+          debitAmount: '5000.00',
+        }),
+        expect.objectContaining({
+          accountCode: GL_ACCOUNTS.REVENUE_LPG.code,
+          creditAmount: '5000.00',
+        }),
+      ]),
+    );
+  });
+
+  it('posts customer payment DR cash CR AR', async () => {
+    await service.postCustomerPayment(3000, 'pay-1');
+
+    expect(savedEntries).toHaveLength(1);
+    expect(savedEntries[0].eventType).toBe(JournalEventType.CUSTOMER_PAYMENT);
+    expect(savedEntries[0].lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: GL_ACCOUNTS.CASH.code,
+          debitAmount: '3000.00',
+        }),
+        expect.objectContaining({
+          accountCode: GL_ACCOUNTS.AR_CUSTOMER.code,
+          creditAmount: '3000.00',
         }),
       ]),
     );

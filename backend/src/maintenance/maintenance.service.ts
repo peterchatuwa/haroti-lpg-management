@@ -51,7 +51,7 @@ export class MaintenanceService {
   async createHydroTestOrders() {
     const due = await this.hydroTestDue();
     const created: MaintenanceWorkOrder[] = [];
-    for (const cyl of due.slice(0, 10)) {
+    for (const cyl of due) {
       const existing = await this.woRepo.findOne({
         where: {
           cylinderId: cyl.id,

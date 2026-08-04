@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type FormEvent, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import { formatMoney } from '../lib/format';
+import { useAuthStore } from '../store/auth';
 
 interface StatementLine {
   date: string;
@@ -32,6 +34,16 @@ interface Statement {
 
 export function CustomerStatementPage() {
   const { id } = useParams<{ id: string }>();
+  const qc = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const [amount, setAmount] = useState('');
+  const [reference, setReference] = useState('');
+
+  const canRecordPayment =
+    user?.role === 'SYSTEM_ADMIN' ||
+    user?.role === 'DIRECTOR' ||
+    user?.role === 'FINANCE_MANAGER' ||
+    user?.role === 'OPERATIONS_MANAGER';
 
   const { data, isLoading } = useQuery({
     queryKey: ['customer-statement', id],
@@ -39,6 +51,30 @@ export function CustomerStatementPage() {
     queryFn: async () =>
       (await api.get<Statement>(`/customers/${id}/statement`)).data,
   });
+
+  const recordPayment = useMutation({
+    mutationFn: async () =>
+      (
+        await api.post(`/customers/${id}/payments`, {
+          amount: Number(amount),
+          paymentMethod: 'CASH',
+          reference: reference || undefined,
+          clientTxnId: crypto.randomUUID(),
+        })
+      ).data,
+    onSuccess: () => {
+      setAmount('');
+      setReference('');
+      qc.invalidateQueries({ queryKey: ['customer-statement', id] });
+      qc.invalidateQueries({ queryKey: ['customers'] });
+    },
+  });
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!amount || Number(amount) <= 0) return;
+    recordPayment.mutate();
+  }
 
   if (isLoading || !data) {
     return (
@@ -90,6 +126,46 @@ export function CustomerStatementPage() {
         </div>
       </div>
 
+      {canRecordPayment && c.outstandingBalance > 0 && (
+        <div className="panel">
+          <h3 className="panel-title">Record payment</h3>
+          <form className="row" onSubmit={onSubmit}>
+            <label>
+              Amount (MWK)
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </label>
+            <label>
+              Reference
+              <input
+                type="text"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                placeholder="Receipt / MoMo ref"
+              />
+            </label>
+            <button
+              className="btn btn-primary"
+              type="submit"
+              disabled={recordPayment.isPending}
+            >
+              {recordPayment.isPending ? 'Posting…' : 'Post payment'}
+            </button>
+          </form>
+          {recordPayment.isError && (
+            <p className="muted" style={{ marginTop: '0.75rem' }}>
+              Could not record payment. Check amount and try again.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="panel">
         <h3 className="panel-title">Account activity</h3>
         <div className="table-wrap">
@@ -118,7 +194,7 @@ export function CustomerStatementPage() {
               {!data.lines.length && (
                 <tr>
                   <td colSpan={6} className="muted">
-                    No credit sales recorded for this customer yet.
+                    No credit sales or payments recorded for this customer yet.
                   </td>
                 </tr>
               )}

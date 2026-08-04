@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -90,6 +91,11 @@ export class SalesService {
         relations: { items: true, payments: true },
       });
       if (existing) {
+        if (this.offlinePayloadConflict(existing, dto)) {
+          throw new ConflictException(
+            'Offline sale conflict: clientTxnId already used with different payload',
+          );
+        }
         return existing;
       }
     }
@@ -391,11 +397,24 @@ export class SalesService {
           ? `stock-${dto.clientTxnId}`
           : undefined,
       });
-      await this.financeService.postLpgRefillSale(
-        round2(lpgQuantityKg * activePrice),
-        saved.id,
-        lpgQuantityKg,
-      );
+      const station = await this.stationsService.findOne(dto.stationId);
+      const costPerKg = toNumber(station.weightedAvgCostPerKg ?? 1200);
+      const lpgRevenue = round2(lpgQuantityKg * activePrice);
+      if (hasCredit) {
+        await this.financeService.postCreditSale(
+          lpgRevenue,
+          saved.id,
+          lpgQuantityKg,
+          costPerKg,
+        );
+      } else {
+        await this.financeService.postLpgRefillSale(
+          lpgRevenue,
+          saved.id,
+          lpgQuantityKg,
+          costPerKg,
+        );
+      }
     }
 
     const accessoryLines = items.filter(
@@ -504,5 +523,48 @@ export class SalesService {
         {} as Record<string, number>,
       ),
     };
+  }
+
+  private offlinePayloadConflict(existing: Sale, dto: CreateSaleDto): boolean {
+    return (
+      this.offlinePayloadFingerprint(dto) !==
+      this.saleOfflineFingerprint(existing)
+    );
+  }
+
+  private offlinePayloadFingerprint(dto: CreateSaleDto): string {
+    return JSON.stringify({
+      stationId: dto.stationId,
+      shiftId: dto.shiftId ?? null,
+      customerId: dto.customerId ?? null,
+      items: (dto.items ?? []).map((i) => ({
+        itemName: i.itemName,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        lpgQuantityKg: i.lpgQuantityKg ?? 0,
+      })),
+      payments: dto.payments.map((p) => ({
+        method: p.method,
+        amount: p.amount,
+      })),
+    });
+  }
+
+  private saleOfflineFingerprint(sale: Sale): string {
+    return JSON.stringify({
+      stationId: sale.stationId,
+      shiftId: sale.shiftId ?? null,
+      customerId: sale.customerId ?? null,
+      items: (sale.items ?? []).map((i) => ({
+        itemName: i.itemName,
+        quantity: i.quantity,
+        unitPrice: toNumber(i.unitPrice),
+        lpgQuantityKg: toNumber(i.lpgQuantityKg),
+      })),
+      payments: (sale.payments ?? []).map((p) => ({
+        method: p.method,
+        amount: toNumber(p.amount),
+      })),
+    });
   }
 }

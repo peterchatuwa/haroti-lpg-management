@@ -8,15 +8,14 @@ import { Between, Repository } from 'typeorm';
 import { asDecimal, round2, toNumber } from '../common/decimal';
 import {
   CommissionStatus,
-  JournalEventType,
+  SettlementStatus,
   SaleStatus,
   SalesChannel,
-  SettlementStatus,
   StockOwnership,
 } from '../common/enums';
 import { AccessoriesService } from '../accessories/accessories.service';
 import { Customer } from '../customers/customer.entity';
-import { FinanceService, GL_ACCOUNTS } from '../finance/finance.service';
+import { FinanceService } from '../finance/finance.service';
 import { Sale } from '../sales/sale.entity';
 import { AgentCommission } from './agent-commission.entity';
 import { FranchiseAgreement } from './franchise-agreement.entity';
@@ -98,7 +97,7 @@ export class FranchiseService {
         agreementId,
         periodStart,
         periodEnd,
-        status: SettlementStatus.PENDING_INVOICE,
+        status: SettlementStatus.INVOICED,
         totalSales: asDecimal(totalSales, 2),
         royaltyDue: asDecimal(royaltyDue, 2),
         consignmentDue: asDecimal(consignmentValue, 2),
@@ -119,6 +118,10 @@ export class FranchiseService {
       }),
     );
 
+    if (royaltyDue > 0) {
+      await this.financeService.postFranchiseSettlement(royaltyDue, settlement.id);
+    }
+
     return settlement;
   }
 
@@ -129,21 +132,14 @@ export class FranchiseService {
     });
     if (!settlement) throw new NotFoundException('Settlement not found');
 
+    if (settlement.status === SettlementStatus.INVOICED) return settlement;
+
     settlement.status = SettlementStatus.INVOICED;
     await this.settlementsRepo.save(settlement);
 
     const invoiceAmount = round2(toNumber(settlement.royaltyDue));
     if (invoiceAmount > 0) {
-      await this.financeService.postEntry({
-        eventType: JournalEventType.FRANCHISE_SETTLEMENT,
-        description: `Franchise settlement ${settlement.settlementNumber}`,
-        referenceType: 'FranchiseSettlement',
-        referenceId: settlement.id,
-        lines: [
-          { account: GL_ACCOUNTS.AR_FRANCHISE, debit: invoiceAmount },
-          { account: GL_ACCOUNTS.REVENUE_LPG, credit: invoiceAmount },
-        ],
-      });
+      await this.financeService.postFranchiseSettlement(invoiceAmount, settlement.id);
     }
 
     return settlement;

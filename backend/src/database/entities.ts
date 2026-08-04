@@ -4,6 +4,7 @@ import { ProductBundleItem } from '../accessories/product-bundle-item.entity';
 import { ProductBundle } from '../accessories/product-bundle.entity';
 import { AuditLog } from '../audit/audit-log.entity';
 import { CashDeposit } from '../banking/cash-deposit.entity';
+import { CustomerPayment } from '../customers/customer-payment.entity';
 import { Customer } from '../customers/customer.entity';
 import { Cylinder } from '../cylinders/cylinder.entity';
 import { Delivery } from '../deliveries/delivery.entity';
@@ -49,6 +50,7 @@ export const ENTITIES = [
   Station,
   User,
   Customer,
+  CustomerPayment,
   Supplier,
   Product,
   StockMovement,

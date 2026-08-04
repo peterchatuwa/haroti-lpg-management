@@ -39,6 +39,8 @@ export default function App() {
   const loadOffline = useOfflineStore((s) => s.load);
   const queue = useOfflineStore((s) => s.queue);
   const markSynced = useOfflineStore((s) => s.markSynced);
+  const markConflict = useOfflineStore((s) => s.markConflict);
+  const markFailed = useOfflineStore((s) => s.markFailed);
   const online = useOfflineStore((s) => s.online);
 
   useEffect(() => {
@@ -56,16 +58,25 @@ export default function App() {
 
   useEffect(() => {
     if (!online) return;
-    const pending = queue.filter((q) => !q.synced);
+    const pending = queue.filter((q) => !q.synced && !q.conflict);
     pending.forEach(async (item) => {
       try {
         await api.post('/sales', item.payload);
         markSynced(item.clientTxnId);
-      } catch {
-        // keep in queue for next retry
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number; data?: { message?: string } } })
+          ?.response?.status;
+        const message =
+          (err as { response?: { data?: { message?: string } } })?.response?.data
+            ?.message ?? 'Sync failed';
+        if (status === 409) {
+          markConflict(item.clientTxnId, message);
+        } else {
+          markFailed(item.clientTxnId, message);
+        }
       }
     });
-  }, [online, queue, markSynced]);
+  }, [online, queue, markSynced, markConflict, markFailed]);
 
   return (
     <Routes>

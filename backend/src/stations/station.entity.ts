@@ -77,6 +77,15 @@ export class Station extends BaseEntity {
   @Column({ name: 'is_franchise', default: false })
   isFranchise!: boolean;
 
+  @Column({
+    name: 'weighted_avg_cost_per_kg',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 1200,
+  })
+  weightedAvgCostPerKg!: string;
+
   @OneToMany(() => User, (user) => user.station)
   users!: User[];
 }

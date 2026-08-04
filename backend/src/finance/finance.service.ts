@@ -16,10 +16,12 @@ export const GL_ACCOUNTS = {
   ACCOUNTS_PAYABLE: { code: '2100', name: 'Accounts Payable' },
   CASH: { code: '1100', name: 'Cash-in-Hand / Mobile Money Clearing' },
   AR_FRANCHISE: { code: '1300', name: 'Accounts Receivable: Franchise' },
+  AR_CUSTOMER: { code: '1310', name: 'Accounts Receivable: Customers' },
   REVENUE_ACCESSORY: { code: '4100', name: 'Revenue: Accessory Sales' },
   REVENUE_BUNDLE: { code: '4110', name: 'Revenue: Accessory Bundles' },
   REVENUE_LPG: { code: '4200', name: 'Revenue: LPG Refill Sales' },
   REVENUE_PAYC: { code: '4300', name: 'Revenue: PAYC Burn' },
+  REVENUE_FRANCHISE: { code: '4350', name: 'Revenue: Franchise Royalty' },
   COGS_LPG: { code: '5200', name: 'COGS: LPG Refill Sales' },
   COGS_ACCESSORY: { code: '5100', name: 'COGS: Accessories' },
   DEFERRED_PAYC: { code: '2300', name: 'Deferred Revenue: PAYC Credit' },
@@ -104,7 +106,12 @@ export class FinanceService {
     }
   }
 
-  async postLpgRefillSale(amount: number, refId: string, cogsKg = 0) {
+  async postLpgRefillSale(
+    amount: number,
+    refId: string,
+    cogsKg = 0,
+    costPerKg?: number,
+  ) {
     await this.postEntry({
       eventType: JournalEventType.LPG_REFILL_SALE,
       description: `LPG refill sale ${refId}`,
@@ -116,7 +123,8 @@ export class FinanceService {
       ],
     });
 
-    const cogs = round2(cogsKg * DEFAULT_LPG_COST_PER_KG);
+    const unitCost = costPerKg ?? DEFAULT_LPG_COST_PER_KG;
+    const cogs = round2(cogsKg * unitCost);
     if (cogs > 0) {
       await this.postEntry({
         eventType: JournalEventType.LPG_COGS,
@@ -129,6 +137,69 @@ export class FinanceService {
         ],
       });
     }
+  }
+
+  async postCreditSale(amount: number, refId: string, cogsKg = 0, costPerKg?: number) {
+    await this.postEntry({
+      eventType: JournalEventType.CUSTOMER_CREDIT_SALE,
+      description: `Credit sale ${refId}`,
+      referenceType: 'Sale',
+      referenceId: refId,
+      lines: [
+        { account: GL_ACCOUNTS.AR_CUSTOMER, debit: amount },
+        { account: GL_ACCOUNTS.REVENUE_LPG, credit: amount },
+      ],
+    });
+
+    const unitCost = costPerKg ?? DEFAULT_LPG_COST_PER_KG;
+    const cogs = round2(cogsKg * unitCost);
+    if (cogs > 0) {
+      await this.postEntry({
+        eventType: JournalEventType.LPG_COGS,
+        description: `LPG COGS ${refId}`,
+        referenceType: 'Sale',
+        referenceId: refId,
+        lines: [
+          { account: GL_ACCOUNTS.COGS_LPG, debit: cogs },
+          { account: GL_ACCOUNTS.INVENTORY_BULK_LPG, credit: cogs },
+        ],
+      });
+    }
+  }
+
+  async postCustomerPayment(amount: number, refId: string) {
+    return this.postEntry({
+      eventType: JournalEventType.CUSTOMER_PAYMENT,
+      description: `Customer payment ${refId}`,
+      referenceType: 'CustomerPayment',
+      referenceId: refId,
+      lines: [
+        { account: GL_ACCOUNTS.CASH, debit: amount },
+        { account: GL_ACCOUNTS.AR_CUSTOMER, credit: amount },
+      ],
+    });
+  }
+
+  async postFranchiseSettlement(amount: number, refId: string) {
+    const existing = await this.entriesRepo.findOne({
+      where: {
+        referenceType: 'FranchiseSettlement',
+        referenceId: refId,
+        eventType: JournalEventType.FRANCHISE_SETTLEMENT,
+      },
+    });
+    if (existing) return existing;
+
+    return this.postEntry({
+      eventType: JournalEventType.FRANCHISE_SETTLEMENT,
+      description: `Franchise royalty ${refId}`,
+      referenceType: 'FranchiseSettlement',
+      referenceId: refId,
+      lines: [
+        { account: GL_ACCOUNTS.AR_FRANCHISE, debit: amount },
+        { account: GL_ACCOUNTS.REVENUE_FRANCHISE, credit: amount },
+      ],
+    });
   }
 
   async postAccessoryGrn(amount: number, refId: string) {

@@ -51,7 +51,12 @@ const links = [
 export function Layout() {
   const { user, clearSession } = useAuthStore();
   const online = useOfflineStore((s) => s.online);
-  const pending = useOfflineStore((s) => s.queue.filter((q) => !q.synced).length);
+  const pending = useOfflineStore((s) =>
+    s.queue.filter((q) => !q.synced && !q.conflict).length,
+  );
+  const conflicts = useOfflineStore((s) =>
+    s.queue.filter((q) => q.conflict).length,
+  );
   const navigate = useNavigate();
   const now = useClock();
 
@@ -157,6 +162,11 @@ export function Layout() {
             )}
             {pending > 0 && (
               <span className="badge warn">{pending} queued offline</span>
+            )}
+            {conflicts > 0 && (
+              <NavLink to="/pos" className="badge warn">
+                {conflicts} sync conflict{conflicts > 1 ? 's' : ''}
+              </NavLink>
             )}
             <div
               className={`status-pill ${online ? '' : 'offline'}`}

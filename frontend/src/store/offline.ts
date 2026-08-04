@@ -5,6 +5,8 @@ export interface OfflineSale {
   payload: Record<string, unknown>;
   createdAt: string;
   synced: boolean;
+  conflict?: boolean;
+  errorMessage?: string;
 }
 
 interface OfflineState {
@@ -13,6 +15,9 @@ interface OfflineState {
   setOnline: (online: boolean) => void;
   enqueue: (sale: OfflineSale) => void;
   markSynced: (clientTxnId: string) => void;
+  markConflict: (clientTxnId: string, message?: string) => void;
+  markFailed: (clientTxnId: string, message?: string) => void;
+  clearResolved: () => void;
   load: () => void;
 }
 
@@ -29,8 +34,33 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
   },
   markSynced: (clientTxnId) => {
     const queue = get().queue.map((s) =>
-      s.clientTxnId === clientTxnId ? { ...s, synced: true } : s,
+      s.clientTxnId === clientTxnId
+        ? { ...s, synced: true, conflict: false, errorMessage: undefined }
+        : s,
     );
+    localStorage.setItem(KEY, JSON.stringify(queue));
+    set({ queue });
+  },
+  markConflict: (clientTxnId, message) => {
+    const queue = get().queue.map((s) =>
+      s.clientTxnId === clientTxnId
+        ? { ...s, conflict: true, errorMessage: message }
+        : s,
+    );
+    localStorage.setItem(KEY, JSON.stringify(queue));
+    set({ queue });
+  },
+  markFailed: (clientTxnId, message) => {
+    const queue = get().queue.map((s) =>
+      s.clientTxnId === clientTxnId
+        ? { ...s, errorMessage: message }
+        : s,
+    );
+    localStorage.setItem(KEY, JSON.stringify(queue));
+    set({ queue });
+  },
+  clearResolved: () => {
+    const queue = get().queue.filter((s) => !s.synced && !s.conflict);
     localStorage.setItem(KEY, JSON.stringify(queue));
     set({ queue });
   },

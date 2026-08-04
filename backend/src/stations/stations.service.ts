@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
-import { round2, round3, toNumber } from '../common/decimal';
+import { round2, round3, toNumber, asDecimal } from '../common/decimal';
 import {
   ExpenseStatus,
   SaleStatus,
@@ -202,5 +202,27 @@ export class StationsService {
 
   async touchSync(stationId: string) {
     await this.stationsRepo.update(stationId, { lastSyncedAt: new Date() });
+  }
+
+  async updateWeightedAvgCost(
+    stationId: string,
+    qtyReceived: number,
+    landedPerKg: number,
+  ) {
+    const station = await this.findOne(stationId);
+    const oldStock = toNumber(station.currentStockKg) - qtyReceived;
+    const oldWac = toNumber(station.weightedAvgCostPerKg ?? 1200);
+    const newStock = toNumber(station.currentStockKg);
+    const newWac =
+      newStock > 0
+        ? round2(
+            (Math.max(0, oldStock) * oldWac + qtyReceived * landedPerKg) /
+              newStock,
+          )
+        : landedPerKg;
+    await this.stationsRepo.update(stationId, {
+      weightedAvgCostPerKg: asDecimal(newWac, 2),
+    });
+    return newWac;
   }
 }

@@ -115,7 +115,13 @@ export function FranchisePage() {
                     <td>{formatMoney(Number(s.totalSales))}</td>
                     <td>{formatMoney(Number(s.royaltyDue))}</td>
                     <td>
-                      <span className="badge">{s.status.replaceAll('_', ' ')}</span>
+                      <span
+                        className={`badge ${
+                          s.status === 'INVOICED' ? 'ok' : 'warn'
+                        }`}
+                      >
+                        {s.status.replaceAll('_', ' ')}
+                      </span>
                     </td>
                   </tr>
                 ))}
