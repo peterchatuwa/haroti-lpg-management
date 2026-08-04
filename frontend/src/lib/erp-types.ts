@@ -55,9 +55,41 @@ export interface PurchaseOrder {
   poNumber: string;
   status: string;
   totalAmount: string;
-  supplier: { name: string };
+  supplier: {
+    name: string;
+    customerId?: string | null;
+    customer?: { customerCode: string; fullName: string } | null;
+  };
   destinationStation?: { code: string; name: string } | null;
   lines: Array<{ itemDescription: string; quantity: number; landedUnitCost: string }>;
+  documents?: ProcurementDocumentRow[];
+}
+
+export interface SupplierRow {
+  id: string;
+  code: string;
+  name: string;
+  customerId?: string | null;
+  customer?: { customerCode: string; fullName: string } | null;
+}
+
+export interface ProcurementDocumentRow {
+  id: string;
+  documentType: string;
+  documentNumber: string;
+  issuedAt: string;
+  payload: string;
+}
+
+export interface CustomerRow {
+  id: string;
+  customerCode: string;
+  fullName: string;
+  type: string;
+  phone?: string;
+  creditLimit: string;
+  outstandingBalance: string;
+  isSuspended: boolean;
 }
 
 export interface PaycDashboard {
@@ -79,17 +111,6 @@ export interface PaycDashboard {
     location?: string;
     customer?: { fullName: string };
   }>;
-}
-
-export interface CustomerRow {
-  id: string;
-  customerCode: string;
-  fullName: string;
-  type: string;
-  phone?: string;
-  creditLimit: string;
-  outstandingBalance: string;
-  isSuspended: boolean;
 }
 
 export interface WorkOrder {

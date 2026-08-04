@@ -162,7 +162,15 @@ export enum PurchaseOrderStatus {
   ORDERED = 'ORDERED',
   PARTIALLY_RECEIVED = 'PARTIALLY_RECEIVED',
   RECEIVED = 'RECEIVED',
+  PAID = 'PAID',
   CANCELLED = 'CANCELLED',
+}
+
+export enum ProcurementDocumentType {
+  QUOTATION = 'QUOTATION',
+  PURCHASE_ORDER = 'PURCHASE_ORDER',
+  INVOICE = 'INVOICE',
+  RECEIPT = 'RECEIPT',
 }
 
 /** Station requisition: request → GM approve → finance pay. */
@@ -196,6 +204,7 @@ export enum JournalEventType {
   REQUISITION_PAYMENT = 'REQUISITION_PAYMENT',
   CUSTOMER_CREDIT_SALE = 'CUSTOMER_CREDIT_SALE',
   CUSTOMER_PAYMENT = 'CUSTOMER_PAYMENT',
+  SUPPLIER_PAYMENT = 'SUPPLIER_PAYMENT',
 }
 
 export enum TankReadingContext {

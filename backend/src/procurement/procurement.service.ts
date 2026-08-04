@@ -6,10 +6,16 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { asDecimal, round2, toNumber } from '../common/decimal';
-import { PurchaseOrderStatus, UserRole } from '../common/enums';
+import {
+  ProcurementDocumentType,
+  PurchaseOrderStatus,
+  UserRole,
+} from '../common/enums';
 import { FinanceService } from '../finance/finance.service';
 import { AccessoriesService } from '../accessories/accessories.service';
+import { Supplier } from '../suppliers/supplier.entity';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
+import { ProcurementDocumentsService } from './procurement-documents.service';
 import { PurchaseOrderLine } from './purchase-order-line.entity';
 import { PurchaseOrder } from './purchase-order.entity';
 
@@ -27,20 +33,53 @@ export class ProcurementService {
     private readonly poRepo: Repository<PurchaseOrder>,
     @InjectRepository(PurchaseOrderLine)
     private readonly lineRepo: Repository<PurchaseOrderLine>,
+    @InjectRepository(Supplier)
+    private readonly suppliersRepo: Repository<Supplier>,
     private readonly financeService: FinanceService,
     private readonly accessoriesService: AccessoriesService,
+    private readonly documentsService: ProcurementDocumentsService,
   ) {}
 
   findAll(status?: PurchaseOrderStatus) {
     return this.poRepo.find({
       where: status ? { status } : {},
-      relations: { supplier: true, destinationStation: true, lines: true },
+      relations: {
+        supplier: { customer: true },
+        destinationStation: true,
+        lines: true,
+        documents: true,
+      },
       order: { createdAt: 'DESC' },
       take: 100,
     });
   }
 
+  async findOne(id: string) {
+    const po = await this.poRepo.findOne({
+      where: { id },
+      relations: {
+        supplier: { customer: true },
+        destinationStation: true,
+        lines: true,
+        documents: true,
+      },
+    });
+    if (!po) throw new NotFoundException('Purchase order not found');
+    return po;
+  }
+
   async create(dto: CreatePurchaseOrderDto, userId: string) {
+    const supplier = await this.suppliersRepo.findOne({
+      where: { id: dto.supplierId, isActive: true },
+      relations: { customer: true },
+    });
+    if (!supplier) throw new NotFoundException('Vendor not found');
+    if (!supplier.customerId) {
+      throw new BadRequestException(
+        'Procurement is only allowed from customer-linked vendors',
+      );
+    }
+
     const stamp = Date.now().toString().slice(-8);
     const landedExtras =
       (dto.freightCost ?? 0) + (dto.customsDuty ?? 0) + (dto.clearingFees ?? 0);
@@ -64,30 +103,44 @@ export class ProcurementService {
       });
     });
 
-    const po = this.poRepo.create({
-      poNumber: `PO-${stamp}`,
-      supplierId: dto.supplierId,
-      destinationStationId: dto.destinationStationId,
-      status: PurchaseOrderStatus.PENDING_APPROVAL,
-      currency: dto.currency,
-      freightCost: asDecimal(dto.freightCost ?? 0, 2),
-      customsDuty: asDecimal(dto.customsDuty ?? 0, 2),
-      clearingFees: asDecimal(dto.clearingFees ?? 0, 2),
-      totalAmount: asDecimal(total, 2),
-      notes: dto.notes,
-      createdById: userId,
-      lines,
-    });
+    const po = await this.poRepo.save(
+      this.poRepo.create({
+        poNumber: `PO-${stamp}`,
+        supplierId: dto.supplierId,
+        destinationStationId: dto.destinationStationId,
+        status: PurchaseOrderStatus.DRAFT,
+        currency: dto.currency,
+        freightCost: asDecimal(dto.freightCost ?? 0, 2),
+        customsDuty: asDecimal(dto.customsDuty ?? 0, 2),
+        clearingFees: asDecimal(dto.clearingFees ?? 0, 2),
+        totalAmount: asDecimal(total, 2),
+        notes: dto.notes,
+        createdById: userId,
+        lines,
+      }),
+    );
 
-    return this.poRepo.save(po);
+    const full = await this.findOne(po.id);
+    await this.documentsService.generate(
+      full,
+      ProcurementDocumentType.QUOTATION,
+      userId,
+    );
+    return this.findOne(po.id);
+  }
+
+  async submitForApproval(id: string, userId: string) {
+    const po = await this.findOne(id);
+    if (po.status !== PurchaseOrderStatus.DRAFT) {
+      throw new BadRequestException('Only draft orders can be submitted');
+    }
+    po.status = PurchaseOrderStatus.PENDING_APPROVAL;
+    await this.poRepo.save(po);
+    return this.findOne(id);
   }
 
   async approve(id: string, userId: string, role: UserRole) {
-    const po = await this.poRepo.findOne({
-      where: { id },
-      relations: { lines: true },
-    });
-    if (!po) throw new NotFoundException('Purchase order not found');
+    const po = await this.findOne(id);
     if (po.status !== PurchaseOrderStatus.PENDING_APPROVAL) {
       throw new BadRequestException('PO is not pending approval');
     }
@@ -99,20 +152,41 @@ export class ProcurementService {
     }
     po.status = PurchaseOrderStatus.APPROVED;
     po.approvedById = userId;
-    return this.poRepo.save(po);
+    await this.poRepo.save(po);
+
+    const updated = await this.findOne(id);
+    await this.documentsService.generate(
+      updated,
+      ProcurementDocumentType.PURCHASE_ORDER,
+      userId,
+    );
+    return this.findOne(id);
+  }
+
+  async placeOrder(id: string, userId: string) {
+    const po = await this.findOne(id);
+    if (po.status !== PurchaseOrderStatus.APPROVED) {
+      throw new BadRequestException('PO must be approved before ordering');
+    }
+    po.status = PurchaseOrderStatus.ORDERED;
+    await this.poRepo.save(po);
+
+    const updated = await this.findOne(id);
+    await this.documentsService.generate(
+      updated,
+      ProcurementDocumentType.INVOICE,
+      userId,
+    );
+    return this.findOne(id);
   }
 
   async receive(id: string, userId: string) {
-    const po = await this.poRepo.findOne({
-      where: { id },
-      relations: { lines: true, destinationStation: true },
-    });
-    if (!po) throw new NotFoundException('Purchase order not found');
+    const po = await this.findOne(id);
     if (
-      po.status !== PurchaseOrderStatus.APPROVED &&
-      po.status !== PurchaseOrderStatus.ORDERED
+      po.status !== PurchaseOrderStatus.ORDERED &&
+      po.status !== PurchaseOrderStatus.APPROVED
     ) {
-      throw new BadRequestException('PO must be approved before receiving');
+      throw new BadRequestException('PO must be ordered before receiving');
     }
 
     const stationId = po.destinationStationId;
@@ -136,13 +210,35 @@ export class ProcurementService {
     await this.poRepo.save(po);
     await this.financeService.postAccessoryGrn(toNumber(po.totalAmount), po.id);
 
-    return po;
+    const updated = await this.findOne(id);
+    await this.documentsService.generate(
+      updated,
+      ProcurementDocumentType.RECEIPT,
+      userId,
+    );
+    return this.findOne(id);
   }
 
-  async submitForApproval(id: string) {
-    const po = await this.poRepo.findOne({ where: { id } });
-    if (!po) throw new NotFoundException('Purchase order not found');
-    po.status = PurchaseOrderStatus.PENDING_APPROVAL;
-    return this.poRepo.save(po);
+  async pay(id: string, userId: string, paymentReference?: string) {
+    const po = await this.findOne(id);
+    if (po.status !== PurchaseOrderStatus.RECEIVED) {
+      throw new BadRequestException('PO must be received before payment');
+    }
+
+    await this.financeService.postSupplierPayment(toNumber(po.totalAmount), po.id);
+    po.status = PurchaseOrderStatus.PAID;
+    po.notes = paymentReference
+      ? `${po.notes ?? ''}\nPayment ref: ${paymentReference}`.trim()
+      : po.notes;
+    await this.poRepo.save(po);
+    return this.findOne(id);
+  }
+
+  listDocuments(purchaseOrderId: string) {
+    return this.documentsService.listForOrder(purchaseOrderId);
+  }
+
+  getDocument(id: string) {
+    return this.documentsService.findOne(id);
   }
 }

@@ -42,6 +42,7 @@ export class CatalogController {
   suppliers() {
     return this.suppliersRepo.find({
       where: { isActive: true },
+      relations: { customer: true },
       order: { name: 'ASC' },
     });
   }

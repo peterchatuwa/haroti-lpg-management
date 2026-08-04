@@ -180,6 +180,28 @@ export class FinanceService {
     });
   }
 
+  async postSupplierPayment(amount: number, refId: string) {
+    const existing = await this.entriesRepo.findOne({
+      where: {
+        referenceType: 'PurchaseOrder',
+        referenceId: refId,
+        eventType: JournalEventType.SUPPLIER_PAYMENT,
+      },
+    });
+    if (existing) return existing;
+
+    return this.postEntry({
+      eventType: JournalEventType.SUPPLIER_PAYMENT,
+      description: `Supplier payment ${refId}`,
+      referenceType: 'PurchaseOrder',
+      referenceId: refId,
+      lines: [
+        { account: GL_ACCOUNTS.ACCOUNTS_PAYABLE, debit: amount },
+        { account: GL_ACCOUNTS.CASH, credit: amount },
+      ],
+    });
+  }
+
   async postFranchiseSettlement(amount: number, refId: string) {
     const existing = await this.entriesRepo.findOne({
       where: {

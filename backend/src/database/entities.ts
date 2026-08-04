@@ -26,6 +26,7 @@ import { CapitalProject } from '../projects/capital-project.entity';
 import { ProjectExpenditure } from '../projects/project-expenditure.entity';
 import { ProjectMilestone } from '../projects/project-milestone.entity';
 import { PriceList } from '../pricing/price-list.entity';
+import { ProcurementDocument } from '../procurement/procurement-document.entity';
 import { PurchaseOrderLine } from '../procurement/purchase-order-line.entity';
 import { PurchaseOrder } from '../procurement/purchase-order.entity';
 import { RequisitionLine } from '../requisitions/requisition-line.entity';
@@ -72,6 +73,7 @@ export const ENTITIES = [
   ProductBundleItem,
   PurchaseOrder,
   PurchaseOrderLine,
+  ProcurementDocument,
   JournalEntry,
   JournalLine,
   BudgetLine,

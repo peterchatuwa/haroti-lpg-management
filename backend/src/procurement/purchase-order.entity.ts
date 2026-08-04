@@ -5,6 +5,7 @@ import { Station } from '../stations/station.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { User } from '../users/user.entity';
 import { PurchaseOrderLine } from './purchase-order-line.entity';
+import { ProcurementDocument } from './procurement-document.entity';
 
 @Entity('purchase_orders')
 export class PurchaseOrder extends BaseEntity {
@@ -88,4 +89,7 @@ export class PurchaseOrder extends BaseEntity {
     cascade: true,
   })
   lines!: PurchaseOrderLine[];
+
+  @OneToMany(() => ProcurementDocument, (doc) => doc.purchaseOrder)
+  documents!: ProcurementDocument[];
 }
