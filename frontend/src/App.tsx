@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AccessoriesPage } from './pages/AccessoriesPage';
 import { CylindersPage } from './pages/CylindersPage';
+import { CustomerStatementPage } from './pages/CustomerStatementPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DeliveriesPage } from './pages/DeliveriesPage';
@@ -17,7 +18,9 @@ import { FinancePage } from './pages/FinancePage';
 import { FranchisePage } from './pages/FranchisePage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { RequisitionsPage } from './pages/RequisitionsPage';
 import { ShiftsPage } from './pages/ShiftsPage';
+import { StationOverviewPage } from './pages/StationOverviewPage';
 import { StationsPage } from './pages/StationsPage';
 import { TransfersPage } from './pages/TransfersPage';
 import api from './lib/api';
@@ -83,9 +86,11 @@ export default function App() {
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="deliveries" element={<DeliveriesPage />} />
         <Route path="procurement" element={<ProcurementPage />} />
+        <Route path="requisitions" element={<RequisitionsPage />} />
         <Route path="transfers" element={<TransfersPage />} />
         <Route path="cylinders" element={<CylindersPage />} />
         <Route path="customers" element={<CustomersPage />} />
+        <Route path="customers/:id/statement" element={<CustomerStatementPage />} />
         <Route path="payc" element={<PaycPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="projects" element={<ProjectsPage />} />
@@ -93,6 +98,7 @@ export default function App() {
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="finance" element={<FinancePage />} />
         <Route path="stations" element={<StationsPage />} />
+        <Route path="stations/:id" element={<StationOverviewPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

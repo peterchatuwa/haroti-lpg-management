@@ -3,6 +3,7 @@ import {
   BarChart3,
   Building2,
   Calculator,
+  ClipboardList,
   Gauge,
   Handshake,
   LayoutDashboard,
@@ -18,7 +19,9 @@ import {
   Wrench,
 } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useClock } from '../hooks/useClock';
+import api from '../lib/api';
 import { useAuthStore } from '../store/auth';
 import { useOfflineStore } from '../store/offline';
 import { FlameMark } from './FlameMark';
@@ -32,6 +35,7 @@ const links = [
   { to: '/inventory', label: 'LPG Stock', icon: Package },
   { to: '/deliveries', label: 'Deliveries', icon: Truck },
   { to: '/procurement', label: 'Procurement', icon: Receipt },
+  { to: '/requisitions', label: 'Requisitions', icon: ClipboardList },
   { to: '/transfers', label: 'Transfers', icon: ArrowLeftRight },
   { to: '/cylinders', label: 'Cylinders', icon: Tag },
   { to: '/customers', label: 'Customers', icon: Users },
@@ -50,6 +54,24 @@ export function Layout() {
   const pending = useOfflineStore((s) => s.queue.filter((q) => !q.synced).length);
   const navigate = useNavigate();
   const now = useClock();
+
+  const { data: reqSummary } = useQuery({
+    queryKey: ['requisitions-summary'],
+    queryFn: async () =>
+      (await api.get<{ pendingGmApproval: number; readyToPay: number }>(
+        '/requisitions/pending-summary',
+      )).data,
+    refetchInterval: 30000,
+  });
+
+  const isGm =
+    user?.role === 'SYSTEM_ADMIN' ||
+    user?.role === 'DIRECTOR' ||
+    user?.role === 'OPERATIONS_MANAGER';
+  const isFinance =
+    user?.role === 'SYSTEM_ADMIN' ||
+    user?.role === 'DIRECTOR' ||
+    user?.role === 'FINANCE_MANAGER';
 
   return (
     <div className="app-shell">
@@ -123,6 +145,16 @@ export function Layout() {
             </span>
           </div>
           <div className="row">
+            {isGm && (reqSummary?.pendingGmApproval ?? 0) > 0 && (
+              <NavLink to="/requisitions" className="badge warn">
+                {reqSummary?.pendingGmApproval} req. pending
+              </NavLink>
+            )}
+            {isFinance && (reqSummary?.readyToPay ?? 0) > 0 && (
+              <NavLink to="/requisitions" className="badge ok">
+                {reqSummary?.readyToPay} ready to pay
+              </NavLink>
+            )}
             {pending > 0 && (
               <span className="badge warn">{pending} queued offline</span>
             )}

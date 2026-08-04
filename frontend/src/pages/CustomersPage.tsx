@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import type { CustomerRow } from '../lib/erp-types';
@@ -104,9 +105,11 @@ export function CustomersPage() {
               <tbody>
                 {(customers ?? []).map((c) => (
                   <tr key={c.id}>
-                    <td>{c.customerCode}</td>
                     <td>
-                      {c.fullName}
+                      <Link to={`/customers/${c.id}/statement`}>{c.customerCode}</Link>
+                    </td>
+                    <td>
+                      <Link to={`/customers/${c.id}/statement`}>{c.fullName}</Link>
                       <div className="muted">{c.type}</div>
                     </td>
                     <td>{formatMoney(Number(c.creditLimit))}</td>

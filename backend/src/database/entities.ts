@@ -27,6 +27,8 @@ import { ProjectMilestone } from '../projects/project-milestone.entity';
 import { PriceList } from '../pricing/price-list.entity';
 import { PurchaseOrderLine } from '../procurement/purchase-order-line.entity';
 import { PurchaseOrder } from '../procurement/purchase-order.entity';
+import { RequisitionLine } from '../requisitions/requisition-line.entity';
+import { Requisition } from '../requisitions/requisition.entity';
 import { Product } from '../products/product.entity';
 import { SaleItem } from '../sales/sale-item.entity';
 import { SalePayment } from '../sales/sale-payment.entity';
@@ -88,4 +90,6 @@ export const ENTITIES = [
   LossCase,
   CylinderMovement,
   MobileMoneyLine,
+  Requisition,
+  RequisitionLine,
 ];

@@ -2,9 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { round2, round3, toNumber } from '../common/decimal';
+import { Requisition } from '../requisitions/requisition.entity';
 import {
   CylinderStatus,
   ExpenseStatus,
+  RequisitionStatus,
   SaleStatus,
   ShiftStatus,
   TransferStatus,
@@ -31,6 +33,8 @@ export class DashboardService {
     @InjectRepository(Shift) private readonly shiftsRepo: Repository<Shift>,
     @InjectRepository(Transfer)
     private readonly transfersRepo: Repository<Transfer>,
+    @InjectRepository(Requisition)
+    private readonly requisitionsRepo: Repository<Requisition>,
   ) {}
 
   private dayBounds() {
@@ -92,6 +96,20 @@ export class DashboardService {
       ],
     });
 
+    const topCustomers = await this.customersRepo.find({
+      where: {},
+      order: { outstandingBalance: 'DESC' },
+      take: 8,
+      relations: { station: true },
+    });
+
+    const pendingGmRequisitions = await this.requisitionsRepo.count({
+      where: { status: RequisitionStatus.SUBMITTED },
+    });
+    const readyToPayRequisitions = await this.requisitionsRepo.count({
+      where: { status: RequisitionStatus.READY_TO_PAY },
+    });
+
     const byStation = stock.stations.map((station) => {
       const stationToday = todaySales.filter((s) => s.stationId === station.id);
       const stationMonth = monthSales.filter((s) => s.stationId === station.id);
@@ -143,6 +161,20 @@ export class DashboardService {
       topStation: ranked[0] ?? null,
       lowestStation: ranked[ranked.length - 1] ?? null,
       stations: byStation,
+      topCustomers: topCustomers
+        .filter((c) => toNumber(c.outstandingBalance) > 0)
+        .map((c) => ({
+          id: c.id,
+          customerCode: c.customerCode,
+          fullName: c.fullName,
+          outstandingBalance: toNumber(c.outstandingBalance),
+          creditLimit: toNumber(c.creditLimit),
+          stationCode: c.station?.code,
+        })),
+      requisitions: {
+        pendingGmApproval: pendingGmRequisitions,
+        readyToPay: readyToPayRequisitions,
+      },
     };
   }
 }

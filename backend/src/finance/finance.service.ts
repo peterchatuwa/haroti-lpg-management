@@ -178,6 +178,19 @@ export class FinanceService {
     });
   }
 
+  async postRequisitionPayment(amount: number, category: string, refId: string) {
+    return this.postEntry({
+      eventType: JournalEventType.REQUISITION_PAYMENT,
+      description: `Requisition payment: ${category}`,
+      referenceType: 'Requisition',
+      referenceId: refId,
+      lines: [
+        { account: GL_ACCOUNTS.EXPENSE_STATION, debit: amount },
+        { account: GL_ACCOUNTS.ACCOUNTS_PAYABLE, credit: amount },
+      ],
+    });
+  }
+
   async trialBalance() {
     const entries = await this.entriesRepo.find({ relations: { lines: true } });
     const accounts: Record<

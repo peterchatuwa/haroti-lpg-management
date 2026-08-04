@@ -17,6 +17,11 @@ export class StationsController {
     return this.stationsService.getStockSummary();
   }
 
+  @Get(':id/overview')
+  overview(@Param('id') id: string) {
+    return this.stationsService.overview(id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.stationsService.findOne(id);

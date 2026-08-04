@@ -8,6 +8,7 @@ import { Sale } from '../sales/sale.entity';
 import { Shift } from '../shifts/shift.entity';
 import { StationsModule } from '../stations/stations.module';
 import { Transfer } from '../transfers/transfer.entity';
+import { Requisition } from '../requisitions/requisition.entity';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 
@@ -22,6 +23,7 @@ import { DashboardService } from './dashboard.service';
       Shift,
       Transfer,
       AuditLog,
+      Requisition,
     ]),
   ],
   controllers: [DashboardController],

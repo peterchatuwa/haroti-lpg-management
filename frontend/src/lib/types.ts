@@ -57,6 +57,18 @@ export interface DashboardOverview {
   topStation: StationPerf | null;
   lowestStation: StationPerf | null;
   stations: StationPerf[];
+  topCustomers?: Array<{
+    id: string;
+    customerCode: string;
+    fullName: string;
+    outstandingBalance: number;
+    creditLimit: number;
+    stationCode?: string;
+  }>;
+  requisitions?: {
+    pendingGmApproval: number;
+    readyToPay: number;
+  };
 }
 
 export interface StationPerf {

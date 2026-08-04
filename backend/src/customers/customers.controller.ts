@@ -13,6 +13,15 @@ export class CustomersController {
     return this.customersService.findAll(stationId);
   }
 
+  @Get(':id/statement')
+  statement(
+    @Param('id') id: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.customersService.statement(id, from, to);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.customersService.findOne(id);

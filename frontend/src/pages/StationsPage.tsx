@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import { TankGauge } from '../components/TankGauge';
 import api from '../lib/api';
@@ -40,10 +41,11 @@ export function StationsPage() {
               const capacity = Number(s.tankCapacityKg);
               const fill = capacity > 0 ? (stock / capacity) * 100 : 0;
               return (
-                <article
-                  className="station-tile"
+                <Link
+                  to={`/stations/${s.id}`}
+                  className="station-tile station-tile-link"
                   key={s.id}
-                  style={{ animationDelay: `${i * 0.06}s` }}
+                  style={{ animationDelay: `${i * 0.06}s`, textDecoration: 'none', color: 'inherit' }}
                 >
                   <div className="row" style={{ justifyContent: 'space-between' }}>
                     <div>
@@ -70,7 +72,7 @@ export function StationsPage() {
                       </small>
                     </div>
                   </div>
-                </article>
+                </Link>
               );
             })}
           </div>

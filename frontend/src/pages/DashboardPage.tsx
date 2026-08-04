@@ -43,11 +43,32 @@ export function DashboardPage() {
         title="Network pulse"
         subtitle="Haroti Gas ERP — live ops across Salima, Lilongwe and Blantyre"
         action={
-          <Link className="btn btn-ghost" to="/reports">
-            Executive BI →
-          </Link>
+          <div className="row">
+            <Link className="btn btn-ghost" to="/requisitions">
+              Requisitions →
+            </Link>
+            <Link className="btn btn-ghost" to="/reports">
+              Executive BI →
+            </Link>
+          </div>
         }
       />
+
+      {(data.requisitions?.pendingGmApproval ?? 0) > 0 && (
+        <Link to="/requisitions" className="panel warn-panel" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <strong>{data.requisitions?.pendingGmApproval} requisition(s)</strong>{' '}
+          pending GM approval — review now →
+        </Link>
+      )}
+
+      {(data.requisitions?.readyToPay ?? 0) > 0 && (
+        <Link to="/requisitions" className="panel ok-panel" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <strong className="ok-text">
+            {data.requisitions?.readyToPay} requisition(s) ready for finance payment
+          </strong>{' '}
+          →
+        </Link>
+      )}
 
       <div className="hero-dash">
         <div className="hero-dash-main">
@@ -98,7 +119,9 @@ export function DashboardPage() {
           <div className="value">
             {formatMoney(data.outstandingCustomerBalances)}
           </div>
-          <div className="hint">Outstanding balances</div>
+          <div className="hint">
+            <Link to="/customers">View register →</Link>
+          </div>
         </div>
         <div className="panel stat-card">
           <h3>Open shifts</h3>
@@ -110,7 +133,11 @@ export function DashboardPage() {
         <div className="panel stat-card deep">
           <h3>Top station</h3>
           <div className="value" style={{ fontSize: '1.45rem' }}>
-            {data.topStation?.code ?? '—'}
+            {data.topStation ? (
+              <Link to={`/stations/${data.topStation.id}`}>{data.topStation.code}</Link>
+            ) : (
+              '—'
+            )}
           </div>
           <div className="hint">
             {data.topStation
@@ -127,7 +154,11 @@ export function DashboardPage() {
             {[...data.stations]
               .sort((a, b) => b.salesToday - a.salesToday)
               .map((s) => (
-                <div className="station-bar-row" key={s.id}>
+                <Link
+                  to={`/stations/${s.id}`}
+                  className="station-bar-row station-bar-link"
+                  key={s.id}
+                >
                   <strong>{s.code}</strong>
                   <div className="station-bar-track">
                     <div
@@ -138,7 +169,7 @@ export function DashboardPage() {
                     />
                   </div>
                   <small>{formatMoney(s.salesToday)}</small>
-                </div>
+                </Link>
               ))}
           </div>
         </div>
@@ -162,9 +193,11 @@ export function DashboardPage() {
                         ? Math.round((s.currentStockKg / s.tankCapacityKg) * 100)
                         : 0;
                     return (
-                      <tr key={s.id}>
+                      <tr key={s.id} className="clickable-row">
                         <td>
-                          <strong>{s.code}</strong>
+                          <Link to={`/stations/${s.id}`}>
+                            <strong>{s.code}</strong>
+                          </Link>
                           <div className="muted">{s.district}</div>
                         </td>
                         <td>{formatKg(s.currentStockKg)}</td>
@@ -204,6 +237,49 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {(data.topCustomers ?? []).length > 0 && (
+        <div className="panel">
+          <h3 className="panel-title">Customers with outstanding credit</h3>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Customer</th>
+                  <th>Station</th>
+                  <th>Outstanding</th>
+                  <th>Limit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data.topCustomers ?? []).map(
+                  (c: {
+                    id: string;
+                    customerCode: string;
+                    fullName: string;
+                    outstandingBalance: number;
+                    creditLimit: number;
+                    stationCode?: string;
+                  }) => (
+                    <tr key={c.id} className="clickable-row">
+                      <td>
+                        <Link to={`/customers/${c.id}/statement`}>{c.customerCode}</Link>
+                      </td>
+                      <td>
+                        <Link to={`/customers/${c.id}/statement`}>{c.fullName}</Link>
+                      </td>
+                      <td>{c.stationCode ?? '—'}</td>
+                      <td>{formatMoney(c.outstandingBalance)}</td>
+                      <td>{formatMoney(c.creditLimit)}</td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -165,6 +165,17 @@ export enum PurchaseOrderStatus {
   CANCELLED = 'CANCELLED',
 }
 
+/** Station requisition: request → GM approve → finance pay. */
+export enum RequisitionStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  GM_APPROVED = 'GM_APPROVED',
+  READY_TO_PAY = 'READY_TO_PAY',
+  PAID = 'PAID',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
+}
+
 /** ERP accounting matrix events (Charter §4). */
 export enum JournalEventType {
   ACCESSORY_GRN = 'ACCESSORY_GRN',
@@ -182,6 +193,7 @@ export enum JournalEventType {
   CAPITAL_EXPENDITURE = 'CAPITAL_EXPENDITURE',
   AGENT_COMMISSION = 'AGENT_COMMISSION',
   STATION_EXPENSE = 'STATION_EXPENSE',
+  REQUISITION_PAYMENT = 'REQUISITION_PAYMENT',
 }
 
 export enum TankReadingContext {

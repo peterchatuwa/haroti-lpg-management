@@ -50,6 +50,7 @@ import { ProcurementModule } from './procurement/procurement.module';
 import { PurchaseOrderLine } from './procurement/purchase-order-line.entity';
 import { PurchaseOrder } from './procurement/purchase-order.entity';
 import { Product } from './products/product.entity';
+import { RequisitionsModule } from './requisitions/requisitions.module';
 import { ReportsModule } from './reports/reports.module';
 import { SaleItem } from './sales/sale-item.entity';
 import { SalePayment } from './sales/sale-payment.entity';
@@ -112,6 +113,7 @@ import { User } from './users/user.entity';
     TanksModule,
     CylindersModule,
     BankingModule,
+    RequisitionsModule,
   ],
 })
 export class AppModule {}
