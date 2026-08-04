@@ -7,11 +7,16 @@ describe('ShiftsService approveShift', () => {
     findOne: jest.fn(),
     save: jest.fn((s) => s),
   };
+  const tanksService = {
+    ensureTanksForStation: jest.fn(),
+    recordReading: jest.fn(),
+  };
   const service = new ShiftsService(
     shiftsRepo as never,
     {} as never,
     {} as never,
     {} as never,
+    tanksService as never,
   );
 
   beforeEach(() => {

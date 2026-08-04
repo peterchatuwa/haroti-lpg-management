@@ -18,7 +18,18 @@ export class FinanceController {
     UserRole.SYSTEM_ADMIN,
   )
   journals() {
-    return this.financeService.findEntries();
+    return this.financeService.findEntries(100);
+  }
+
+  @Get('trial-balance')
+  @Roles(
+    UserRole.FINANCE_MANAGER,
+    UserRole.DIRECTOR,
+    UserRole.AUDITOR,
+    UserRole.SYSTEM_ADMIN,
+  )
+  trialBalance() {
+    return this.financeService.trialBalance();
   }
 
   @Get('budget-vs-actual')

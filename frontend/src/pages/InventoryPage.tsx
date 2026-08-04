@@ -32,6 +32,29 @@ export function InventoryPage() {
       (await api.get('/inventory/movements', { params: { stationId } })).data,
   });
 
+  const periodStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    .toISOString()
+    .slice(0, 10);
+  const periodEnd = new Date().toISOString().slice(0, 10);
+
+  const { data: gasRecon } = useQuery({
+    queryKey: ['gas-recon', stationId, periodStart, periodEnd],
+    enabled: !!stationId,
+    queryFn: async () =>
+      (
+        await api.get('/tanks/reconciliation', {
+          params: { stationId, periodStart, periodEnd },
+        })
+      ).data,
+  });
+
+  const { data: lossCases } = useQuery({
+    queryKey: ['loss-cases', stationId],
+    enabled: !!stationId,
+    queryFn: async () =>
+      (await api.get('/tanks/loss-cases', { params: { stationId } })).data,
+  });
+
   const adjustMutation = useMutation({
     mutationFn: async () =>
       (
@@ -141,6 +164,70 @@ export function InventoryPage() {
             </table>
           </div>
         </div>
+      </div>
+
+      <div className="panel">
+        <h3 style={{ marginTop: 0 }}>Gas reconciliation (LPG-006)</h3>
+        <p className="muted">
+          Period {periodStart} → {periodEnd}
+        </p>
+        <div className="grid stats">
+          <div className="stat-card">
+            <h3>Expected closing</h3>
+            <div className="value">{formatKg(gasRecon?.expectedClosingKg)}</div>
+          </div>
+          <div className="stat-card">
+            <h3>Physical closing</h3>
+            <div className="value">{formatKg(gasRecon?.physicalClosingKg)}</div>
+          </div>
+          <div className="stat-card">
+            <h3>Variance</h3>
+            <div className="value">
+              {formatKg(gasRecon?.varianceKg)} ({gasRecon?.variancePercent ?? 0}%)
+            </div>
+          </div>
+          <div className="stat-card">
+            <h3>Threshold</h3>
+            <div className="value">
+              {gasRecon?.thresholdBreached ? (
+                <span className="badge warn">Breach</span>
+              ) : (
+                <span className="badge">OK</span>
+              )}
+            </div>
+          </div>
+        </div>
+        {(lossCases ?? []).length > 0 && (
+          <div className="table-wrap" style={{ marginTop: '1rem' }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Case</th>
+                  <th>Variance %</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lossCases.slice(0, 5).map(
+                  (c: {
+                    id: string;
+                    caseNumber: string;
+                    variancePercent: string;
+                    status: string;
+                  }) => (
+                    <tr key={c.id}>
+                      <td>{c.caseNumber}</td>
+                      <td>{c.variancePercent}%</td>
+                      <td>
+                        <span className="badge">{c.status}</span>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

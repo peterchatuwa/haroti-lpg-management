@@ -6,6 +6,7 @@ import { ProductBundleItem } from '../accessories/product-bundle-item.entity';
 import { ProductBundle } from '../accessories/product-bundle.entity';
 import { Customer } from '../customers/customer.entity';
 import { Cylinder } from '../cylinders/cylinder.entity';
+import { Tank } from '../tanks/tank.entity';
 import { BudgetLine } from '../finance/budget-line.entity';
 import { FranchiseAgreement } from '../franchise/franchise-agreement.entity';
 import { Asset } from '../maintenance/asset.entity';
@@ -30,6 +31,7 @@ import { SeedService } from './seed.service';
       Product,
       Customer,
       Cylinder,
+      Tank,
       PriceList,
       ProductBundle,
       ProductBundleItem,

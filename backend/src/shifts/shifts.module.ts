@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Expense } from '../expenses/expense.entity';
 import { Sale } from '../sales/sale.entity';
 import { StationsModule } from '../stations/stations.module';
+import { TanksModule } from '../tanks/tanks.module';
 import { Shift } from './shift.entity';
 import { ShiftsController } from './shifts.controller';
 import { ShiftsService } from './shifts.service';
@@ -11,6 +12,7 @@ import { ShiftsService } from './shifts.service';
   imports: [
     TypeOrmModule.forFeature([Shift, Sale, Expense]),
     StationsModule,
+    TanksModule,
   ],
   controllers: [ShiftsController],
   providers: [ShiftsService],

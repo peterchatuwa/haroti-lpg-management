@@ -23,6 +23,15 @@ export class SalesController {
     return this.salesService.findAll(scoped);
   }
 
+  @Get('pending-discounts')
+  pendingDiscounts(
+    @CurrentUser() user: JwtPayload,
+    @Query('stationId') stationId?: string,
+  ) {
+    const scoped = this.stationScope.resolveStationFilter(user, stationId);
+    return this.salesService.listPendingDiscounts(scoped);
+  }
+
   @Get('summary/today')
   today(
     @CurrentUser() user: JwtPayload,
@@ -41,6 +50,11 @@ export class SalesController {
     return this.salesService.getActivePrice(stationId).then((pricePerKg) => ({
       pricePerKg,
     }));
+  }
+
+  @Post(':id/approve-discount')
+  approveDiscount(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.salesService.approveDiscount(id, user.sub, user.role);
   }
 
   @Get(':id')

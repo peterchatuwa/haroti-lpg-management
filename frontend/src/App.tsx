@@ -13,6 +13,7 @@ import { MaintenancePage } from './pages/MaintenancePage';
 import { PaycPage } from './pages/PaycPage';
 import { PosPage } from './pages/PosPage';
 import { ProcurementPage } from './pages/ProcurementPage';
+import { FinancePage } from './pages/FinancePage';
 import { FranchisePage } from './pages/FranchisePage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -90,6 +91,7 @@ export default function App() {
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="franchise" element={<FranchisePage />} />
         <Route path="expenses" element={<ExpensesPage />} />
+        <Route path="finance" element={<FinancePage />} />
         <Route path="stations" element={<StationsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

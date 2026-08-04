@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   BarChart3,
   Building2,
+  Calculator,
   Gauge,
   Handshake,
   LayoutDashboard,
@@ -39,6 +40,7 @@ const links = [
   { to: '/projects', label: 'Capital projects', icon: Building2 },
   { to: '/franchise', label: 'Franchise', icon: Handshake },
   { to: '/expenses', label: 'Cash & Expenses', icon: Wallet },
+  { to: '/finance', label: 'Finance & GL', icon: Calculator },
   { to: '/stations', label: 'Stations', icon: Receipt },
 ];
 

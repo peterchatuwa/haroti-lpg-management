@@ -30,6 +30,8 @@ import { CapitalProject } from '../projects/capital-project.entity';
 import { ProjectMilestone } from '../projects/project-milestone.entity';
 import { Customer } from '../customers/customer.entity';
 import { Cylinder } from '../cylinders/cylinder.entity';
+import { Tank } from '../tanks/tank.entity';
+import { asDecimal, toNumber } from '../common/decimal';
 import { PriceList } from '../pricing/price-list.entity';
 import { Product } from '../products/product.entity';
 import { Station } from '../stations/station.entity';
@@ -106,6 +108,7 @@ export class SeedService implements OnModuleInit {
     @InjectRepository(Product) private readonly productsRepo: Repository<Product>,
     @InjectRepository(Customer) private readonly customersRepo: Repository<Customer>,
     @InjectRepository(Cylinder) private readonly cylindersRepo: Repository<Cylinder>,
+    @InjectRepository(Tank) private readonly tanksRepo: Repository<Tank>,
     @InjectRepository(PriceList) private readonly pricesRepo: Repository<PriceList>,
     @InjectRepository(ProductBundle)
     private readonly bundlesRepo: Repository<ProductBundle>,
@@ -147,6 +150,7 @@ export class SeedService implements OnModuleInit {
       this.logger.log('Database already seeded');
     }
     await this.seedPhase23Extensions(stations);
+    await this.ensureTierBTanks(stations);
   }
 
   async seed() {
@@ -428,6 +432,27 @@ export class SeedService implements OnModuleInit {
     this.logger.log('Default password for all users: Password123!');
     await this.seedCharterExtensions(stations);
     await this.seedPhase23Extensions(stations);
+    await this.ensureTierBTanks(stations);
+  }
+
+  async ensureTierBTanks(stations: Station[]) {
+    for (const station of stations) {
+      const exists = await this.tanksRepo.findOne({
+        where: { stationId: station.id },
+      });
+      if (exists) continue;
+
+      await this.tanksRepo.save(
+        this.tanksRepo.create({
+          tankCode: `${station.code}-TK1`,
+          name: `${station.name} Bulk Tank`,
+          stationId: station.id,
+          capacityKg: asDecimal(toNumber(station.tankCapacityKg)),
+          safeWorkingCapacityKg: asDecimal(toNumber(station.tankCapacityKg) * 0.9),
+          currentStockKg: station.currentStockKg,
+        }),
+      );
+    }
   }
 
   async seedCharterExtensions(stations: Station[]) {

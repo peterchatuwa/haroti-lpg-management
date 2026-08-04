@@ -13,7 +13,9 @@ import { CashDeposit } from './banking/cash-deposit.entity';
 import { CatalogModule } from './catalog/catalog.module';
 import { Customer } from './customers/customer.entity';
 import { CustomersModule } from './customers/customers.module';
+import { CylindersModule } from './cylinders/cylinders.module';
 import { Cylinder } from './cylinders/cylinder.entity';
+import { BankingModule } from './banking/banking.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DeliveriesModule } from './deliveries/deliveries.module';
 import { Delivery } from './deliveries/delivery.entity';
@@ -59,6 +61,7 @@ import { ShiftsModule } from './shifts/shifts.module';
 import { Station } from './stations/station.entity';
 import { StationsModule } from './stations/stations.module';
 import { Supplier } from './suppliers/supplier.entity';
+import { TanksModule } from './tanks/tanks.module';
 import { TransferItem } from './transfers/transfer-item.entity';
 import { Transfer } from './transfers/transfer.entity';
 import { TransfersModule } from './transfers/transfers.module';
@@ -106,6 +109,9 @@ import { User } from './users/user.entity';
     FranchiseModule,
     ReportsModule,
     CustomersModule,
+    TanksModule,
+    CylindersModule,
+    BankingModule,
   ],
 })
 export class AppModule {}

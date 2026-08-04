@@ -10,6 +10,7 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { PriceList } from '../pricing/price-list.entity';
 import { ShiftsModule } from '../shifts/shifts.module';
 import { StationsModule } from '../stations/stations.module';
+import { User } from '../users/user.entity';
 import { SaleItem } from './sale-item.entity';
 import { SalePayment } from './sale-payment.entity';
 import { Sale } from './sale.entity';
@@ -18,7 +19,7 @@ import { SalesService } from './sales.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Sale, SaleItem, SalePayment, PriceList, AuditLog]),
+    TypeOrmModule.forFeature([Sale, SaleItem, SalePayment, PriceList, AuditLog, User]),
     InventoryModule,
     StationsModule,
     ShiftsModule,

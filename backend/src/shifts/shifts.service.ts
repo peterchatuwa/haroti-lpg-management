@@ -16,6 +16,8 @@ import {
 import { Expense } from '../expenses/expense.entity';
 import { Sale } from '../sales/sale.entity';
 import { StationsService } from '../stations/stations.service';
+import { TankReadingContext } from '../common/enums';
+import { TanksService } from '../tanks/tanks.service';
 import { CloseShiftDto, OpenShiftDto } from './dto/shift.dto';
 import { Shift } from './shift.entity';
 
@@ -34,6 +36,7 @@ export class ShiftsService {
     @InjectRepository(Expense)
     private readonly expensesRepo: Repository<Expense>,
     private readonly stationsService: StationsService,
+    private readonly tanksService: TanksService,
   ) {}
 
   isShiftLocked(shift: Shift): boolean {
@@ -81,6 +84,7 @@ export class ShiftsService {
     }
 
     const station = await this.stationsService.findOne(dto.stationId);
+    const tank = await this.tanksService.ensureTanksForStation(station);
     const shift = this.shiftsRepo.create({
       stationId: dto.stationId,
       attendantId,
@@ -90,7 +94,18 @@ export class ShiftsService {
       openingLpgStockKg: station.currentStockKg,
       openingCylinderCount: dto.openingCylinderCount ?? 0,
     });
-    return this.shiftsRepo.save(shift);
+    const saved = await this.shiftsRepo.save(shift);
+
+    await this.tanksService.recordReading({
+      tankId: tank.id,
+      readingKg: toNumber(station.currentStockKg),
+      context: TankReadingContext.SHIFT_OPEN,
+      referenceType: 'Shift',
+      referenceId: saved.id,
+      userId: attendantId,
+    });
+
+    return saved;
   }
 
   async closeShift(id: string, dto: CloseShiftDto, userId: string) {
@@ -189,7 +204,22 @@ export class ShiftsService {
     shift.closingCylinderCount = dto.closingCylinderCount;
     shift.varianceNotes = dto.varianceNotes;
 
-    return this.shiftsRepo.save(shift);
+    const saved = await this.shiftsRepo.save(shift);
+
+    const tank = await this.tanksService.ensureTanksForStation(
+      await this.stationsService.findOne(shift.stationId),
+    );
+    await this.tanksService.recordReading({
+      tankId: tank.id,
+      readingKg: dto.physicalLpgStockKg,
+      context: TankReadingContext.SHIFT_CLOSE,
+      referenceType: 'Shift',
+      referenceId: saved.id,
+      userId,
+      notes: dto.varianceNotes,
+    });
+
+    return saved;
   }
 
   async approveShift(id: string, approverId: string, approverRole: UserRole) {

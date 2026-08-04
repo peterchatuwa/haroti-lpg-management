@@ -29,6 +29,22 @@ export function ExpensesPage() {
     queryFn: async () => (await api.get('/deposits')).data,
   });
 
+  const canApprove =
+    user?.role === 'STATION_MANAGER' ||
+    user?.role === 'OPERATIONS_MANAGER' ||
+    user?.role === 'FINANCE_MANAGER' ||
+    user?.role === 'SYSTEM_ADMIN' ||
+    user?.role === 'DIRECTOR';
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) =>
+      (await api.post(`/expenses/${id}/approve`)).data,
+    onSuccess: () => {
+      setMessage('Expense approved and posted to GL');
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    },
+  });
+
   const expenseMutation = useMutation({
     mutationFn: async () =>
       (
@@ -176,6 +192,7 @@ export function ExpensesPage() {
                 <th>Description</th>
                 <th>Amount</th>
                 <th>Status</th>
+                {canApprove && <th>Action</th>}
               </tr>
             </thead>
             <tbody>
@@ -196,6 +213,19 @@ export function ExpensesPage() {
                     <td>
                       <span className="badge">{e.status}</span>
                     </td>
+                    {canApprove && (
+                      <td>
+                        {e.status === 'SUBMITTED' && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => approveMutation.mutate(e.id)}
+                          >
+                            Approve
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ),
               )}

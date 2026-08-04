@@ -25,6 +25,8 @@ export const GL_ACCOUNTS = {
   DEFERRED_PAYC: { code: '2300', name: 'Deferred Revenue: PAYC Credit' },
   CWIP: { code: '1400', name: 'Capital Work-in-Progress (CWIP)' },
   COMMISSION_PAYABLE: { code: '2200', name: 'Commission Payable: Agents' },
+  EXPENSE_STATION: { code: '6100', name: 'Station Operating Expenses' },
+  PETTY_CASH: { code: '1110', name: 'Petty Cash' },
 } as const;
 
 /** Default bulk LPG inventory cost (MWK/kg) until tank costing is implemented. */
@@ -161,6 +163,51 @@ export class FinanceService {
       take: limit,
       relations: { lines: true },
     });
+  }
+
+  async postStationExpense(amount: number, category: string, refId: string) {
+    return this.postEntry({
+      eventType: JournalEventType.STATION_EXPENSE,
+      description: `Station expense: ${category}`,
+      referenceType: 'Expense',
+      referenceId: refId,
+      lines: [
+        { account: GL_ACCOUNTS.EXPENSE_STATION, debit: amount },
+        { account: GL_ACCOUNTS.PETTY_CASH, credit: amount },
+      ],
+    });
+  }
+
+  async trialBalance() {
+    const entries = await this.entriesRepo.find({ relations: { lines: true } });
+    const accounts: Record<
+      string,
+      { code: string; name: string; debit: number; credit: number }
+    > = {};
+
+    for (const entry of entries) {
+      for (const line of entry.lines ?? []) {
+        if (!accounts[line.accountCode]) {
+          accounts[line.accountCode] = {
+            code: line.accountCode,
+            name: line.accountName,
+            debit: 0,
+            credit: 0,
+          };
+        }
+        accounts[line.accountCode].debit += Number(line.debitAmount);
+        accounts[line.accountCode].credit += Number(line.creditAmount);
+      }
+    }
+
+    return Object.values(accounts)
+      .map((a) => ({
+        ...a,
+        debit: round2(a.debit),
+        credit: round2(a.credit),
+        balance: round2(a.debit - a.credit),
+      }))
+      .sort((a, b) => a.code.localeCompare(b.code));
   }
 
   async budgetVsActual(year: number, month: number) {

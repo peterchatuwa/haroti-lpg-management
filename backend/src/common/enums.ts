@@ -181,6 +181,36 @@ export enum JournalEventType {
   PAYC_CREDIT_TOPUP = 'PAYC_CREDIT_TOPUP',
   CAPITAL_EXPENDITURE = 'CAPITAL_EXPENDITURE',
   AGENT_COMMISSION = 'AGENT_COMMISSION',
+  STATION_EXPENSE = 'STATION_EXPENSE',
+}
+
+export enum TankReadingContext {
+  SHIFT_OPEN = 'SHIFT_OPEN',
+  SHIFT_CLOSE = 'SHIFT_CLOSE',
+  DELIVERY = 'DELIVERY',
+  TRANSFER = 'TRANSFER',
+  MANUAL = 'MANUAL',
+}
+
+export enum LossCaseStatus {
+  OPEN = 'OPEN',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum CylinderMovementType {
+  ISSUE = 'ISSUE',
+  RETURN = 'RETURN',
+  SWAP_IN = 'SWAP_IN',
+  SWAP_OUT = 'SWAP_OUT',
+  TRANSFER = 'TRANSFER',
+  SALE_ATTACH = 'SALE_ATTACH',
+}
+
+export enum SettlementMatchStatus {
+  UNMATCHED = 'UNMATCHED',
+  MATCHED = 'MATCHED',
+  DISPUTED = 'DISPUTED',
 }
 
 export enum PaycMeterStatus {

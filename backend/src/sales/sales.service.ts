@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import {
   SaleStatus,
   SalesChannel,
   StockMovementType,
+  UserRole,
 } from '../common/enums';
 import { FinanceService } from '../finance/finance.service';
 import { FranchiseService } from '../franchise/franchise.service';
@@ -22,10 +24,19 @@ import { InventoryService } from '../inventory/inventory.service';
 import { PriceList } from '../pricing/price-list.entity';
 import { ShiftsService } from '../shifts/shifts.service';
 import { StationsService } from '../stations/stations.service';
+import { User } from '../users/user.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { SaleItem } from './sale-item.entity';
 import { SalePayment } from './sale-payment.entity';
 import { Sale } from './sale.entity';
+
+const DISCOUNT_APPROVER_ROLES = new Set<UserRole>([
+  UserRole.STATION_MANAGER,
+  UserRole.OPERATIONS_MANAGER,
+  UserRole.FINANCE_MANAGER,
+  UserRole.DIRECTOR,
+  UserRole.SYSTEM_ADMIN,
+]);
 
 @Injectable()
 export class SalesService {
@@ -33,6 +44,7 @@ export class SalesService {
     @InjectRepository(Sale) private readonly salesRepo: Repository<Sale>,
     @InjectRepository(PriceList)
     private readonly pricesRepo: Repository<PriceList>,
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
     private readonly inventoryService: InventoryService,
     private readonly stationsService: StationsService,
     private readonly auditService: AuditService,
@@ -205,6 +217,17 @@ export class SalesService {
       paymentMethod = dto.payments[0].method;
     }
 
+    const attendant = await this.usersRepo.findOne({ where: { id: attendantId } });
+    if (!attendant) {
+      throw new BadRequestException('Attendant not found');
+    }
+    const discountPercent =
+      subtotal > 0 ? round2((discount / subtotal) * 100) : 0;
+    const needsDiscountApproval =
+      discount > 0 &&
+      !attendant.canOverridePrice &&
+      discountPercent > toNumber(attendant.discountLimitPercent);
+
     const sale = this.salesRepo.create({
       receiptNumber: this.receiptNumber(station.code),
       stationId: dto.stationId,
@@ -216,7 +239,9 @@ export class SalesService {
       totalAmount: asDecimal(total, 2),
       lpgQuantityKg: asDecimal(lpgQuantityKg),
       paymentMethod,
-      status: SaleStatus.COMPLETED,
+      status: needsDiscountApproval
+        ? SaleStatus.PENDING_APPROVAL
+        : SaleStatus.COMPLETED,
       salesChannel,
       commercialStream,
       notes: dto.notes,
@@ -233,6 +258,125 @@ export class SalesService {
     });
 
     const saved = await this.salesRepo.save(sale);
+
+    if (needsDiscountApproval) {
+      await this.auditService.log({
+        userId: attendantId,
+        action: 'SALE_PENDING_DISCOUNT',
+        entityType: 'Sale',
+        entityId: saved.id,
+        newValues: {
+          receiptNumber: saved.receiptNumber,
+          discountPercent,
+          discountLimit: attendant.discountLimitPercent,
+        },
+        stationId: dto.stationId,
+      });
+      return this.salesRepo.findOne({
+        where: { id: saved.id },
+        relations: {
+          items: true,
+          payments: true,
+          station: true,
+          attendant: true,
+          customer: true,
+        },
+      });
+    }
+
+    await this.finalizeSale(saved, dto, attendantId, activePrice, items, salesChannel, lpgQuantityKg, total);
+
+    return this.salesRepo.findOne({
+      where: { id: saved.id },
+      relations: { items: true, payments: true, station: true, attendant: true, customer: true },
+    });
+  }
+
+  async approveDiscount(id: string, approverId: string, approverRole: UserRole) {
+    if (!DISCOUNT_APPROVER_ROLES.has(approverRole)) {
+      throw new ForbiddenException('Insufficient role to approve discounts');
+    }
+
+    const sale = await this.salesRepo.findOne({
+      where: { id },
+      relations: { items: true, payments: true },
+    });
+    if (!sale) throw new NotFoundException('Sale not found');
+    if (sale.status !== SaleStatus.PENDING_APPROVAL) {
+      throw new BadRequestException('Sale is not awaiting discount approval');
+    }
+    if (sale.attendantId === approverId) {
+      throw new ForbiddenException('Cannot approve your own discounted sale');
+    }
+
+    const activePrice = await this.getActivePrice(sale.stationId);
+    const lpgQuantityKg = toNumber(sale.lpgQuantityKg);
+    const total = toNumber(sale.totalAmount);
+
+    sale.status = SaleStatus.COMPLETED;
+    await this.salesRepo.save(sale);
+
+    const dtoLike: CreateSaleDto = {
+      stationId: sale.stationId,
+      shiftId: sale.shiftId!,
+      customerId: sale.customerId ?? undefined,
+      clientTxnId: sale.clientTxnId ?? undefined,
+      salesChannel: sale.salesChannel,
+      payments: (sale.payments ?? []).map((p) => ({
+        method: p.method,
+        amount: toNumber(p.amount),
+        reference: p.reference,
+      })),
+      items: [],
+    };
+
+    await this.finalizeSale(
+      sale,
+      dtoLike,
+      sale.attendantId,
+      activePrice,
+      sale.items ?? [],
+      sale.salesChannel,
+      lpgQuantityKg,
+      total,
+    );
+
+    await this.auditService.log({
+      userId: approverId,
+      action: 'SALE_DISCOUNT_APPROVED',
+      entityType: 'Sale',
+      entityId: sale.id,
+      stationId: sale.stationId,
+    });
+
+    return this.findOne(id);
+  }
+
+  listPendingDiscounts(stationId?: string) {
+    return this.salesRepo.find({
+      where: {
+        status: SaleStatus.PENDING_APPROVAL,
+        ...(stationId ? { stationId } : {}),
+      },
+      order: { soldAt: 'DESC' },
+      relations: { items: true, payments: true, station: true, attendant: true },
+      take: 50,
+    });
+  }
+
+  private async finalizeSale(
+    saved: Sale,
+    dto: CreateSaleDto,
+    attendantId: string,
+    activePrice: number,
+    items: Partial<SaleItem>[],
+    salesChannel: SalesChannel,
+    lpgQuantityKg: number,
+    total: number,
+  ) {
+    const hasCredit = dto.payments.some(
+      (p) => p.method === PaymentMethod.CUSTOMER_ACCOUNT,
+    );
 
     if (lpgQuantityKg > 0) {
       await this.inventoryService.applyMovement({
@@ -303,11 +447,6 @@ export class SalesService {
         lpgQuantityKg: saved.lpgQuantityKg,
       },
       stationId: dto.stationId,
-    });
-
-    return this.salesRepo.findOne({
-      where: { id: saved.id },
-      relations: { items: true, payments: true, station: true, attendant: true, customer: true },
     });
   }
 

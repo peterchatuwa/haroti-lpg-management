@@ -34,6 +34,11 @@ import { Sale } from '../sales/sale.entity';
 import { Shift } from '../shifts/shift.entity';
 import { Station } from '../stations/station.entity';
 import { Supplier } from '../suppliers/supplier.entity';
+import { Tank } from '../tanks/tank.entity';
+import { TankReading } from '../tanks/tank-reading.entity';
+import { LossCase } from '../tanks/loss-case.entity';
+import { CylinderMovement } from '../cylinders/cylinder-movement.entity';
+import { MobileMoneyLine } from '../banking/mobile-money-line.entity';
 import { TransferItem } from '../transfers/transfer-item.entity';
 import { Transfer } from '../transfers/transfer.entity';
 import { User } from '../users/user.entity';
@@ -78,4 +83,9 @@ export const ENTITIES = [
   FranchiseSettlement,
   FranchiseSettlementLine,
   AgentCommission,
+  Tank,
+  TankReading,
+  LossCase,
+  CylinderMovement,
+  MobileMoneyLine,
 ];

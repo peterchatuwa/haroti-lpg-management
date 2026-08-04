@@ -45,14 +45,4 @@ export class CatalogController {
       order: { name: 'ASC' },
     });
   }
-
-  @Get('cylinders')
-  cylinders(@Query('stationId') stationId?: string) {
-    return this.cylindersRepo.find({
-      where: stationId ? { stationId } : {},
-      order: { serialNumber: 'ASC' },
-      relations: { station: true, customer: true },
-      take: 500,
-    });
-  }
 }

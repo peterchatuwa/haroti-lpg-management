@@ -52,4 +52,48 @@ describe('FinanceService LPG COGS (AC-11)', () => {
       ]),
     );
   });
+
+  it('posts station expense to GL 6100/1110', async () => {
+    await service.postStationExpense(25000, 'Transport', 'exp-1');
+
+    expect(savedEntries).toHaveLength(1);
+    expect(savedEntries[0].eventType).toBe(JournalEventType.STATION_EXPENSE);
+    expect(savedEntries[0].lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountCode: GL_ACCOUNTS.EXPENSE_STATION.code,
+          debitAmount: '25000.00',
+        }),
+        expect.objectContaining({
+          accountCode: GL_ACCOUNTS.PETTY_CASH.code,
+          creditAmount: '25000.00',
+        }),
+      ]),
+    );
+  });
+
+  it('builds trial balance from journal lines', async () => {
+    entriesRepo.find = jest.fn(async () => [
+      {
+        lines: [
+          {
+            accountCode: '1100',
+            accountName: 'Cash',
+            debitAmount: '100.00',
+            creditAmount: '0.00',
+          },
+          {
+            accountCode: '4200',
+            accountName: 'Revenue',
+            debitAmount: '0.00',
+            creditAmount: '100.00',
+          },
+        ],
+      },
+    ]);
+
+    const tb = await service.trialBalance();
+    expect(tb).toHaveLength(2);
+    expect(tb.find((a) => a.code === '1100')?.balance).toBe(100);
+  });
 });

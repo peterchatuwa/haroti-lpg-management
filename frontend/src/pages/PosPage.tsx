@@ -94,6 +94,34 @@ export function PosPage() {
     : 0;
   const bundleTotal = bundleProduct ? Number(bundleProduct.bundlePrice) : 0;
 
+  const isManager =
+    user?.role === 'STATION_MANAGER' ||
+    user?.role === 'OPERATIONS_MANAGER' ||
+    user?.role === 'FINANCE_MANAGER' ||
+    user?.role === 'SYSTEM_ADMIN' ||
+    user?.role === 'DIRECTOR';
+
+  const { data: pendingDiscounts } = useQuery({
+    queryKey: ['pending-discounts', activeStationId],
+    enabled: !!activeStationId && isManager,
+    queryFn: async () =>
+      (
+        await api.get('/sales/pending-discounts', {
+          params: { stationId: activeStationId },
+        })
+      ).data,
+  });
+
+  const approveDiscountMutation = useMutation({
+    mutationFn: async (saleId: string) =>
+      (await api.post(`/sales/${saleId}/approve-discount`)).data,
+    onSuccess: () => {
+      setMessage('Discount approved — sale completed');
+      queryClient.invalidateQueries({ queryKey: ['pending-discounts'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+
   const lpgQty = useMemo(
     () => Math.max(0, Number((filledWeight - emptyWeight).toFixed(3))),
     [emptyWeight, filledWeight],
@@ -106,6 +134,13 @@ export function PosPage() {
       : posMode === 'bundle'
         ? Math.max(0, Number(bundleTotal.toFixed(2)))
         : Math.max(0, Number((subtotal - discount).toFixed(2)));
+
+  const discountPercent =
+    subtotal > 0 ? Number(((discount / subtotal) * 100).toFixed(1)) : 0;
+  const discountNeedsApproval =
+    discount > 0 &&
+    !user?.canOverridePrice &&
+    discountPercent > (user?.discountLimitPercent ?? 0);
 
   const saleMutation = useMutation({
     mutationFn: async () => {
@@ -177,15 +212,20 @@ export function PosPage() {
     onSuccess: (data) => {
       setLastReceipt(data.receiptNumber);
       setMessage(
-        data.offline
-          ? `Saved offline · ${data.receiptNumber}`
-          : `Sale complete · ${data.receiptNumber}`,
+        data.status === 'PENDING_APPROVAL'
+          ? `Awaiting manager approval · ${data.receiptNumber}`
+          : data.offline
+            ? `Saved offline · ${data.receiptNumber}`
+            : `Sale complete · ${data.receiptNumber}`,
       );
       setError('');
       setBurst(true);
       window.setTimeout(() => setBurst(false), 600);
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
+      if (data.status === 'PENDING_APPROVAL') {
+        queryClient.invalidateQueries({ queryKey: ['pending-discounts'] });
+      }
     },
     onError: (err: { response?: { data?: { message?: string | string[] } } }) => {
       const msg = err.response?.data?.message;
@@ -328,6 +368,12 @@ export function PosPage() {
               value={discount}
               onChange={(e) => setDiscount(Number(e.target.value))}
             />
+            {discountNeedsApproval && (
+              <small className="badge warn">
+                Discount {discountPercent}% exceeds your limit (
+                {user?.discountLimitPercent ?? 0}%) — manager approval required
+              </small>
+            )}
           </label>
             </>
           )}
@@ -478,6 +524,52 @@ export function PosPage() {
           )}
         </div>
       </form>
+
+      {isManager && (pendingDiscounts ?? []).length > 0 && (
+        <div className="panel">
+          <h3 style={{ marginTop: 0 }}>Pending discount approvals</h3>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Receipt</th>
+                  <th>Attendant</th>
+                  <th>Discount</th>
+                  <th>Total</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {pendingDiscounts.map(
+                  (s: {
+                    id: string;
+                    receiptNumber: string;
+                    discountAmount: string;
+                    totalAmount: string;
+                    attendant?: { fullName: string };
+                  }) => (
+                    <tr key={s.id}>
+                      <td>{s.receiptNumber}</td>
+                      <td>{s.attendant?.fullName ?? '—'}</td>
+                      <td>{formatMoney(s.discountAmount)}</td>
+                      <td>{formatMoney(s.totalAmount)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => approveDiscountMutation.mutate(s.id)}
+                        >
+                          Approve
+                        </button>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
