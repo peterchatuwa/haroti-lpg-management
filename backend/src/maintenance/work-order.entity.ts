@@ -52,4 +52,16 @@ export class MaintenanceWorkOrder extends BaseEntity {
 
   @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
   completedAt?: Date;
+
+  @Column({ name: 'hydro_certificate_ref', length: 80, nullable: true })
+  hydroCertificateRef?: string;
+
+  @Column({
+    name: 'estimated_cost',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
+  estimatedCost!: string;
 }

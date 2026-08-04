@@ -1,7 +1,9 @@
 import {
   ArrowLeftRight,
   BarChart3,
+  Building2,
   Gauge,
+  Handshake,
   LayoutDashboard,
   LogOut,
   Package,
@@ -34,6 +36,8 @@ const links = [
   { to: '/customers', label: 'Customers', icon: Users },
   { to: '/payc', label: 'PAYC IoT', icon: Radio },
   { to: '/maintenance', label: 'CMMS', icon: Wrench },
+  { to: '/projects', label: 'Capital projects', icon: Building2 },
+  { to: '/franchise', label: 'Franchise', icon: Handshake },
   { to: '/expenses', label: 'Cash & Expenses', icon: Wallet },
   { to: '/stations', label: 'Stations', icon: Receipt },
 ];

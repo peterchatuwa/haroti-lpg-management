@@ -1,7 +1,9 @@
 import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { JwtPayload } from '../auth/jwt-payload';
 import { UserRole, WorkOrderStatus } from '../common/enums';
 import { MaintenanceService } from './maintenance.service';
 
@@ -13,6 +15,11 @@ export class MaintenanceController {
   @Get('work-orders')
   workOrders(@Query('status') status?: WorkOrderStatus) {
     return this.maintenanceService.findAll(status);
+  }
+
+  @Get('assets')
+  assets(@Query('stationId') stationId?: string) {
+    return this.maintenanceService.listAssets(stationId);
   }
 
   @Get('hydro-due')
@@ -27,9 +34,18 @@ export class MaintenanceController {
     return this.maintenanceService.createHydroTestOrders();
   }
 
+  @Post('work-orders/:id/assign')
+  @Roles(UserRole.SAFETY_OFFICER, UserRole.STATION_MANAGER)
+  assign(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.maintenanceService.assign(id, user.sub);
+  }
+
   @Post('work-orders/:id/complete')
   @Roles(UserRole.SAFETY_OFFICER, UserRole.STATION_MANAGER)
-  complete(@Param('id') id: string) {
-    return this.maintenanceService.complete(id);
+  complete(
+    @Param('id') id: string,
+    @Query('certificateRef') certificateRef?: string,
+  ) {
+    return this.maintenanceService.completeHydro(id, certificateRef);
   }
 }

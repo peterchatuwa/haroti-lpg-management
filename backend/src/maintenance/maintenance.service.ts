@@ -1,8 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { WorkOrderStatus, WorkOrderType } from '../common/enums';
+import { CylinderStatus, WorkOrderStatus, WorkOrderType } from '../common/enums';
 import { Cylinder } from '../cylinders/cylinder.entity';
+import { Asset } from './asset.entity';
 import { MaintenanceWorkOrder } from './work-order.entity';
 
 @Injectable()
@@ -12,6 +16,8 @@ export class MaintenanceService {
     private readonly woRepo: Repository<MaintenanceWorkOrder>,
     @InjectRepository(Cylinder)
     private readonly cylindersRepo: Repository<Cylinder>,
+    @InjectRepository(Asset)
+    private readonly assetsRepo: Repository<Asset>,
   ) {}
 
   findAll(status?: WorkOrderStatus) {
@@ -20,6 +26,14 @@ export class MaintenanceService {
       relations: { station: true, cylinder: true, assignedTo: true },
       order: { dueDate: 'ASC' },
       take: 100,
+    });
+  }
+
+  listAssets(stationId?: string) {
+    return this.assetsRepo.find({
+      where: stationId ? { stationId } : {},
+      relations: { station: true },
+      order: { name: 'ASC' },
     });
   }
 
@@ -62,9 +76,45 @@ export class MaintenanceService {
     return created;
   }
 
+  async assign(id: string, userId: string) {
+    const wo = await this.woRepo.findOne({ where: { id } });
+    if (!wo) throw new NotFoundException('Work order not found');
+    wo.assignedToId = userId;
+    wo.status = WorkOrderStatus.IN_PROGRESS;
+    return this.woRepo.save(wo);
+  }
+
+  async completeHydro(id: string, certificateRef?: string) {
+    const wo = await this.woRepo.findOne({
+      where: { id },
+      relations: { cylinder: true },
+    });
+    if (!wo) throw new NotFoundException('Work order not found');
+
+    wo.status = WorkOrderStatus.COMPLETED;
+    wo.completedAt = new Date();
+    if (certificateRef) wo.hydroCertificateRef = certificateRef;
+
+    if (wo.cylinderId && wo.cylinder) {
+      const cyl = wo.cylinder;
+      const today = new Date().toISOString().slice(0, 10);
+      cyl.lastInspectionDate = today;
+      const next = new Date();
+      next.setFullYear(next.getFullYear() + 5);
+      cyl.nextInspectionDate = next.toISOString().slice(0, 10);
+      cyl.status = CylinderStatus.AVAILABLE;
+      await this.cylindersRepo.save(cyl);
+    }
+
+    return this.woRepo.save(wo);
+  }
+
   async complete(id: string) {
     const wo = await this.woRepo.findOne({ where: { id } });
     if (!wo) return null;
+    if (wo.type === WorkOrderType.CYLINDER_HYDRO_TEST) {
+      return this.completeHydro(id);
+    }
     wo.status = WorkOrderStatus.COMPLETED;
     wo.completedAt = new Date();
     return this.woRepo.save(wo);

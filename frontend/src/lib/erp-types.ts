@@ -11,6 +11,13 @@ export interface ExecutiveReport {
     meters: number;
     deferredRevenue: number;
     dailyBurnKg: number;
+    alerts?: number;
+  };
+  cmmsSummary?: { openWorkOrders: number };
+  projectsSummary?: {
+    active: number;
+    totalBudget: number;
+    totalSpent: number;
   };
   budgetVsActual: Array<{
     category: string;
@@ -94,4 +101,91 @@ export interface WorkOrder {
   dueDate?: string;
   station?: { code: string };
   cylinder?: { serialNumber: string };
+  hydroTestCertificateRef?: string;
+  estimatedCost?: string;
+}
+
+export interface AssetRow {
+  id: string;
+  assetCode: string;
+  name: string;
+  category: string;
+  status: string;
+  station?: { code: string };
+  nextServiceDate?: string;
+}
+
+export interface CapitalProjectPortfolio {
+  totalProjects: number;
+  active: number;
+  totalBudget: number;
+  totalSpent: number;
+  projects: Array<{
+    id: string;
+    projectCode: string;
+    name: string;
+    type: string;
+    status: string;
+    approvedBudget: number;
+    spentToDate: number;
+    utilizationPercent: number;
+    grantReference?: string;
+    station?: string;
+  }>;
+}
+
+export interface FranchiseAgreementRow {
+  id: string;
+  agreementCode: string;
+  franchiseName: string;
+  royaltyPercent: string;
+  agentCommissionPercent: string;
+  station?: { code: string };
+}
+
+export interface FranchiseSettlementRow {
+  id: string;
+  settlementNumber: string;
+  periodStart: string;
+  periodEnd: string;
+  totalSales: string;
+  royaltyDue: string;
+  status: string;
+}
+
+export interface AgentCommissionRow {
+  id: string;
+  agentId: string;
+  saleAmount: string;
+  commissionPercent: string;
+  commissionAmount: string;
+  status: string;
+  agent?: { fullName: string };
+}
+
+export interface StationProfitRow {
+  code: string;
+  name: string;
+  isFranchise: boolean;
+  revenue: number;
+  kgSold: number;
+  estimatedCogs: number;
+  grossProfit: number;
+  transactions: number;
+  currentStockKg: number;
+}
+
+export interface RevenueTrendPoint {
+  date: string;
+  revenue: number;
+}
+
+export interface CashFlowForecast {
+  monthToDateRevenue: number;
+  dailyAverageRevenue: number;
+  projectedMonthEnd: number;
+  paycDailyBurnRevenue: number;
+  deferredPaycLiability: number;
+  capexCommitted: number;
+  capexRemaining: number;
 }

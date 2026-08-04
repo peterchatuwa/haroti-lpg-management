@@ -5,6 +5,7 @@ import { AuditLog } from '../audit/audit-log.entity';
 import { AuditService } from '../audit/audit.service';
 import { CustomersModule } from '../customers/customers.module';
 import { FinanceModule } from '../finance/finance.module';
+import { FranchiseModule } from '../franchise/franchise.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { PriceList } from '../pricing/price-list.entity';
 import { StationsModule } from '../stations/stations.module';
@@ -22,6 +23,7 @@ import { SalesService } from './sales.service';
     AccessoriesModule,
     FinanceModule,
     CustomersModule,
+    FranchiseModule,
   ],
   controllers: [SalesController],
   providers: [SalesService, AuditService],

@@ -4,11 +4,15 @@ import api from '../lib/api';
 import type { PaycDashboard } from '../lib/erp-types';
 import { formatKg, formatMoney } from '../lib/format';
 
+interface PaycDashboardExtended extends PaycDashboard {
+  alerts?: Array<{ meterSerial: string; type: string; message: string }>;
+}
+
 export function PaycPage() {
   const { data } = useQuery({
     queryKey: ['payc-dashboard'],
     queryFn: async () =>
-      (await api.get<PaycDashboard>('/payc/dashboard')).data,
+      (await api.get<PaycDashboardExtended>('/payc/dashboard')).data,
     refetchInterval: 20000,
   });
 
@@ -18,7 +22,7 @@ export function PaycPage() {
     <div className="stack">
       <PageHeader
         title="Pay-As-You-Cook (PAYC)"
-        subtitle="IoT smart metering, deferred revenue & daily burn (Charter §4 — integration stub)"
+        subtitle="IoT smart metering, telemetry ingest, credit top-up & offline detection (Phase 2)"
       />
 
       <div className="grid stats">
@@ -46,6 +50,22 @@ export function PaycPage() {
         </div>
       </div>
 
+      {data.alerts && data.alerts.length > 0 && (
+        <div className="panel">
+          <h3 className="panel-title">Active alerts</h3>
+          <ul className="alert-list">
+            {data.alerts.map((a, i) => (
+              <li key={i}>
+                <span>
+                  {a.meterSerial} — {a.type.replaceAll('_', ' ')}
+                </span>
+                <strong>{a.message}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="panel">
         <h3 className="panel-title">Smart meter fleet</h3>
         <div className="table-wrap">
@@ -54,8 +74,10 @@ export function PaycPage() {
               <tr>
                 <th>Serial</th>
                 <th>Customer</th>
+                <th>Location</th>
                 <th>Credit (kg)</th>
                 <th>Deferred MWK</th>
+                <th>Daily burn</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -64,8 +86,10 @@ export function PaycPage() {
                 <tr key={m.id}>
                   <td>{m.meterSerial}</td>
                   <td>{m.customer?.fullName ?? '—'}</td>
+                  <td>{m.location ?? '—'}</td>
                   <td>{formatKg(Number(m.creditBalanceKg))}</td>
                   <td>{formatMoney(Number(m.deferredRevenue))}</td>
+                  <td>{formatKg(Number(m.dailyBurnKg))}</td>
                   <td>
                     <span className="badge">{m.status.replaceAll('_', ' ')}</span>
                   </td>

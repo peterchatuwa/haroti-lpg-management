@@ -17,6 +17,7 @@ import {
   StockMovementType,
 } from '../common/enums';
 import { FinanceService } from '../finance/finance.service';
+import { FranchiseService } from '../franchise/franchise.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { PriceList } from '../pricing/price-list.entity';
 import { StationsService } from '../stations/stations.service';
@@ -37,6 +38,7 @@ export class SalesService {
     private readonly accessoriesService: AccessoriesService,
     private readonly financeService: FinanceService,
     private readonly customersService: CustomersService,
+    private readonly franchiseService: FranchiseService,
   ) {}
 
   async getActivePrice(stationId: string) {
@@ -267,6 +269,18 @@ export class SalesService {
 
     if (hasCredit && dto.customerId) {
       await this.customersService.applyCredit(dto.customerId, total);
+    }
+
+    if (
+      salesChannel === SalesChannel.AGENT_COMMISSION &&
+      dto.customerId
+    ) {
+      await this.franchiseService.accrueAgentCommission(
+        saved.id,
+        dto.customerId,
+        total,
+        8,
+      );
     }
 
     await this.stationsService.touchSync(dto.stationId);

@@ -22,6 +22,8 @@ export const GL_ACCOUNTS = {
   REVENUE_PAYC: { code: '4300', name: 'Revenue: PAYC Burn' },
   COGS_ACCESSORY: { code: '5100', name: 'COGS: Accessories' },
   DEFERRED_PAYC: { code: '2300', name: 'Deferred Revenue: PAYC Credit' },
+  CWIP: { code: '1400', name: 'Capital Work-in-Progress (CWIP)' },
+  COMMISSION_PAYABLE: { code: '2200', name: 'Commission Payable: Agents' },
 } as const;
 
 @Injectable()

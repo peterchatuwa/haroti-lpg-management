@@ -3,11 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Repository } from 'typeorm';
 import {
+  AssetCategory,
   CommercialStream,
   CustomerType,
   CylinderOwnership,
   CylinderStatus,
   ProductCategory,
+  ProjectStatus,
+  ProjectType,
   SalesChannel,
   StationStatus,
   UserRole,
@@ -18,7 +21,13 @@ import { ChannelPrice } from '../accessories/channel-price.entity';
 import { ProductBundleItem } from '../accessories/product-bundle-item.entity';
 import { ProductBundle } from '../accessories/product-bundle.entity';
 import { BudgetLine } from '../finance/budget-line.entity';
+import { FranchiseAgreement } from '../franchise/franchise-agreement.entity';
+import { Asset } from '../maintenance/asset.entity';
+import { PaycCreditTransaction } from '../payc/payc-credit-transaction.entity';
 import { PaycMeter } from '../payc/payc-meter.entity';
+import { PaycTelemetry } from '../payc/payc-telemetry.entity';
+import { CapitalProject } from '../projects/capital-project.entity';
+import { ProjectMilestone } from '../projects/project-milestone.entity';
 import { Customer } from '../customers/customer.entity';
 import { Cylinder } from '../cylinders/cylinder.entity';
 import { PriceList } from '../pricing/price-list.entity';
@@ -108,8 +117,20 @@ export class SeedService implements OnModuleInit {
     private readonly accessoryStockRepo: Repository<AccessoryStock>,
     @InjectRepository(PaycMeter)
     private readonly paycRepo: Repository<PaycMeter>,
+    @InjectRepository(PaycTelemetry)
+    private readonly paycTelemetryRepo: Repository<PaycTelemetry>,
+    @InjectRepository(PaycCreditTransaction)
+    private readonly paycCreditRepo: Repository<PaycCreditTransaction>,
     @InjectRepository(BudgetLine)
     private readonly budgetRepo: Repository<BudgetLine>,
+    @InjectRepository(Asset)
+    private readonly assetsRepo: Repository<Asset>,
+    @InjectRepository(CapitalProject)
+    private readonly projectsRepo: Repository<CapitalProject>,
+    @InjectRepository(ProjectMilestone)
+    private readonly milestonesRepo: Repository<ProjectMilestone>,
+    @InjectRepository(FranchiseAgreement)
+    private readonly franchiseRepo: Repository<FranchiseAgreement>,
   ) {}
 
   async onModuleInit() {
@@ -119,12 +140,13 @@ export class SeedService implements OnModuleInit {
       return;
     }
     const bundleCount = await this.bundlesRepo.count();
+    const stations = await this.stationsRepo.find();
     if (bundleCount === 0) {
-      const stations = await this.stationsRepo.find();
       await this.seedCharterExtensions(stations);
     } else {
       this.logger.log('Database already seeded');
     }
+    await this.seedPhase23Extensions(stations);
   }
 
   async seed() {
@@ -405,6 +427,7 @@ export class SeedService implements OnModuleInit {
     );
     this.logger.log('Default password for all users: Password123!');
     await this.seedCharterExtensions(stations);
+    await this.seedPhase23Extensions(stations);
   }
 
   async seedCharterExtensions(stations: Station[]) {
@@ -583,5 +606,144 @@ export class SeedService implements OnModuleInit {
     }
 
     this.logger.log('Charter ERP extensions seeded');
+  }
+
+  async seedPhase23Extensions(stations: Station[]) {
+    this.logger.log('Seeding Phase 2/3 (PAYC telemetry, CMMS assets, projects, franchise)...');
+
+    const central = stations.find((s) => s.code === 'LLW-01')!;
+    const franchiseStation = stations.find((s) => s.code === 'BT-02');
+    const bt03 = stations.find((s) => s.code === 'BT-03');
+
+    const assetCount = await this.assetsRepo.count();
+    if (assetCount === 0) {
+      await this.assetsRepo.save([
+        {
+          assetCode: 'TK-LLW-01',
+          name: 'Bulk LPG Storage Tank 15T',
+          category: AssetCategory.STATION_EQUIPMENT,
+          stationId: central.id,
+          acquisitionCost: '45000000.00',
+          commissionedAt: '2022-06-01',
+          nextServiceDate: '2026-12-01',
+        },
+        {
+          assetCode: 'COMP-LLW-01',
+          name: 'LPG Compressor Unit',
+          category: AssetCategory.STATION_EQUIPMENT,
+          stationId: central.id,
+          acquisitionCost: '8200000.00',
+          commissionedAt: '2023-01-15',
+        },
+        {
+          assetCode: 'DISP-BT-02',
+          name: 'Forecourt Dispenser #1',
+          category: AssetCategory.STATION_EQUIPMENT,
+          stationId: franchiseStation?.id,
+          acquisitionCost: '3500000.00',
+          commissionedAt: '2024-03-01',
+        },
+      ].map((a) => this.assetsRepo.create(a)));
+    }
+
+    const meters = await this.paycRepo.find();
+    const telemetryCount = await this.paycTelemetryRepo.count();
+    if (telemetryCount === 0 && meters.length) {
+      const now = new Date();
+      for (const meter of meters.slice(0, 2)) {
+        for (let d = 6; d >= 0; d--) {
+          const ts = new Date(now);
+          ts.setDate(ts.getDate() - d);
+          await this.paycTelemetryRepo.save(
+            this.paycTelemetryRepo.create({
+              meterId: meter.id,
+              recordedAt: ts,
+              creditRemainingKg: (Number(meter.creditBalanceKg) + d * 0.05).toFixed(3),
+              burnKg: meter.dailyBurnKg,
+              valveOpen: true,
+            }),
+          );
+        }
+      }
+    }
+
+    const projectCount = await this.projectsRepo.count();
+    if (projectCount === 0 && bt03) {
+      const project = await this.projectsRepo.save(
+        this.projectsRepo.create({
+          projectCode: 'CAP-BT03-2026',
+          name: 'Ndirande Depot Tank Upgrade',
+          type: ProjectType.CAPEX_STATION,
+          status: ProjectStatus.IN_PROGRESS,
+          commercialStream: CommercialStream.RETAIL_FORECOURT,
+          stationId: bt03.id,
+          approvedBudget: '28000000.00',
+          spentToDate: '8450000.00',
+          grantReference: 'AFDB-LPG-2025-04',
+          startDate: '2026-01-15',
+          targetEndDate: '2026-09-30',
+        }),
+      );
+      await this.milestonesRepo.save([
+        {
+          projectId: project.id,
+          name: 'Civil works & foundation',
+          dueDate: '2026-03-31',
+          budgetAllocation: '6000000.00',
+          isCompleted: true,
+        },
+        {
+          projectId: project.id,
+          name: 'Tank installation & piping',
+          dueDate: '2026-06-30',
+          budgetAllocation: '15000000.00',
+        },
+        {
+          projectId: project.id,
+          name: 'Commissioning & safety sign-off',
+          dueDate: '2026-09-15',
+          budgetAllocation: '7000000.00',
+        },
+      ].map((m) => this.milestonesRepo.create(m)));
+    }
+
+    if (franchiseStation) {
+      const agreementExists = await this.franchiseRepo.findOne({
+        where: { agreementCode: 'FA-BT02-LIMBE' },
+      });
+      if (!agreementExists) {
+        await this.franchiseRepo.save(
+          this.franchiseRepo.create({
+            agreementCode: 'FA-BT02-LIMBE',
+            franchiseName: 'Limbe Gas Partners Ltd',
+            stationId: franchiseStation.id,
+            royaltyPercent: '5.00',
+            agentCommissionPercent: '8.00',
+            consignmentEnabled: true,
+            contactPhone: '+265991234567',
+            effectiveFrom: '2025-01-01',
+          }),
+        );
+      }
+    }
+
+    const agentExists = await this.customersRepo.findOne({
+      where: { customerCode: 'AGT-001' },
+    });
+    if (!agentExists && franchiseStation) {
+      await this.customersRepo.save(
+        this.customersRepo.create({
+          customerCode: 'AGT-001',
+          fullName: 'James Phiri (Field Agent)',
+          type: CustomerType.AGENT,
+          phone: '+265888123456',
+          stationId: franchiseStation.id,
+          creditLimit: '0.00',
+          outstandingBalance: '0.00',
+        }),
+      );
+    }
+
+    this.logger.log('Phase 2/3 extensions seeded');
   }
 }

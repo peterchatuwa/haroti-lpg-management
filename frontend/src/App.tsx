@@ -13,6 +13,8 @@ import { MaintenancePage } from './pages/MaintenancePage';
 import { PaycPage } from './pages/PaycPage';
 import { PosPage } from './pages/PosPage';
 import { ProcurementPage } from './pages/ProcurementPage';
+import { FranchisePage } from './pages/FranchisePage';
+import { ProjectsPage } from './pages/ProjectsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { ShiftsPage } from './pages/ShiftsPage';
 import { StationsPage } from './pages/StationsPage';
@@ -85,6 +87,8 @@ export default function App() {
         <Route path="customers" element={<CustomersPage />} />
         <Route path="payc" element={<PaycPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
+        <Route path="projects" element={<ProjectsPage />} />
+        <Route path="franchise" element={<FranchisePage />} />
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="stations" element={<StationsPage />} />
       </Route>

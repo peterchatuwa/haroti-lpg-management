@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
-import type { WorkOrder } from '../lib/erp-types';
+import type { AssetRow, WorkOrder } from '../lib/erp-types';
 
 export function MaintenancePage() {
   const qc = useQueryClient();
@@ -9,6 +9,11 @@ export function MaintenancePage() {
     queryKey: ['work-orders'],
     queryFn: async () =>
       (await api.get<WorkOrder[]>('/maintenance/work-orders')).data,
+  });
+  const { data: assets } = useQuery({
+    queryKey: ['assets'],
+    queryFn: async () =>
+      (await api.get<AssetRow[]>('/maintenance/assets')).data,
   });
   const { data: hydroDue } = useQuery({
     queryKey: ['hydro-due'],
@@ -24,7 +29,7 @@ export function MaintenancePage() {
     <div className="stack">
       <PageHeader
         title="Asset maintenance (CMMS)"
-        subtitle="Cylinder hydro-testing & work orders (Charter §8)"
+        subtitle="Fixed assets, cylinder hydro-testing & work order lifecycle (Phase 2)"
       />
 
       <div className="row">
@@ -38,6 +43,46 @@ export function MaintenancePage() {
         <span className="badge warn">
           {Array.isArray(hydroDue) ? hydroDue.length : 0} cylinders due inspection
         </span>
+        <span className="badge">{assets?.length ?? 0} registered assets</span>
+      </div>
+
+      <div className="panel">
+        <h3 className="panel-title">Fixed assets</h3>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Station</th>
+                <th>Next service</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(assets ?? []).map((a) => (
+                <tr key={a.id}>
+                  <td>{a.assetCode}</td>
+                  <td>{a.name}</td>
+                  <td>{a.category.replaceAll('_', ' ')}</td>
+                  <td>{a.station?.code ?? '—'}</td>
+                  <td>{a.nextServiceDate ?? '—'}</td>
+                  <td>
+                    <span className="badge">{a.status.replaceAll('_', ' ')}</span>
+                  </td>
+                </tr>
+              ))}
+              {!assets?.length && (
+                <tr>
+                  <td colSpan={6} className="muted">
+                    No assets registered
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="panel">
@@ -49,6 +94,7 @@ export function MaintenancePage() {
                 <th>WO #</th>
                 <th>Type</th>
                 <th>Title</th>
+                <th>Cylinder</th>
                 <th>Station</th>
                 <th>Due</th>
                 <th>Status</th>
@@ -60,6 +106,7 @@ export function MaintenancePage() {
                   <td>{wo.woNumber}</td>
                   <td>{wo.type.replaceAll('_', ' ')}</td>
                   <td>{wo.title}</td>
+                  <td>{wo.cylinder?.serialNumber ?? '—'}</td>
                   <td>{wo.station?.code ?? '—'}</td>
                   <td>{wo.dueDate ?? '—'}</td>
                   <td>
@@ -69,7 +116,7 @@ export function MaintenancePage() {
               ))}
               {!orders?.length && (
                 <tr>
-                  <td colSpan={6} className="muted">
+                  <td colSpan={7} className="muted">
                     No open work orders — click generate for due hydro tests
                   </td>
                 </tr>

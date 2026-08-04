@@ -24,10 +24,22 @@ import { JournalEntry } from './finance/journal-entry.entity';
 import { JournalLine } from './finance/journal-line.entity';
 import { InventoryModule } from './inventory/inventory.module';
 import { StockMovement } from './inventory/stock-movement.entity';
+import { AgentCommission } from './franchise/agent-commission.entity';
+import { FranchiseAgreement } from './franchise/franchise-agreement.entity';
+import { FranchiseModule } from './franchise/franchise.module';
+import { FranchiseSettlementLine } from './franchise/franchise-settlement-line.entity';
+import { FranchiseSettlement } from './franchise/franchise-settlement.entity';
+import { Asset } from './maintenance/asset.entity';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { MaintenanceWorkOrder } from './maintenance/work-order.entity';
+import { PaycCreditTransaction } from './payc/payc-credit-transaction.entity';
 import { PaycMeter } from './payc/payc-meter.entity';
+import { PaycTelemetry } from './payc/payc-telemetry.entity';
 import { PaycModule } from './payc/payc.module';
+import { CapitalProject } from './projects/capital-project.entity';
+import { ProjectExpenditure } from './projects/project-expenditure.entity';
+import { ProjectMilestone } from './projects/project-milestone.entity';
+import { ProjectsModule } from './projects/projects.module';
 import { PriceList } from './pricing/price-list.entity';
 import { ProcurementModule } from './procurement/procurement.module';
 import { PurchaseOrderLine } from './procurement/purchase-order-line.entity';
@@ -91,7 +103,17 @@ import { User } from './users/user.entity';
           JournalLine,
           BudgetLine,
           PaycMeter,
+          PaycTelemetry,
+          PaycCreditTransaction,
           MaintenanceWorkOrder,
+          Asset,
+          CapitalProject,
+          ProjectMilestone,
+          ProjectExpenditure,
+          FranchiseAgreement,
+          FranchiseSettlement,
+          FranchiseSettlementLine,
+          AgentCommission,
         ],
         synchronize: true,
         logging: config.get('NODE_ENV') === 'development',
@@ -113,6 +135,8 @@ import { User } from './users/user.entity';
     FinanceModule,
     PaycModule,
     MaintenanceModule,
+    ProjectsModule,
+    FranchiseModule,
     ReportsModule,
     CustomersModule,
   ],

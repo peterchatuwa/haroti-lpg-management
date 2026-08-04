@@ -1,16 +1,34 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { asDecimal, round2, round3, toNumber } from '../common/decimal';
-import { PaycMeterStatus, JournalEventType } from '../common/enums';
+import {
+  JournalEventType,
+  PaycCreditTxnType,
+  PaycMeterStatus,
+  PaymentMethod,
+} from '../common/enums';
 import { FinanceService, GL_ACCOUNTS } from '../finance/finance.service';
+import { PaycCreditTransaction } from './payc-credit-transaction.entity';
 import { PaycMeter } from './payc-meter.entity';
+import { PaycTelemetry } from './payc-telemetry.entity';
+
+const OFFLINE_HOURS = 24;
+const PRICE_PER_KG = 1850;
 
 @Injectable()
 export class PaycService {
   constructor(
     @InjectRepository(PaycMeter)
     private readonly metersRepo: Repository<PaycMeter>,
+    @InjectRepository(PaycTelemetry)
+    private readonly telemetryRepo: Repository<PaycTelemetry>,
+    @InjectRepository(PaycCreditTransaction)
+    private readonly creditRepo: Repository<PaycCreditTransaction>,
     private readonly financeService: FinanceService,
   ) {}
 
@@ -21,7 +39,46 @@ export class PaycService {
     });
   }
 
+  async findOne(id: string) {
+    const meter = await this.metersRepo.findOne({
+      where: { id },
+      relations: { customer: true, station: true },
+    });
+    if (!meter) throw new NotFoundException('Meter not found');
+    return meter;
+  }
+
+  async telemetryHistory(meterId: string, limit = 30) {
+    return this.telemetryRepo.find({
+      where: { meterId },
+      order: { recordedAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  async creditHistory(meterId: string) {
+    return this.creditRepo.find({
+      where: { meterId },
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
+  }
+
+  private async markOfflineMeters() {
+    const cutoff = new Date(Date.now() - OFFLINE_HOURS * 3600 * 1000);
+    const meters = await this.metersRepo.find();
+    for (const m of meters) {
+      if (m.lastTelemetryAt && m.lastTelemetryAt < cutoff) {
+        if (m.status !== PaycMeterStatus.OFFLINE) {
+          m.status = PaycMeterStatus.OFFLINE;
+          await this.metersRepo.save(m);
+        }
+      }
+    }
+  }
+
   async dashboard() {
+    await this.markOfflineMeters();
     const meters = await this.findAll();
     const active = meters.filter((m) => m.status === PaycMeterStatus.ACTIVE);
     const offline = meters.filter((m) => m.status === PaycMeterStatus.OFFLINE);
@@ -45,13 +102,75 @@ export class PaycService {
       lowCreditMeters: lowCredit.length,
       totalDeferredRevenue: totalDeferred,
       totalCreditKg,
-      estimatedDailyRevenue: round2(dailyBurn * 1850),
+      estimatedDailyRevenue: round2(dailyBurn * PRICE_PER_KG),
       dailyBurnKg: dailyBurn,
+      alerts: [
+        ...lowCredit.map((m) => ({
+          type: 'LOW_CREDIT',
+          meterSerial: m.meterSerial,
+          message: `${m.meterSerial} below 0.5 kg credit`,
+        })),
+        ...offline.map((m) => ({
+          type: 'OFFLINE',
+          meterSerial: m.meterSerial,
+          message: `${m.meterSerial} no telemetry for ${OFFLINE_HOURS}h+`,
+        })),
+      ],
       meters: meters.slice(0, 20),
     };
   }
 
-  /** Simulated IoT telemetry ingest (Charter Module 4). */
+  async topUpCredit(params: {
+    meterId: string;
+    amountMwk: number;
+    paymentMethod: PaymentMethod;
+    reference?: string;
+  }) {
+    const meter = await this.findOne(params.meterId);
+    const creditKg = round3(params.amountMwk / PRICE_PER_KG);
+    meter.creditBalanceKg = asDecimal(
+      toNumber(meter.creditBalanceKg) + creditKg,
+    );
+    meter.deferredRevenue = asDecimal(
+      toNumber(meter.deferredRevenue) + params.amountMwk,
+      2,
+    );
+    if (toNumber(meter.creditBalanceKg) >= 0.5) {
+      meter.status = PaycMeterStatus.ACTIVE;
+    }
+    await this.metersRepo.save(meter);
+
+    await this.creditRepo.save(
+      this.creditRepo.create({
+        meterId: meter.id,
+        type: PaycCreditTxnType.TOPUP,
+        amountMwk: asDecimal(params.amountMwk, 2),
+        creditKg: asDecimal(creditKg),
+        paymentMethod: params.paymentMethod,
+        reference: params.reference,
+      }),
+    );
+
+    await this.financeService.postEntry({
+      eventType: JournalEventType.PAYC_CREDIT_TOPUP,
+      description: `PAYC credit top-up ${meter.meterSerial}`,
+      referenceType: 'PaycMeter',
+      referenceId: meter.id,
+      lines: [
+        { account: GL_ACCOUNTS.CASH, debit: params.amountMwk },
+        { account: GL_ACCOUNTS.DEFERRED_PAYC, credit: params.amountMwk },
+      ],
+    });
+
+    return meter;
+  }
+
+  async rebindCylinder(meterId: string, cylinderSerial: string) {
+    const meter = await this.findOne(meterId);
+    meter.cylinderSerial = cylinderSerial;
+    return this.metersRepo.save(meter);
+  }
+
   async ingestTelemetry(params: {
     meterSerial: string;
     burnKg: number;
@@ -62,6 +181,15 @@ export class PaycService {
       where: { meterSerial: params.meterSerial },
     });
     if (!meter) return null;
+
+    await this.telemetryRepo.save(
+      this.telemetryRepo.create({
+        meterId: meter.id,
+        burnKg: asDecimal(params.burnKg),
+        creditRemainingKg: asDecimal(params.creditRemainingKg),
+        valveOpen: params.valveOpen,
+      }),
+    );
 
     meter.dailyBurnKg = asDecimal(params.burnKg);
     meter.creditBalanceKg = asDecimal(params.creditRemainingKg);
@@ -74,8 +202,22 @@ export class PaycService {
 
     await this.metersRepo.save(meter);
 
-    const revenue = round2(params.burnKg * 1850);
+    const revenue = round2(params.burnKg * PRICE_PER_KG);
     if (revenue > 0) {
+      await this.creditRepo.save(
+        this.creditRepo.create({
+          meterId: meter.id,
+          type: PaycCreditTxnType.BURN,
+          amountMwk: asDecimal(revenue, 2),
+          creditKg: asDecimal(params.burnKg),
+        }),
+      );
+      meter.deferredRevenue = asDecimal(
+        Math.max(0, toNumber(meter.deferredRevenue) - revenue),
+        2,
+      );
+      await this.metersRepo.save(meter);
+
       await this.financeService.postEntry({
         eventType: JournalEventType.PAYC_BURN_REVENUE,
         description: `PAYC daily burn ${params.meterSerial}`,
@@ -89,5 +231,21 @@ export class PaycService {
     }
 
     return meter;
+  }
+
+  async ingestBatch(
+    readings: Array<{
+      meterSerial: string;
+      burnKg: number;
+      creditRemainingKg: number;
+      valveOpen: boolean;
+    }>,
+  ) {
+    const results = [];
+    for (const r of readings) {
+      const m = await this.ingestTelemetry(r);
+      if (m) results.push(m);
+    }
+    return { processed: results.length };
   }
 }
