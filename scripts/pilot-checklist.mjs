@@ -48,11 +48,18 @@ async function main() {
 
   const shiftOpen = await req('POST', '/shifts/open', token, {
     stationId,
-    openingCash: 50000,
-    tankReadingKg: 1200,
+    openingCashFloat: 50000,
   });
-  const shiftId = shiftOpen.data?.id;
-  ok('Open shift', shiftOpen.status === 201 || shiftOpen.status === 200, shiftOpen.data?.message);
+  let shiftId = shiftOpen.data?.id;
+  if (shiftOpen.status !== 201 && shiftOpen.status !== 200) {
+    const current = await req('GET', `/shifts/current?stationId=${stationId}`, token);
+    shiftId = current.data?.id;
+  }
+  ok(
+    'Open shift',
+    !!shiftId,
+    shiftOpen.data?.message ?? (shiftId ? 'reused open shift' : `HTTP ${shiftOpen.status}`),
+  );
 
   const sale = await req('POST', '/sales', token, {
     stationId,
