@@ -5,6 +5,19 @@
 
 Isolated Docker stack at `/opt/haroti-lpg`.
 
+## 🌐 Custom Domain Setup
+
+**Setting up with your own domain?** See the comprehensive [Domain Setup Guide](./docs/DOMAIN_SETUP.md) for step-by-step instructions on:
+- DNS configuration
+- SSL/HTTPS setup with Let's Encrypt
+- Automated certificate renewal
+- Troubleshooting
+
+Quick setup command:
+```bash
+sudo bash scripts/setup-ssl.sh your-domain.com your-email@example.com
+```
+
 ## Access
 
 - **Web UI:** http://169.58.127.129/

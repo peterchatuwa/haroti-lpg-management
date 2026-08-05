@@ -2,6 +2,12 @@
 
 Centralized multi-station LPG operations and retail management for **Haroti Holdings Limited** (trading as **Haroti Gas**) — covering Salima, Lilongwe and Blantyre stations with offline-capable station POS, stock control, shifts, transfers, management dashboards, and **ERP charter modules** aligned to the Haroti Gas Project Charter (Aug 2026).
 
+## 🚀 Quick Links
+
+- **[Quick Start Guide](./QUICKSTART.md)** - Get up and running in 5 minutes
+- **[Domain Setup Guide](./docs/DOMAIN_SETUP.md)** - Configure custom domain with SSL/HTTPS
+- **[Deployment Notes](./README.DEPLOY.md)** - Production VPS deployment details
+
 ## ERP charter alignment (Phase 1)
 
 | Charter module | Status in this build |
