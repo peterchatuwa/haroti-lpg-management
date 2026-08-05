@@ -1,0 +1,257 @@
+================================================================================
+HAROTI LPG MANAGEMENT - DEPLOYMENT COMMANDS
+Domain: harotiholdingslimited.com
+VPS IP: 169.58.127.129
+================================================================================
+
+INITIAL SETUP (Run once)
+================================================================================
+
+1. Configure DNS A Record:
+   Type: A
+   Name: @
+   Value: 169.58.127.129
+   
+2. SSH into VPS:
+   ssh root@169.58.127.129
+
+3. Update repository:
+   cd /opt/haroti-lpg
+   git pull origin cursor/domain-vps-setup-376b
+
+4. Run SSL setup:
+   cd /opt/haroti-lpg
+   sudo bash scripts/setup-ssl.sh harotiholdingslimited.com admin@harotiholdingslimited.com
+
+5. Configure firewall:
+   sudo ufw allow 80/tcp
+   sudo ufw allow 443/tcp
+   sudo ufw allow OpenSSH
+   sudo ufw enable
+
+6. Access application:
+   https://harotiholdingslimited.com
+   https://harotiholdingslimited.com/api/docs
+
+
+DAILY OPERATIONS
+================================================================================
+
+Connect to VPS:
+  ssh root@169.58.127.129
+  cd /opt/haroti-lpg
+
+View running containers:
+  docker compose -f docker-compose.prod.yml ps
+
+View logs (live):
+  docker logs haroti-web -f
+  docker logs haroti-api -f
+  docker logs haroti-postgres -f
+
+View last 100 log lines:
+  docker logs haroti-web --tail 100
+  docker logs haroti-api --tail 100
+
+Restart all services:
+  docker compose -f docker-compose.prod.yml restart
+
+Restart specific service:
+  docker compose -f docker-compose.prod.yml restart web
+  docker compose -f docker-compose.prod.yml restart api
+  docker compose -f docker-compose.prod.yml restart postgres
+
+Stop all services:
+  docker compose -f docker-compose.prod.yml down
+
+Start all services:
+  docker compose -f docker-compose.prod.yml --env-file .env up -d
+
+Check disk space:
+  df -h
+
+Check memory usage:
+  free -h
+
+Check system resources:
+  docker stats
+
+
+DATABASE OPERATIONS
+================================================================================
+
+Backup database:
+  docker exec haroti-postgres pg_dump -U haroti haroti_lpg > backup-$(date +%Y%m%d).sql
+
+Backup with timestamp:
+  docker exec haroti-postgres pg_dump -U haroti haroti_lpg > backup-$(date +%Y%m%d-%H%M%S).sql
+
+Restore database:
+  docker exec -i haroti-postgres psql -U haroti haroti_lpg < backup-20260805.sql
+
+Connect to database:
+  docker exec -it haroti-postgres psql -U haroti -d haroti_lpg
+
+List databases:
+  docker exec haroti-postgres psql -U haroti -c '\l'
+
+
+APPLICATION UPDATES
+================================================================================
+
+Update from git:
+  cd /opt/haroti-lpg
+  git pull
+  docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+Force rebuild:
+  docker compose -f docker-compose.prod.yml --env-file .env up -d --build --force-recreate
+
+Check current git branch:
+  git branch
+
+Check git status:
+  git status
+
+Pull specific branch:
+  git pull origin cursor/domain-vps-setup-376b
+
+
+SSL CERTIFICATE MANAGEMENT
+================================================================================
+
+Check certificate status:
+  sudo certbot certificates
+
+Check certificate expiry:
+  openssl x509 -in /opt/haroti-lpg/ssl/fullchain.pem -noout -dates
+
+Test certificate renewal (dry run):
+  sudo certbot renew --dry-run
+
+Manual certificate renewal:
+  sudo certbot renew
+  sudo cp /etc/letsencrypt/live/harotiholdingslimited.com/fullchain.pem /opt/haroti-lpg/ssl/
+  sudo cp /etc/letsencrypt/live/harotiholdingslimited.com/privkey.pem /opt/haroti-lpg/ssl/
+  docker compose -f docker-compose.prod.yml restart web
+
+View auto-renewal cron job:
+  sudo crontab -l | grep certbot
+
+
+CONFIGURATION
+================================================================================
+
+View environment variables:
+  cat /opt/haroti-lpg/.env
+
+Edit environment variables:
+  sudo nano /opt/haroti-lpg/.env
+  (After editing, restart: docker compose -f docker-compose.prod.yml restart)
+
+View nginx configuration:
+  cat /opt/haroti-lpg/frontend/nginx.conf
+
+View docker compose config:
+  cat /opt/haroti-lpg/docker-compose.prod.yml
+
+
+TROUBLESHOOTING
+================================================================================
+
+Container not starting:
+  docker logs haroti-web
+  docker logs haroti-api
+  docker logs haroti-postgres
+
+Cannot connect to database:
+  docker exec haroti-postgres pg_isready -U haroti
+  docker logs haroti-postgres
+
+Port already in use:
+  sudo netstat -tulpn | grep :80
+  sudo netstat -tulpn | grep :443
+
+Check CORS settings:
+  cat /opt/haroti-lpg/.env | grep CORS_ORIGIN
+  (Should be: CORS_ORIGIN=https://harotiholdingslimited.com)
+
+Clear all containers and volumes (WARNING: Deletes data!):
+  docker compose -f docker-compose.prod.yml down -v --remove-orphans
+
+Restart everything from scratch:
+  docker compose -f docker-compose.prod.yml down
+  docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+
+SYSTEM MAINTENANCE
+================================================================================
+
+Update system packages:
+  sudo apt update
+  sudo apt upgrade -y
+
+Clean up Docker:
+  docker system prune -f
+
+Clean up Docker (including volumes - WARNING!):
+  docker system prune -a --volumes -f
+
+Check disk usage by Docker:
+  docker system df
+
+View system logs:
+  sudo journalctl -u docker -f
+
+Reboot server:
+  sudo reboot
+
+
+MONITORING
+================================================================================
+
+Check if website is up:
+  curl -I https://harotiholdingslimited.com
+
+Check API endpoint:
+  curl https://harotiholdingslimited.com/api/health
+
+Test SSL certificate:
+  curl -vI https://harotiholdingslimited.com 2>&1 | grep -i ssl
+
+Check DNS resolution:
+  nslookup harotiholdingslimited.com
+  dig harotiholdingslimited.com +short
+
+View all open ports:
+  sudo netstat -tulpn
+
+Check firewall status:
+  sudo ufw status
+
+
+QUICK ACCESS
+================================================================================
+
+Application URL:     https://harotiholdingslimited.com
+API Documentation:   https://harotiholdingslimited.com/api/docs
+Demo Login:          admin / Password123!
+
+SSH Command:         ssh root@169.58.127.129
+App Directory:       cd /opt/haroti-lpg
+
+Support Docs:
+  - Full setup guide:      /opt/haroti-lpg/docs/SETUP_harotiholdingslimited.com.md
+  - Domain setup:          /opt/haroti-lpg/docs/DOMAIN_SETUP.md
+  - Quick start:           /opt/haroti-lpg/QUICKSTART.md
+  - Deployment notes:      /opt/haroti-lpg/README.DEPLOY.md
+
+
+EMERGENCY CONTACTS
+================================================================================
+
+SSL Issues:          Check /var/log/letsencrypt/letsencrypt.log
+Docker Issues:       sudo journalctl -u docker -f
+Application Issues:  docker logs haroti-api --tail 200
+
+================================================================================
