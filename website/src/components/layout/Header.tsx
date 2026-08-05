@@ -43,13 +43,15 @@ export const Header = () => {
       <nav className="container-custom py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-12 h-12 bg-haroti-orange rounded-full flex items-center justify-center text-white font-bold text-xl">
-              HG
-            </div>
+          <Link to="/" className="flex items-center space-x-3">
+            <img 
+              src="/haroti-logo.png" 
+              alt="Haroti Gas Logo" 
+              className="h-12 w-auto"
+            />
             <div className="hidden sm:block">
-              <div className="font-bold text-xl text-haroti-blue">HAROTI GAS</div>
-              <div className="text-xs text-gray-600">Powering the World</div>
+              <div className="font-bold text-xl text-haroti-green">HAROTI GAS</div>
+              <div className="text-xs text-haroti-blue font-semibold">Powering the world</div>
             </div>
           </Link>
 

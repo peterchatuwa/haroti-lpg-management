@@ -8,13 +8,15 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div>
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-haroti-orange rounded-full flex items-center justify-center text-white font-bold">
-                HG
-              </div>
+            <div className="flex items-center space-x-3 mb-4">
+              <img 
+                src="/haroti-logo.png" 
+                alt="Haroti Gas Logo" 
+                className="h-10 w-auto"
+              />
               <div>
                 <div className="font-bold text-lg">HAROTI GAS</div>
-                <div className="text-xs text-gray-400">Powering the World</div>
+                <div className="text-xs text-gray-400">Powering the world</div>
               </div>
             </div>
             <p className="text-gray-400 text-sm mb-4">
