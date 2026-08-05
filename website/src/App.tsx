@@ -4,16 +4,14 @@ import { HomePage } from './pages/HomePage';
 import { AboutPage } from './pages/AboutPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { StationsPage } from './pages/StationsPage';
-
-// Placeholder components for remaining pages
-const FranchisePage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Franchise Opportunities</h1><p className="mt-4">Coming soon...</p></div>;
-const ImpactPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Impact & ESG</h1><p className="mt-4">Coming soon...</p></div>;
-const InvestorsPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Investors & Partners</h1><p className="mt-4">Coming soon...</p></div>;
-const NewsPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">News & Updates</h1><p className="mt-4">Coming soon...</p></div>;
-const CareersPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Careers</h1><p className="mt-4">Coming soon...</p></div>;
-const ContactPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Contact Us</h1><p className="mt-4">Coming soon...</p></div>;
-const PrivacyPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Privacy Policy</h1><p className="mt-4">Coming soon...</p></div>;
-const TermsPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Terms of Use</h1><p className="mt-4">Coming soon...</p></div>;
+import { FranchisePage } from './pages/FranchisePage';
+import { ImpactPage } from './pages/ImpactPage';
+import { InvestorsPage } from './pages/InvestorsPage';
+import { NewsPage } from './pages/NewsPage';
+import { CareersPage } from './pages/CareersPage';
+import { ContactPage } from './pages/ContactPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 
 function App() {
   return (
