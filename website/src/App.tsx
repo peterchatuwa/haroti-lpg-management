@@ -1,11 +1,11 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { HomePage } from './pages/HomePage';
+import { AboutPage } from './pages/AboutPage';
+import { ProductsPage } from './pages/ProductsPage';
+import { StationsPage } from './pages/StationsPage';
 
-// Placeholder components for other pages
-const AboutPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">About Us</h1><p className="mt-4">Coming soon...</p></div>;
-const ProductsPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Products & PAYC</h1><p className="mt-4">Coming soon...</p></div>;
-const StationsPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Find a Station</h1><p className="mt-4">Coming soon...</p></div>;
+// Placeholder components for remaining pages
 const FranchisePage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Franchise Opportunities</h1><p className="mt-4">Coming soon...</p></div>;
 const ImpactPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Impact & ESG</h1><p className="mt-4">Coming soon...</p></div>;
 const InvestorsPage = () => <div className="container-custom py-16"><h1 className="text-4xl font-bold">Investors & Partners</h1><p className="mt-4">Coming soon...</p></div>;
