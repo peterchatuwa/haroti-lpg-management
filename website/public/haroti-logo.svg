@@ -1,22 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
-  <!-- Haroti Gas text logo -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 120">
   <defs>
-    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#0047AB;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#FF6B35;stop-opacity:1" />
+    <!-- Define the green color -->
+    <linearGradient id="greenFlame" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1B7A5E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0F6B4F;stop-opacity:1" />
+    </linearGradient>
+    <!-- Define the blue color -->
+    <linearGradient id="blueFlame" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E3A8A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
     </linearGradient>
   </defs>
   
-  <!-- Background circle -->
-  <circle cx="30" cy="30" r="25" fill="#0047AB"/>
+  <!-- Green flame (left) -->
+  <path d="M 80 15 Q 75 25, 75 35 Q 75 50, 85 60 Q 90 65, 95 60 Q 105 50, 105 35 Q 105 25, 100 15 Q 95 20, 90 25 Q 85 20, 80 15 Z" 
+        fill="url(#greenFlame)" stroke="#0F6B4F" stroke-width="1"/>
   
-  <!-- Flame icon in circle -->
-  <path d="M30 15 C35 20, 38 25, 35 32 C32 38, 25 40, 22 35 C20 32, 22 28, 25 25 C27 23, 28 20, 30 15 Z" 
-        fill="#FF6B35"/>
-  <path d="M30 20 C32 23, 33 26, 31 30 C29 33, 26 34, 24 31 C23 29, 24 27, 26 26 C27 25, 28 23, 30 20 Z" 
-        fill="#FFFFFF" opacity="0.7"/>
+  <!-- Blue flame (right) -->
+  <path d="M 105 10 Q 100 20, 100 32 Q 100 48, 112 58 Q 118 63, 125 58 Q 137 48, 137 32 Q 137 20, 132 10 Q 127 16, 120 22 Q 115 16, 105 10 Z" 
+        fill="url(#blueFlame)" stroke="#1E3A8A" stroke-width="1"/>
   
-  <!-- Text -->
-  <text x="65" y="28" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#0047AB">HAROTI</text>
-  <text x="65" y="48" font-family="Arial, sans-serif" font-size="16" font-weight="normal" fill="#FF6B35">Gas</text>
+  <!-- White highlights on flames -->
+  <ellipse cx="88" cy="35" rx="4" ry="8" fill="white" opacity="0.3"/>
+  <ellipse cx="118" cy="32" rx="4" ry="8" fill="white" opacity="0.3"/>
+  
+  <!-- HAROTI GAS text -->
+  <text x="150" y="50" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="900" fill="#0F6B4F" letter-spacing="2">HAROTI GAS</text>
+  
+  <!-- Powering the world tagline -->
+  <rect x="150" y="60" width="140" height="22" rx="11" fill="#1E3A8A"/>
+  <text x="220" y="75" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600" fill="white" text-anchor="middle">Powering the world</text>
 </svg>
