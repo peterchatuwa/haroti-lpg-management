@@ -1,3 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
-  <!-- This is a placeholder - the actual logo image will be used -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
+  <!-- Haroti Gas text logo -->
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0047AB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF6B35;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="30" cy="30" r="25" fill="#0047AB"/>
+  
+  <!-- Flame icon in circle -->
+  <path d="M30 15 C35 20, 38 25, 35 32 C32 38, 25 40, 22 35 C20 32, 22 28, 25 25 C27 23, 28 20, 30 15 Z" 
+        fill="#FF6B35"/>
+  <path d="M30 20 C32 23, 33 26, 31 30 C29 33, 26 34, 24 31 C23 29, 24 27, 26 26 C27 25, 28 23, 30 20 Z" 
+        fill="#FFFFFF" opacity="0.7"/>
+  
+  <!-- Text -->
+  <text x="65" y="28" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#0047AB">HAROTI</text>
+  <text x="65" y="48" font-family="Arial, sans-serif" font-size="16" font-weight="normal" fill="#FF6B35">Gas</text>
 </svg>

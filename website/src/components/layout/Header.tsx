@@ -45,7 +45,7 @@ export const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
             <img 
-              src="/haroti-logo.png" 
+              src="/haroti-logo.svg" 
               alt="Haroti Gas Logo" 
               className="h-12 w-auto"
             />
