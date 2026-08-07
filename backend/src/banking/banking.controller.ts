@@ -10,6 +10,12 @@ import { BankingService } from './banking.service';
 export class BankingController {
   constructor(private readonly bankingService: BankingService) {}
 
+  @Get('accounts')
+  @Roles(UserRole.FINANCE_MANAGER, UserRole.DIRECTOR, UserRole.SYSTEM_ADMIN)
+  accounts() {
+    return this.bankingService.listBankAccounts();
+  }
+
   @Post('mobile-money/import')
   @Roles(UserRole.FINANCE_MANAGER, UserRole.STATION_MANAGER, UserRole.SYSTEM_ADMIN)
   import(
@@ -28,5 +34,25 @@ export class BankingController {
   @Roles(UserRole.FINANCE_MANAGER, UserRole.STATION_MANAGER, UserRole.SYSTEM_ADMIN)
   summary(@Query('stationId') stationId?: string) {
     return this.bankingService.summary(stationId);
+  }
+
+  @Post('statements/import')
+  @Roles(UserRole.FINANCE_MANAGER, UserRole.DIRECTOR, UserRole.SYSTEM_ADMIN)
+  importBank(
+    @Body() body: { bankAccountId: string; csvText: string },
+  ) {
+    return this.bankingService.importBankCsv(body);
+  }
+
+  @Get('statements/lines')
+  @Roles(UserRole.FINANCE_MANAGER, UserRole.DIRECTOR, UserRole.SYSTEM_ADMIN)
+  bankLines(@Query('bankAccountId') bankAccountId?: string) {
+    return this.bankingService.bankReconciliation(bankAccountId);
+  }
+
+  @Get('statements/summary')
+  @Roles(UserRole.FINANCE_MANAGER, UserRole.DIRECTOR, UserRole.SYSTEM_ADMIN)
+  bankSummary(@Query('bankAccountId') bankAccountId?: string) {
+    return this.bankingService.bankSummary(bankAccountId);
   }
 }

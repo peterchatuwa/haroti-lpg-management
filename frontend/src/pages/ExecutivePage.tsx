@@ -86,6 +86,45 @@ export function ExecutivePage() {
         </div>
       </div>
 
+      {(overview.targetProgress ?? []).length > 0 && (
+        <div className="panel">
+          <h3 className="panel-title">Target achievement (this month)</h3>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Scope</th>
+                  <th>Metric</th>
+                  <th>Target</th>
+                  <th>Actual</th>
+                  <th>%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overview.targetProgress.map(
+                  (t: {
+                    id: string;
+                    stationCode?: string;
+                    metric: string;
+                    target: number;
+                    actual: number;
+                    achievementPct: number;
+                  }) => (
+                    <tr key={t.id}>
+                      <td>{t.stationCode ?? 'Network'}</td>
+                      <td>{t.metric}</td>
+                      <td>{formatMoney(t.target)}</td>
+                      <td>{formatMoney(t.actual)}</td>
+                      <td>{t.achievementPct}%</td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {(overview.runoutAlerts ?? []).length > 0 && (
         <div className="panel">
           <h3 className="panel-title">Runout alerts</h3>

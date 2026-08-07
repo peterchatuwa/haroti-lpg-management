@@ -18,6 +18,7 @@ import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { ProcurementDocumentsService } from './procurement-documents.service';
 import { PurchaseOrderLine } from './purchase-order-line.entity';
 import { PurchaseOrder } from './purchase-order.entity';
+import { ThreeWayMatchService } from './three-way-match.service';
 
 const APPROVAL_THRESHOLDS: Record<string, number> = {
   [UserRole.STATION_MANAGER]: 500000,
@@ -38,6 +39,7 @@ export class ProcurementService {
     private readonly financeService: FinanceService,
     private readonly accessoriesService: AccessoriesService,
     private readonly documentsService: ProcurementDocumentsService,
+    private readonly threeWayMatch: ThreeWayMatchService,
   ) {}
 
   findAll(status?: PurchaseOrderStatus) {
@@ -74,11 +76,6 @@ export class ProcurementService {
       relations: { customer: true },
     });
     if (!supplier) throw new NotFoundException('Vendor not found');
-    if (!supplier.customerId) {
-      throw new BadRequestException(
-        'Procurement is only allowed from customer-linked vendors',
-      );
-    }
 
     const stamp = Date.now().toString().slice(-8);
     const landedExtras =
@@ -225,7 +222,10 @@ export class ProcurementService {
       throw new BadRequestException('PO must be received before payment');
     }
 
+    await this.threeWayMatch.assertPayable(id);
+
     await this.financeService.postSupplierPayment(toNumber(po.totalAmount), po.id);
+    await this.threeWayMatch.markPaid(id);
     po.status = PurchaseOrderStatus.PAID;
     po.notes = paymentReference
       ? `${po.notes ?? ''}\nPayment ref: ${paymentReference}`.trim()

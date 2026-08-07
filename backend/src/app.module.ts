@@ -40,6 +40,8 @@ import { Asset } from './maintenance/asset.entity';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ActionCentreModule } from './action-centre/action-centre.module';
+import { AttachmentsModule } from './attachments/attachments.module';
+import { TargetsModule } from './targets/targets.module';
 import { ExecutiveModule } from './executive/executive.module';
 import { HealthModule } from './health/health.module';
 import { JobsModule } from './jobs/jobs.module';
@@ -125,6 +127,8 @@ import { User } from './users/user.entity';
     SuppliersModule,
     NotificationsModule,
     HealthModule,
+    AttachmentsModule,
+    TargetsModule,
     ActionCentreModule,
     ExecutiveModule,
     JobsModule,

@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MaintenanceService } from '../maintenance/maintenance.service';
+import { AgeingService } from '../finance/ageing.service';
 import { TanksService } from '../tanks/tanks.service';
 import { JobRun } from './job-run.entity';
 
@@ -15,6 +16,7 @@ export class JobsService {
     private readonly jobRunsRepo: Repository<JobRun>,
     private readonly maintenanceService: MaintenanceService,
     private readonly tanksService: TanksService,
+    private readonly ageingService: AgeingService,
   ) {}
 
   private async track(jobName: string, fn: () => Promise<string>) {
@@ -54,6 +56,14 @@ export class JobsService {
     await this.track('stock-integrity', async () => {
       const result = await this.tanksService.stockIntegrityCheck();
       return `${result.issueCount} station(s) with stock mismatch`;
+    });
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async ageingReportJob() {
+    await this.track('ageing-report', async () => {
+      const snapshot = await this.ageingService.snapshot();
+      return `AR total MWK ${snapshot.ar.total}, AP total MWK ${snapshot.ap.total}`;
     });
   }
 

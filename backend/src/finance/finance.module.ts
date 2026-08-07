@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CustomerPayment } from '../customers/customer-payment.entity';
+import { Customer } from '../customers/customer.entity';
+import { PurchaseOrder } from '../procurement/purchase-order.entity';
+import { Sale } from '../sales/sale.entity';
+import { AgeingController } from './ageing.controller';
+import { AgeingService } from './ageing.service';
 import { BudgetLine } from './budget-line.entity';
 import { FiscalPeriodController } from './fiscal-period.controller';
 import {
@@ -21,10 +27,14 @@ import { PostingRule } from './posting-rule.entity';
       BudgetLine,
       FiscalPeriod,
       PostingRule,
+      Customer,
+      CustomerPayment,
+      Sale,
+      PurchaseOrder,
     ]),
   ],
-  controllers: [FinanceController, FiscalPeriodController],
-  providers: [FinanceService, FiscalPeriodService, PostingRuleService],
-  exports: [FinanceService, FiscalPeriodService, PostingRuleService],
+  controllers: [FinanceController, FiscalPeriodController, AgeingController],
+  providers: [FinanceService, FiscalPeriodService, PostingRuleService, AgeingService],
+  exports: [FinanceService, FiscalPeriodService, PostingRuleService, AgeingService],
 })
 export class FinanceModule {}

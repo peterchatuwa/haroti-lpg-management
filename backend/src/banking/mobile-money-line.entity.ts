@@ -38,6 +38,27 @@ export class MobileMoneyLine extends BaseEntity {
   @Column({ name: 'matched_payment_id', type: 'uuid', nullable: true })
   matchedPaymentId?: string | null;
 
+  @Column({
+    name: 'fee_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
+  feeAmount?: string;
+
+  @Column({
+    name: 'net_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
+  netAmount?: string;
+
+  @Column({ name: 'settlement_batch', length: 60, nullable: true })
+  settlementBatch?: string;
+
   @ManyToOne(() => SalePayment, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'matched_payment_id' })
   matchedPayment?: SalePayment | null;

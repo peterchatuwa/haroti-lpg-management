@@ -336,3 +336,46 @@ export enum CommissionStatus {
   APPROVED = 'APPROVED',
   PAID = 'PAID',
 }
+
+export enum TargetMetric {
+  REVENUE = 'REVENUE',
+  KG = 'KG',
+  MARGIN = 'MARGIN',
+}
+
+export enum TargetScope {
+  NETWORK = 'NETWORK',
+  STATION = 'STATION',
+}
+
+export enum TargetPeriod {
+  DAY = 'DAY',
+  WEEK = 'WEEK',
+  MONTH = 'MONTH',
+}
+
+export enum AttachmentEntityType {
+  PROCUREMENT = 'PROCUREMENT',
+  DELIVERY = 'DELIVERY',
+  CYLINDER = 'CYLINDER',
+  WORK_ORDER = 'WORK_ORDER',
+  EXPENSE = 'EXPENSE',
+  REQUISITION = 'REQUISITION',
+  CUSTOMER = 'CUSTOMER',
+  SUPPLIER_INVOICE = 'SUPPLIER_INVOICE',
+}
+
+export enum SupplierInvoiceStatus {
+  DRAFT = 'DRAFT',
+  REGISTERED = 'REGISTERED',
+  MATCHED = 'MATCHED',
+  VARIANCE = 'VARIANCE',
+  PAID = 'PAID',
+}
+
+export enum ThreeWayMatchStatus {
+  PENDING = 'PENDING',
+  MATCHED = 'MATCHED',
+  VARIANCE = 'VARIANCE',
+  APPROVED = 'APPROVED',
+}

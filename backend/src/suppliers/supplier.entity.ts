@@ -25,9 +25,30 @@ export class Supplier extends BaseEntity {
   @Column({ name: 'is_active', default: true })
   isActive!: boolean;
 
-  /** Vendors must be linked to an existing customer record. */
+  /** Optional link to an existing customer record. */
   @Column({ name: 'customer_id', type: 'uuid', nullable: true, unique: true })
   customerId?: string | null;
+
+  @Column({ name: 'legal_name', length: 160, nullable: true })
+  legalName?: string;
+
+  @Column({ name: 'trading_name', length: 160, nullable: true })
+  tradingName?: string;
+
+  @Column({ name: 'tax_id', length: 40, nullable: true })
+  taxId?: string;
+
+  @Column({ name: 'payment_terms_days', type: 'int', default: 30 })
+  paymentTermsDays!: number;
+
+  @Column({ name: 'bank_account_mask', length: 30, nullable: true })
+  bankAccountMask?: string;
+
+  @Column({ name: 'is_approved_vendor', default: false })
+  isApprovedVendor!: boolean;
+
+  @Column({ length: 80, nullable: true })
+  category?: string;
 
   @ManyToOne(() => Customer, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'customer_id' })

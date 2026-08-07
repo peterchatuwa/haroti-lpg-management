@@ -40,6 +40,9 @@ import { Station } from '../stations/station.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { Tank } from '../tanks/tank.entity';
 import { TankReading } from '../tanks/tank-reading.entity';
+import { Attachment } from '../attachments/attachment.entity';
+import { BankAccount } from '../banking/bank-account.entity';
+import { BankStatementLine } from '../banking/bank-statement-line.entity';
 import { FiscalPeriod } from '../finance/fiscal-period.entity';
 import { PostingRule } from '../finance/posting-rule.entity';
 import { JobRun } from '../jobs/job-run.entity';
@@ -49,6 +52,8 @@ import { CylinderMovement } from '../cylinders/cylinder-movement.entity';
 import { MobileMoneyLine } from '../banking/mobile-money-line.entity';
 import { TransferItem } from '../transfers/transfer-item.entity';
 import { Transfer } from '../transfers/transfer.entity';
+import { SupplierInvoice } from '../procurement/supplier-invoice.entity';
+import { Target } from '../targets/target.entity';
 import { User } from '../users/user.entity';
 
 export const ENTITIES = [
@@ -104,4 +109,9 @@ export const ENTITIES = [
   Requisition,
   RequisitionLine,
   JobRun,
+  Target,
+  BankAccount,
+  BankStatementLine,
+  SupplierInvoice,
+  Attachment,
 ];

@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Customer } from '../customers/customer.entity';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
+import { CreateStandaloneSupplierDto } from './dto/create-standalone-supplier.dto';
 import { Supplier } from './supplier.entity';
 
 @Injectable()
@@ -66,6 +67,29 @@ export class SuppliersService {
         address: dto.address ?? customer.location,
         customerId: customer.id,
         isActive: true,
+        isApprovedVendor: true,
+      }),
+    );
+  }
+
+  async createStandalone(dto: CreateStandaloneSupplierDto) {
+    const code = `VND-${Date.now().toString().slice(-6)}`;
+    return this.suppliersRepo.save(
+      this.suppliersRepo.create({
+        code,
+        name: dto.name,
+        legalName: dto.legalName ?? dto.name,
+        tradingName: dto.tradingName,
+        phone: dto.phone,
+        email: dto.email,
+        taxId: dto.taxId,
+        address: dto.address,
+        depotName: dto.depotName,
+        paymentTermsDays: dto.paymentTermsDays ?? 30,
+        bankAccountMask: dto.bankAccountMask,
+        category: dto.category,
+        isActive: true,
+        isApprovedVendor: false,
       }),
     );
   }

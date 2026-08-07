@@ -9,6 +9,9 @@ import { PurchaseOrderLine } from './purchase-order-line.entity';
 import { PurchaseOrder } from './purchase-order.entity';
 import { ProcurementController } from './procurement.controller';
 import { ProcurementService } from './procurement.service';
+import { SupplierInvoice } from './supplier-invoice.entity';
+import { SupplierInvoicesController } from './supplier-invoices.controller';
+import { ThreeWayMatchService } from './three-way-match.service';
 
 @Module({
   imports: [
@@ -17,11 +20,13 @@ import { ProcurementService } from './procurement.service';
       PurchaseOrderLine,
       ProcurementDocument,
       Supplier,
+      SupplierInvoice,
     ]),
     FinanceModule,
     AccessoriesModule,
   ],
-  controllers: [ProcurementController],
-  providers: [ProcurementService, ProcurementDocumentsService],
+  controllers: [ProcurementController, SupplierInvoicesController],
+  providers: [ProcurementService, ProcurementDocumentsService, ThreeWayMatchService],
+  exports: [ThreeWayMatchService],
 })
 export class ProcurementModule {}

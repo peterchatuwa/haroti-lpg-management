@@ -8,6 +8,7 @@ import { ReportsService } from '../reports/reports.service';
 import { Sale } from '../sales/sale.entity';
 import { Station } from '../stations/station.entity';
 import { TanksService } from '../tanks/tanks.service';
+import { TargetsService } from '../targets/targets.service';
 
 @Injectable()
 export class ExecutiveService {
@@ -17,17 +18,20 @@ export class ExecutiveService {
     private readonly reportsService: ReportsService,
     private readonly actionCentre: ActionCentreService,
     private readonly tanksService: TanksService,
+    private readonly targetsService: TargetsService,
   ) {}
 
   async overview() {
     const base = await this.reportsService.executiveSummary();
     const actionItems = await this.actionCentre.summary();
     const runout = await this.tanksService.runoutForecast();
+    const targetProgress = await this.targetsService.progress();
     return {
       ...base,
       actionCentre: actionItems,
       stockoutRisk: runout.filter((r) => r.daysToRunout <= 3).length,
       runoutAlerts: runout.slice(0, 5),
+      targetProgress,
     };
   }
 

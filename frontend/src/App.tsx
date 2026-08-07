@@ -17,6 +17,7 @@ import { ProcurementPage } from './pages/ProcurementPage';
 import { ActionCentrePage } from './pages/ActionCentrePage';
 import { ExecutivePage } from './pages/ExecutivePage';
 import { FinancePage } from './pages/FinancePage';
+import { TargetsPage } from './pages/TargetsPage';
 import { SyncCentrePage } from './pages/SyncCentrePage';
 import { FranchisePage } from './pages/FranchisePage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -95,6 +96,7 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="executive" element={<ExecutivePage />} />
         <Route path="action-centre" element={<ActionCentrePage />} />
+        <Route path="targets" element={<TargetsPage />} />
         <Route path="sync-centre" element={<SyncCentrePage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="pos" element={<PosPage />} />
