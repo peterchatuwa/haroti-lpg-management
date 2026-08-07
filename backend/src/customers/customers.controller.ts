@@ -19,6 +19,11 @@ export class CustomersController {
     return this.customersService.findAll(stationId);
   }
 
+  @Get(':id/profile')
+  profile(@Param('id') id: string) {
+    return this.customersService.profile360(id);
+  }
+
   @Get(':id/statement')
   statement(
     @Param('id') id: string,

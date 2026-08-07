@@ -106,10 +106,10 @@ export function CustomersPage() {
                 {(customers ?? []).map((c) => (
                   <tr key={c.id}>
                     <td>
-                      <Link to={`/customers/${c.id}/statement`}>{c.customerCode}</Link>
+                      <Link to={`/customers/${c.id}`}>{c.customerCode}</Link>
                     </td>
                     <td>
-                      <Link to={`/customers/${c.id}/statement`}>{c.fullName}</Link>
+                      <Link to={`/customers/${c.id}`}>{c.fullName}</Link>
                       <div className="muted">{c.type}</div>
                     </td>
                     <td>{formatMoney(Number(c.creditLimit))}</td>

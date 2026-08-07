@@ -93,8 +93,8 @@ export function CustomerStatementPage() {
         title={`${c.fullName} — statement`}
         subtitle={`${c.customerCode} · ${c.type.replaceAll('_', ' ')}`}
         action={
-          <Link className="btn btn-ghost" to="/">
-            ← Dashboard
+          <Link className="btn btn-ghost" to={`/customers/${id}`}>
+            ← Customer profile
           </Link>
         }
       />

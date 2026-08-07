@@ -934,6 +934,23 @@ tr.row-ready-pay td {
   background: var(--mist);
 }
 
+.login-portal-link {
+  margin: 1.25rem 0 0;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.login-portal-link a {
+  color: var(--forest);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.login-portal-link a:hover {
+  text-decoration: underline;
+}
+
 /* ——— POS receipt ——— */
 .receipt-ticket {
   background:

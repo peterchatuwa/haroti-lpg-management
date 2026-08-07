@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FlameMark } from '../components/FlameMark';
 import api from '../lib/api';
 import { landingRouteForRole } from '../lib/landing-route';
@@ -106,6 +106,10 @@ export function LoginPage() {
               </button>
             ))}
           </div>
+          <p className="login-portal-link">
+            Customer?{' '}
+            <Link to="/portal">Open the self-service portal</Link>
+          </p>
         </form>
       </section>
     </div>

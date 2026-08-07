@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { AccessoriesPage } from './pages/AccessoriesPage';
 import { CylindersPage } from './pages/CylindersPage';
 import { CustomerStatementPage } from './pages/CustomerStatementPage';
+import { CustomerProfilePage } from './pages/CustomerProfilePage';
 import { CustomersPage } from './pages/CustomersPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DeliveriesPage } from './pages/DeliveriesPage';
@@ -127,6 +128,7 @@ export default function App() {
         <Route path="cylinders" element={<CylindersPage />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id/statement" element={<CustomerStatementPage />} />
+        <Route path="customers/:id" element={<CustomerProfilePage />} />
         <Route path="payc" element={<PaycPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="safety" element={<SafetyPage />} />

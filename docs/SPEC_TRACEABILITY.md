@@ -200,6 +200,94 @@ Configure SMS in production `.env`: `SMS_ENABLED=true`, `SMS_API_URL`, `SMS_API_
 
 ---
 
+## Phase 2 — LPG excellence (complete)
+
+| Spec ID | Requirement | Code | Test | Status |
+|---------|-------------|------|------|--------|
+| LPG-002 | Runout forecasting | `tanks/tanks.service.ts` `runoutForecast`, `GET /tanks/runout-forecast` | manual | DONE |
+| LPG-003 | Reorder engine | `tanks/tanks.service.ts` `reorderSuggestions`, `GET /tanks/reorder-suggestions` | manual | DONE |
+| CYL-001 | QR cylinder identifier | `cylinders/cylinders.service.ts`, `GET /cylinders/lookup/:serial` | manual | DONE |
+| CYL-002 | Cylinder passport | `cylinders/cylinders.service.ts`, `GET /cylinders/:id/passport` | manual | DONE |
+| CYL-006 | Cylinder stocktake | `cylinders/cylinder-stocktake.entity.ts`, `POST /cylinders/stocktakes` | manual | DONE |
+| SAFE-001 | Incident register | `safety/safety.service.ts`, `POST /safety/incidents` | manual | DONE |
+| SAFE-002 | Investigation workflow | `safety/safety.service.ts`, `PATCH /safety/incidents/:id` | manual | DONE |
+| SAFE-004 | Compliance calendar | `safety/safety.service.ts`, `GET /safety/compliance/calendar` | manual | DONE |
+| CMMS-001 | Maintenance plans | `maintenance/maintenance.service.ts`, `GET/POST /maintenance/plans` | manual | DONE |
+| MAP-001 | Station health status | `stations/network.service.ts` `mapOverview` | manual | DONE |
+| MAP-002 | Station popover detail | `stations/network.service.ts`, `GET /network/map` | manual | DONE |
+| DEL-002 | Multi-drop allocation | `deliveries/delivery-allocation.entity.ts`, `POST /deliveries/:id/allocations` | manual | DONE |
+| DEL-003 | Suggested allocation | `deliveries/deliveries.service.ts`, `GET /deliveries/suggested-allocation` | manual | DONE |
+
+Migration: `backend/src/database/migrations/1735696000000-Phase2Improvement.ts`
+
+---
+
+## Phase 3 — Automation (complete)
+
+| Spec ID | Requirement | Code | Test | Status |
+|---------|-------------|------|------|--------|
+| AUTO-001 | Workflow engine | `workflows/workflows.service.ts`, `GET /workflows/definitions` | manual | DONE |
+| AUTO-002 | Approval inbox | `workflows/workflows.service.ts`, `GET /approval-tasks` | manual | DONE |
+| AUTO-003 | Escalation | `workflows/workflows.service.ts` `escalateOverdue`, `jobs/jobs.service.ts` hourly cron | manual | DONE |
+| AUTO-004 | Notification service | `notifications/notifications.service.ts`, adapters in `notifications/adapters/` | manual | DONE |
+| AUTO-005 | Notification reliability | `notifications/notifications.service.ts` `processQueue`, 5-min cron | manual | DONE |
+| CMMS-005 | IoT telemetry ingestion | `iot/iot.service.ts`, `POST /iot/telemetry` (`x-iot-api-key`) | manual | DONE |
+| STAFF-001 | Attendant scorecard | `analytics/staff-analytics.service.ts`, `GET /analytics/staff/attendants` | manual | DONE |
+| STAFF-002 | Manager scorecard | `analytics/staff-analytics.service.ts`, `GET /analytics/staff/managers` | manual | DONE |
+| STAFF-003 | Fair comparison filters | `analytics/staff-analytics.service.ts` station/period query params | manual | DONE |
+
+Migration: `backend/src/database/migrations/1735782400000-Phase3Improvement.ts`
+
+Configure IoT in production `.env`: `IOT_API_KEY` (defaults to `haroti-iot-dev` in development).
+
+---
+
+## Phase 4 — Strategic growth (complete)
+
+| Spec ID | Requirement | Code | Test | Status |
+|---------|-------------|------|------|--------|
+| CRM-004 | Loyalty ledger | `loyalty/loyalty.service.ts`, `sales/sales.service.ts` `finalizeSale` hook | manual | DONE |
+| CRM-001 | Customer 360 profile | `customers/customers.service.ts` `profile360`, `CustomerProfilePage.tsx` | manual | DONE |
+| CUSTAPP-001 | Customer OTP authentication | `customer-portal/customer-portal.service.ts`, scoped `CustomerAuthGuard` JWT | manual | DONE |
+| CUSTAPP-002 | Self-service (prices, receipts, statement) | `customer-portal/customer-portal.controller.ts` | manual | DONE |
+| CUSTAPP-003 | Refill/delivery requests | `customer-portal/refill-request.entity.ts`, admin `PATCH /customer-portal/admin/refill-requests/:id` | manual | DONE |
+| CUSTAPP-004 | Digital communication via portal | `customer-portal/customer-portal.service.ts` receipts/statement/PAYC | manual | DONE |
+| AI-001 | Demand forecast | `ai/ai-insights.service.ts`, `GET /ai/forecasts/demand` | manual | DONE |
+| AI-002 | Stockout risk | `ai/ai-insights.service.ts`, `GET /ai/stockout-risk` | manual | DONE |
+| AI-003 | Anomaly detection | `ai/ai-insights.service.ts`, `GET /ai/anomalies` | manual | DONE |
+| AI-004 | Natural-language analytics (read-only) | `ai/ai-insights.service.ts`, `POST /ai/analytics/query` | manual | DONE |
+| AI-005 | No direct write access | AI module has no POST/PUT/PATCH for financial or stock entities | manual | DONE |
+
+Migration: `backend/src/database/migrations/1735868800000-Phase4Improvement.ts`
+
+Customer portal uses a separate JWT (`kind: 'customer'`) stored in `sessionStorage` — not the staff ERP token.
+
+---
+
+## Frontend coverage (Phases 2–4)
+
+| Feature | Page | API |
+|---------|------|-----|
+| Network map | `NetworkMapPage.tsx` | `GET /network/map` |
+| Runout / reorder | `InventoryPage.tsx` | `GET /tanks/runout-forecast`, `/tanks/reorder-suggestions` |
+| Cylinder passport | `CylindersPage.tsx` | `GET /cylinders/:id/passport` |
+| Cylinder stocktake | `CylindersPage.tsx` | `GET /cylinders/stocktakes/list`, `POST /cylinders/stocktakes` |
+| Safety incidents | `SafetyPage.tsx` | `GET/POST /safety/incidents` |
+| Compliance calendar | `SafetyPage.tsx` | `GET /safety/compliance/calendar` |
+| Maintenance plans | `MaintenancePage.tsx` | `GET/POST /maintenance/plans` |
+| Delivery allocation | `DeliveriesPage.tsx` | `GET /deliveries/suggested-allocation`, `POST /deliveries/:id/allocations` |
+| Approval inbox | `ApprovalInboxPage.tsx` | `GET /approval-tasks`, `POST /approval-tasks/:id/approve` |
+| Notifications | `NotificationsPage.tsx` | `GET /notifications` |
+| Staff analytics | `StaffAnalyticsPage.tsx` | `GET /analytics/staff/attendants` |
+| Customer portal (public) | `CustomerPortalPage.tsx` | `POST /customer-portal/auth/*`, scoped customer routes |
+| AI insights | `InsightsPage.tsx` | `GET /ai/forecasts/demand`, `/ai/anomalies`, `POST /ai/analytics/query` |
+| Loyalty admin | `LoyaltyPage.tsx` | `GET /loyalty/accounts`, `POST /loyalty/customers/:id/redeem` |
+| Customer 360 profile | `CustomerProfilePage.tsx` | `GET /customers/:id/profile` |
+| Refill requests | `RefillRequestsPage.tsx` | `GET /customer-portal/admin/refill-requests` |
+| Customer portal entry | `LoginPage.tsx` | Link to `/portal` |
+
+---
+
 ## Manual pilot checklist (before station go-live)
 
 - [x] Open shift → verify tank reading recorded
@@ -211,10 +299,17 @@ Configure SMS in production `.env`: `SMS_ENABLED=true`, `SMS_API_URL`, `SMS_API_
 - [x] Hydro cylinders due → work orders auto-created daily
 - [x] Offline sale replay with changed payload → 409 conflict surfaced in UI
 - [x] Register customer as vendor → create PO → walk through to PAID with all 4 documents
+- [x] Network map shows station health with runout days
+- [x] Cylinder stocktake session → scan → close with variance
+- [x] Approval task created → approve/reject from inbox → escalation after SLA
+- [x] IoT telemetry POST updates tank reading
+- [x] Customer portal OTP login → view receipts/statement → submit refill request
+- [x] Loyalty points earned on cash sale → redeem from admin
+- [x] AI insights: demand forecast, stockout risk, anomaly list, NL query (read-only)
 
 Run automated pilot: `node scripts/pilot-checklist.mjs http://169.58.127.129/api`
 
 ---
 
-*Last updated: Tier D+ (SMS, PDF, consignment GL, scale).*
+*Last updated: Phases 2–4 (LPG excellence, automation, strategic growth).*
 

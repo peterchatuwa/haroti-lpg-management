@@ -7,8 +7,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { asDecimal, round2, toNumber } from '../common/decimal';
 import { PaymentMethod, SaleStatus } from '../common/enums';
+import { Cylinder } from '../cylinders/cylinder.entity';
+import { RefillRequest } from '../customer-portal/refill-request.entity';
 import { FinanceService } from '../finance/finance.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
+import { NotificationDelivery } from '../notifications/notification-delivery.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PaycMeter } from '../payc/payc-meter.entity';
 import { Sale } from '../sales/sale.entity';
 import { CustomerPayment } from './customer-payment.entity';
 import { Customer } from './customer.entity';
@@ -24,8 +29,17 @@ export class CustomersService {
     private readonly salesRepo: Repository<Sale>,
     @InjectRepository(CustomerPayment)
     private readonly paymentsRepo: Repository<CustomerPayment>,
+    @InjectRepository(Cylinder)
+    private readonly cylindersRepo: Repository<Cylinder>,
+    @InjectRepository(PaycMeter)
+    private readonly paycMetersRepo: Repository<PaycMeter>,
+    @InjectRepository(RefillRequest)
+    private readonly refillRepo: Repository<RefillRequest>,
+    @InjectRepository(NotificationDelivery)
+    private readonly deliveriesRepo: Repository<NotificationDelivery>,
     private readonly financeService: FinanceService,
     private readonly notificationsService: NotificationsService,
+    private readonly loyaltyService: LoyaltyService,
   ) {}
 
   findAll(stationId?: string) {
@@ -147,6 +161,158 @@ export class CustomersService {
       take: limit,
       relations: { station: true },
     });
+  }
+
+  async profile360(customerId: string) {
+    const customer = await this.findOne(customerId);
+
+    const sales = await this.salesRepo.find({
+      where: { customerId, status: SaleStatus.COMPLETED },
+      relations: { station: true },
+      order: { soldAt: 'DESC' },
+      take: 50,
+    });
+
+    const payments = await this.paymentsRepo.find({
+      where: { customerId },
+      order: { paidAt: 'DESC' },
+      take: 20,
+    });
+
+    const cylinders = await this.cylindersRepo.find({
+      where: { customerId },
+      relations: { station: true },
+      order: { serialNumber: 'ASC' },
+    });
+
+    const paycMeters = await this.paycMetersRepo.find({
+      where: { customerId },
+      relations: { station: true },
+      order: { meterSerial: 'ASC' },
+    });
+
+    const refillRequests = await this.refillRepo.find({
+      where: { customerId },
+      relations: { station: true },
+      order: { createdAt: 'DESC' },
+      take: 10,
+    });
+
+    const loyaltyAccount = await this.loyaltyService.getOrCreate(customerId);
+    const loyaltyHistory = await this.loyaltyService.history(customerId);
+
+    let communications: Array<{
+      id: string;
+      channel: string;
+      status: string;
+      recipient?: string | null;
+      title?: string;
+      body?: string;
+      sentAt: Date;
+    }> = [];
+
+    if (customer.phone) {
+      const deliveries = await this.deliveriesRepo.find({
+        where: { recipient: customer.phone },
+        relations: { notification: true },
+        order: { createdAt: 'DESC' },
+        take: 15,
+      });
+      communications = deliveries.map((d) => ({
+        id: d.id,
+        channel: d.channel,
+        status: d.status,
+        recipient: d.recipient,
+        title: d.notification?.title,
+        body: d.notification?.body,
+        sentAt: d.createdAt,
+      }));
+    }
+
+    const lifetimeRevenue = round2(
+      sales.reduce((sum, s) => sum + toNumber(s.totalAmount), 0),
+    );
+    const lifetimeKg = round2(
+      sales.reduce((sum, s) => sum + toNumber(s.lpgQuantityKg), 0),
+    );
+    const lifetimePayments = round2(
+      payments.reduce((sum, p) => sum + toNumber(p.amount), 0),
+    );
+
+    return {
+      customer: {
+        id: customer.id,
+        customerCode: customer.customerCode,
+        fullName: customer.fullName,
+        phone: customer.phone,
+        type: customer.type,
+        creditLimit: toNumber(customer.creditLimit),
+        outstandingBalance: toNumber(customer.outstandingBalance),
+        isSuspended: customer.isSuspended,
+        contractPricePerKg: customer.contractPricePerKg
+          ? toNumber(customer.contractPricePerKg)
+          : null,
+        station: customer.station,
+        createdAt: customer.createdAt,
+      },
+      summary: {
+        saleCount: sales.length,
+        lifetimeRevenue,
+        lifetimeKg,
+        lifetimePayments,
+        cylinderCount: cylinders.length,
+        paycMeterCount: paycMeters.length,
+        loyaltyPoints: loyaltyAccount.pointsBalance,
+        loyaltyLifetimeEarned: loyaltyAccount.lifetimeEarned,
+      },
+      recentSales: sales.slice(0, 10).map((s) => ({
+        id: s.id,
+        receiptNumber: s.receiptNumber,
+        soldAt: s.soldAt,
+        stationCode: s.station?.code,
+        totalAmount: toNumber(s.totalAmount),
+        lpgQuantityKg: toNumber(s.lpgQuantityKg),
+        paymentMethod: s.paymentMethod,
+      })),
+      recentPayments: payments.slice(0, 10).map((p) => ({
+        id: p.id,
+        paidAt: p.paidAt,
+        amount: toNumber(p.amount),
+        paymentMethod: p.paymentMethod,
+        reference: p.reference,
+      })),
+      cylinders: cylinders.map((c) => ({
+        id: c.id,
+        serialNumber: c.serialNumber,
+        sizeKg: toNumber(c.sizeKg),
+        status: c.status,
+        stationCode: c.station?.code,
+        nextInspectionDate: c.nextInspectionDate,
+      })),
+      paycMeters: paycMeters.map((m) => ({
+        id: m.id,
+        meterSerial: m.meterSerial,
+        status: m.status,
+        creditBalanceKg: toNumber(m.creditBalanceKg),
+        stationCode: m.station?.code,
+        lastTelemetryAt: m.lastTelemetryAt,
+      })),
+      loyalty: {
+        pointsBalance: loyaltyAccount.pointsBalance,
+        lifetimeEarned: loyaltyAccount.lifetimeEarned,
+        recentTransactions: loyaltyHistory.slice(0, 10),
+      },
+      refillRequests: refillRequests.map((r) => ({
+        id: r.id,
+        requestNumber: r.requestNumber,
+        status: r.status,
+        quantityKg: toNumber(r.quantityKg),
+        preferredDate: r.preferredDate,
+        stationCode: r.station?.code,
+        createdAt: r.createdAt,
+      })),
+      communications,
+    };
   }
 
   async statement(customerId: string, from?: string, to?: string) {
