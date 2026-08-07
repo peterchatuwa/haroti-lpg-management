@@ -4,7 +4,7 @@ import { JournalEventType } from '../common/enums';
 
 @Entity('posting_rules')
 export class PostingRule extends BaseEntity {
-  @Column({ type: 'enum', enum: JournalEventType })
+  @Column({ name: 'event_type', type: 'enum', enum: JournalEventType })
   eventType!: JournalEventType;
 
   @Column({ name: 'line_role', length: 40 })
@@ -25,7 +25,7 @@ export class PostingRule extends BaseEntity {
   @Column({ name: 'effective_to', type: 'date', nullable: true })
   effectiveTo?: string;
 
-  @Column({ default: true })
+  @Column({ name: 'is_active', default: true })
   isActive!: boolean;
 
   @Column({ type: 'int', default: 1 })
