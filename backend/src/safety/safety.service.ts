@@ -7,9 +7,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   ComplianceItemStatus,
+  IncidentSeverity,
   IncidentStatus,
   IncidentType,
 } from '../common/enums';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ComplianceItem } from './compliance-item.entity';
 import { SafetyIncident } from './safety-incident.entity';
 
@@ -20,6 +22,7 @@ export class SafetyService {
     private readonly incidentsRepo: Repository<SafetyIncident>,
     @InjectRepository(ComplianceItem)
     private readonly complianceRepo: Repository<ComplianceItem>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   listIncidents(stationId?: string) {
@@ -40,7 +43,7 @@ export class SafetyService {
     reportedById?: string;
   }) {
     const stamp = Date.now().toString().slice(-6);
-    return this.incidentsRepo.save(
+    const incident = await this.incidentsRepo.save(
       this.incidentsRepo.create({
         incidentNumber: `INC-${stamp}`,
         type: dto.type,
@@ -53,6 +56,22 @@ export class SafetyService {
         status: IncidentStatus.OPEN,
       }),
     );
+
+    if (
+      dto.severity === IncidentSeverity.HIGH ||
+      dto.severity === IncidentSeverity.CRITICAL
+    ) {
+      await this.notificationsService.dispatch({
+        eventType: 'safety.critical_incident',
+        title: `Critical safety incident: ${dto.type}`,
+        body: dto.description,
+        entityType: 'INCIDENT',
+        entityId: incident.id,
+        mandatory: true,
+      });
+    }
+
+    return incident;
   }
 
   async updateIncident(

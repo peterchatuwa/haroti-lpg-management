@@ -3,9 +3,11 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MaintenanceService } from '../maintenance/maintenance.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SafetyService } from '../safety/safety.service';
 import { AgeingService } from '../finance/ageing.service';
 import { TanksService } from '../tanks/tanks.service';
+import { WorkflowsService } from '../workflows/workflows.service';
 import { JobRun } from './job-run.entity';
 
 @Injectable()
@@ -19,6 +21,8 @@ export class JobsService {
     private readonly tanksService: TanksService,
     private readonly ageingService: AgeingService,
     private readonly safetyService: SafetyService,
+    private readonly workflowsService: WorkflowsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async track(jobName: string, fn: () => Promise<string>) {
@@ -82,6 +86,22 @@ export class JobsService {
     await this.track('compliance-status', async () => {
       const result = await this.safetyService.refreshComplianceStatuses();
       return `Refreshed ${result.updated} compliance item(s)`;
+    });
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async approvalEscalationJob() {
+    await this.track('approval-escalation', async () => {
+      const result = await this.workflowsService.escalateOverdue();
+      return `Escalated ${result.escalated} approval task(s)`;
+    });
+  }
+
+  @Cron('*/5 * * * *')
+  async notificationQueueJob() {
+    await this.track('notification-queue', async () => {
+      const result = await this.notificationsService.processQueue();
+      return `Processed ${result.processed}, sent ${result.sent}, failed ${result.failed}`;
     });
   }
 

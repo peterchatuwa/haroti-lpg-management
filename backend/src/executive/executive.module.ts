@@ -6,6 +6,7 @@ import { Sale } from '../sales/sale.entity';
 import { Station } from '../stations/station.entity';
 import { TargetsModule } from '../targets/targets.module';
 import { TanksModule } from '../tanks/tanks.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
 import { ExecutiveController } from './executive.controller';
 import { ExecutiveService } from './executive.service';
 
@@ -16,6 +17,7 @@ import { ExecutiveService } from './executive.service';
     ActionCentreModule,
     TanksModule,
     TargetsModule,
+    AnalyticsModule,
   ],
   controllers: [ExecutiveController],
   providers: [ExecutiveService],

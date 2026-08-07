@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtPayload } from '../auth/jwt-payload';
 import { StationScopeService } from '../auth/station-scope.service';
 import { TankReadingContext } from '../common/enums';
+import { IoTService } from '../iot/iot.service';
 import { TanksService } from './tanks.service';
 
 @UseGuards(JwtAuthGuard)
@@ -12,6 +13,7 @@ export class TanksController {
   constructor(
     private readonly tanksService: TanksService,
     private readonly stationScope: StationScopeService,
+    private readonly iotService: IoTService,
   ) {}
 
   @Get()
@@ -99,5 +101,10 @@ export class TanksController {
     @Body() body: { description: string; assignedToId?: string; dueDate?: string },
   ) {
     return this.tanksService.addLossCaseAction(id, body);
+  }
+
+  @Get(':id/telemetry')
+  tankTelemetry(@Param('id') id: string, @Query('limit') limit?: string) {
+    return this.iotService.tankTelemetry(id, limit ? Number(limit) : 50);
   }
 }

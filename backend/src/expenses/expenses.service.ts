@@ -6,8 +6,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { asDecimal, toNumber } from '../common/decimal';
-import { ExpenseStatus, UserRole } from '../common/enums';
+import { ExpenseStatus, UserRole, WorkflowEntityType } from '../common/enums';
 import { FinanceService } from '../finance/finance.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { WorkflowsService } from '../workflows/workflows.service';
 import { CashDeposit } from '../banking/cash-deposit.entity';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { Expense } from './expense.entity';
@@ -20,6 +22,8 @@ export class ExpensesService {
     @InjectRepository(CashDeposit)
     private readonly depositsRepo: Repository<CashDeposit>,
     private readonly financeService: FinanceService,
+    private readonly workflowsService: WorkflowsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   findAll(stationId?: string) {
@@ -46,6 +50,25 @@ export class ExpensesService {
         dto.amount > 50000 ? ExpenseStatus.SUBMITTED : ExpenseStatus.APPROVED,
     });
     const saved = await this.expensesRepo.save(expense);
+
+    if (saved.status === ExpenseStatus.SUBMITTED) {
+      await this.workflowsService.createTask({
+        entityType: WorkflowEntityType.EXPENSE,
+        entityId: saved.id,
+        amount: dto.amount,
+        requesterId: userId,
+        stationId: dto.stationId,
+        summary: `${dto.category}: ${dto.description}`,
+      });
+      await this.notificationsService.dispatch({
+        eventType: 'expense.approval_required',
+        title: 'Expense awaiting approval',
+        body: `Expense MWK ${dto.amount.toFixed(0)} — ${dto.description}`,
+        entityType: WorkflowEntityType.EXPENSE,
+        entityId: saved.id,
+        mandatory: true,
+      });
+    }
 
     if (saved.status === ExpenseStatus.APPROVED) {
       await this.financeService.postStationExpense(

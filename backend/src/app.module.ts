@@ -76,6 +76,9 @@ import { TransferItem } from './transfers/transfer-item.entity';
 import { Transfer } from './transfers/transfer.entity';
 import { TransfersModule } from './transfers/transfers.module';
 import { SeedModule } from './seed/seed.module';
+import { WorkflowsModule } from './workflows/workflows.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { IoTModule } from './iot/iot.module';
 
 @Module({
   imports: [
@@ -133,6 +136,9 @@ import { SeedModule } from './seed/seed.module';
     ExecutiveModule,
     JobsModule,
     SafetyModule,
+    WorkflowsModule,
+    AnalyticsModule,
+    IoTModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

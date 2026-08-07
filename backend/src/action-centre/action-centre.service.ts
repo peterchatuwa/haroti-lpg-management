@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ExpenseStatus, PurchaseOrderStatus, RequisitionStatus, SaleStatus, ShiftStatus } from '../common/enums';
+import { WorkflowsService } from '../workflows/workflows.service';
 import { Expense } from '../expenses/expense.entity';
 import { PurchaseOrder } from '../procurement/purchase-order.entity';
 import { Requisition } from '../requisitions/requisition.entity';
@@ -21,6 +22,7 @@ export class ActionCentreService {
     @InjectRepository(PurchaseOrder) private readonly poRepo: Repository<PurchaseOrder>,
     @InjectRepository(LossCase) private readonly lossRepo: Repository<LossCase>,
     @InjectRepository(MaintenanceWorkOrder) private readonly woRepo: Repository<MaintenanceWorkOrder>,
+    private readonly workflowsService: WorkflowsService,
   ) {}
 
   async summary(stationId?: string) {
@@ -67,7 +69,10 @@ export class ActionCentreService {
       where: { status: WorkOrderStatus.OPEN, type: 'CYLINDER_HYDRO_TEST' as never },
     });
 
+    const approvalTasks = await this.workflowsService.pendingCount();
+
     const items = [
+      { type: 'APPROVAL_INBOX', count: approvalTasks, label: 'Workflow approval tasks' },
       { type: 'DISCOUNT_APPROVAL', count: pendingDiscounts, label: 'Pending discount approvals' },
       { type: 'SHIFT_APPROVAL', count: pendingShifts, label: 'Shifts awaiting approval' },
       { type: 'EXPENSE_APPROVAL', count: pendingExpenses, label: 'Expenses to approve' },

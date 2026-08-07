@@ -20,6 +20,9 @@ import { Product } from '../products/product.entity';
 import { Station } from '../stations/station.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { User } from '../users/user.entity';
+import { WorkflowDefinition } from '../workflows/workflow-definition.entity';
+import { WorkflowStep } from '../workflows/workflow-step.entity';
+import { IoTDevice } from '../iot/iot-device.entity';
 import { SeedService } from './seed.service';
 
 @Module({
@@ -45,6 +48,9 @@ import { SeedService } from './seed.service';
       CapitalProject,
       ProjectMilestone,
       FranchiseAgreement,
+      WorkflowDefinition,
+      WorkflowStep,
+      IoTDevice,
     ]),
   ],
   providers: [SeedService],

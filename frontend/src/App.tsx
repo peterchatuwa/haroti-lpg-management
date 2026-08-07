@@ -20,6 +20,9 @@ import { FinancePage } from './pages/FinancePage';
 import { TargetsPage } from './pages/TargetsPage';
 import { NetworkMapPage } from './pages/NetworkMapPage';
 import { SafetyPage } from './pages/SafetyPage';
+import { ApprovalInboxPage } from './pages/ApprovalInboxPage';
+import { NotificationsPage } from './pages/NotificationsPage';
+import { StaffAnalyticsPage } from './pages/StaffAnalyticsPage';
 import { SyncCentrePage } from './pages/SyncCentrePage';
 import { FranchisePage } from './pages/FranchisePage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -98,6 +101,9 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="executive" element={<ExecutivePage />} />
         <Route path="action-centre" element={<ActionCentrePage />} />
+        <Route path="approval-inbox" element={<ApprovalInboxPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="staff-analytics" element={<StaffAnalyticsPage />} />
         <Route path="targets" element={<TargetsPage />} />
         <Route path="sync-centre" element={<SyncCentrePage />} />
         <Route path="reports" element={<ReportsPage />} />

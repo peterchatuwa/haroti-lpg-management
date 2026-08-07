@@ -15,6 +15,9 @@ import {
   StationStatus,
   UserRole,
   WarehouseType,
+  WorkflowEntityType,
+  IoTDeviceType,
+  IoTDeviceStatus,
 } from '../common/enums';
 import { AccessoryStock } from '../accessories/accessory-stock.entity';
 import { ChannelPrice } from '../accessories/channel-price.entity';
@@ -37,6 +40,9 @@ import { Product } from '../products/product.entity';
 import { Station } from '../stations/station.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { User } from '../users/user.entity';
+import { WorkflowDefinition } from '../workflows/workflow-definition.entity';
+import { WorkflowStep } from '../workflows/workflow-step.entity';
+import { IoTDevice } from '../iot/iot-device.entity';
 
 const STATIONS = [
   {
@@ -134,6 +140,12 @@ export class SeedService implements OnModuleInit {
     private readonly milestonesRepo: Repository<ProjectMilestone>,
     @InjectRepository(FranchiseAgreement)
     private readonly franchiseRepo: Repository<FranchiseAgreement>,
+    @InjectRepository(WorkflowDefinition)
+    private readonly workflowDefsRepo: Repository<WorkflowDefinition>,
+    @InjectRepository(WorkflowStep)
+    private readonly workflowStepsRepo: Repository<WorkflowStep>,
+    @InjectRepository(IoTDevice)
+    private readonly iotDevicesRepo: Repository<IoTDevice>,
   ) {}
 
   async onModuleInit() {
@@ -150,6 +162,7 @@ export class SeedService implements OnModuleInit {
       this.logger.log('Database already seeded');
     }
     await this.seedPhase23Extensions(stations);
+    await this.seedPhase3Automation(stations);
     await this.ensureTierBTanks(stations);
   }
 
@@ -432,6 +445,7 @@ export class SeedService implements OnModuleInit {
     this.logger.log('Default password for all users: Password123!');
     await this.seedCharterExtensions(stations);
     await this.seedPhase23Extensions(stations);
+    await this.seedPhase3Automation(stations);
     await this.ensureTierBTanks(stations);
   }
 
@@ -770,5 +784,56 @@ export class SeedService implements OnModuleInit {
     }
 
     this.logger.log('Phase 2/3 extensions seeded');
+  }
+
+  async seedPhase3Automation(stations: Station[]) {
+    const wfCount = await this.workflowDefsRepo.count();
+    if (wfCount === 0) {
+      this.logger.log('Seeding Phase 3 automation (workflows, IoT devices)...');
+      const expenseWf = await this.workflowDefsRepo.save(
+        this.workflowDefsRepo.create({
+          name: 'Expense approval chain',
+          entityType: WorkflowEntityType.EXPENSE,
+          minAmount: '50000',
+          isActive: true,
+        }),
+      );
+      await this.workflowStepsRepo.save([
+        this.workflowStepsRepo.create({
+          definitionId: expenseWf.id,
+          stepOrder: 1,
+          approverRole: UserRole.STATION_MANAGER,
+          escalationHours: 24,
+          fallbackRole: UserRole.FINANCE_MANAGER,
+        }),
+        this.workflowStepsRepo.create({
+          definitionId: expenseWf.id,
+          stepOrder: 2,
+          approverRole: UserRole.FINANCE_MANAGER,
+          escalationHours: 48,
+          fallbackRole: UserRole.DIRECTOR,
+        }),
+      ]);
+    }
+
+    const iotCount = await this.iotDevicesRepo.count();
+    if (iotCount === 0 && stations.length) {
+      const tanks = await this.tanksRepo.find({ take: 3 });
+      for (let i = 0; i < Math.min(stations.length, 3); i++) {
+        const station = stations[i];
+        const tank = tanks.find((t) => t.stationId === station.id) ?? tanks[0];
+        await this.iotDevicesRepo.save(
+          this.iotDevicesRepo.create({
+            deviceKey: `TANK-${station.code}`,
+            name: `${station.code} level sensor`,
+            type: IoTDeviceType.TANK_LEVEL,
+            status: IoTDeviceStatus.ACTIVE,
+            stationId: station.id,
+            tankId: tank?.id,
+          }),
+        );
+      }
+      this.logger.log('Phase 3 IoT devices seeded');
+    }
   }
 }

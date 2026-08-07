@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { round2, round3, toNumber } from '../common/decimal';
 import { SaleStatus } from '../common/enums';
+import { StaffAnalyticsService } from '../analytics/staff-analytics.service';
 import { ActionCentreService } from '../action-centre/action-centre.service';
 import { ReportsService } from '../reports/reports.service';
 import { Sale } from '../sales/sale.entity';
@@ -19,6 +20,7 @@ export class ExecutiveService {
     private readonly actionCentre: ActionCentreService,
     private readonly tanksService: TanksService,
     private readonly targetsService: TargetsService,
+    private readonly analyticsService: StaffAnalyticsService,
   ) {}
 
   async overview() {
@@ -26,12 +28,14 @@ export class ExecutiveService {
     const actionItems = await this.actionCentre.summary();
     const runout = await this.tanksService.runoutForecast();
     const targetProgress = await this.targetsService.progress();
+    const networkFlash = await this.analyticsService.networkFlash();
     return {
       ...base,
       actionCentre: actionItems,
       stockoutRisk: runout.filter((r) => r.daysToRunout <= 3).length,
       runoutAlerts: runout.slice(0, 5),
       targetProgress,
+      networkFlash,
     };
   }
 

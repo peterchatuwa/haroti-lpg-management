@@ -6,6 +6,7 @@ import { LossCase } from './loss-case.entity';
 import { LossCaseAction } from './loss-case-action.entity';
 import { TankReading } from './tank-reading.entity';
 import { Tank } from './tank.entity';
+import { IoTModule } from '../iot/iot.module';
 import { TanksController } from './tanks.controller';
 import { TanksService } from './tanks.service';
 
@@ -19,6 +20,7 @@ import { TanksService } from './tanks.service';
       StockMovement,
       Station,
     ]),
+    IoTModule,
   ],
   controllers: [TanksController],
   providers: [TanksService],

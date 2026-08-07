@@ -435,3 +435,52 @@ export enum StationHealthStatus {
   AMBER = 'AMBER',
   RED = 'RED',
 }
+
+export enum WorkflowEntityType {
+  EXPENSE = 'EXPENSE',
+  REQUISITION = 'REQUISITION',
+  PURCHASE_ORDER = 'PURCHASE_ORDER',
+  DISCOUNT = 'DISCOUNT',
+  STOCK_ADJUSTMENT = 'STOCK_ADJUSTMENT',
+  LOSS_CASE = 'LOSS_CASE',
+}
+
+export enum ApprovalTaskStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  ESCALATED = 'ESCALATED',
+  EXPIRED = 'EXPIRED',
+}
+
+export enum NotificationChannel {
+  IN_APP = 'IN_APP',
+  EMAIL = 'EMAIL',
+  SMS = 'SMS',
+  WHATSAPP = 'WHATSAPP',
+}
+
+export enum NotificationStatus {
+  PENDING = 'PENDING',
+  DELIVERED = 'DELIVERED',
+  FAILED = 'FAILED',
+  READ = 'READ',
+}
+
+export enum NotificationDeliveryStatus {
+  QUEUED = 'QUEUED',
+  SENT = 'SENT',
+  FAILED = 'FAILED',
+}
+
+export enum IoTDeviceType {
+  TANK_LEVEL = 'TANK_LEVEL',
+  PRESSURE = 'PRESSURE',
+  TEMPERATURE = 'TEMPERATURE',
+}
+
+export enum IoTDeviceStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  FAULT = 'FAULT',
+}

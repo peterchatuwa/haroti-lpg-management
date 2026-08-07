@@ -61,6 +61,14 @@ import { SupplierInvoice } from '../procurement/supplier-invoice.entity';
 import { Attachment } from '../attachments/attachment.entity';
 import { Target } from '../targets/target.entity';
 import { User } from '../users/user.entity';
+import { WorkflowDefinition } from '../workflows/workflow-definition.entity';
+import { WorkflowStep } from '../workflows/workflow-step.entity';
+import { ApprovalTask } from '../workflows/approval-task.entity';
+import { Notification } from '../notifications/notification.entity';
+import { NotificationDelivery } from '../notifications/notification-delivery.entity';
+import { NotificationPreference } from '../notifications/notification-preference.entity';
+import { IoTDevice } from '../iot/iot-device.entity';
+import { TelemetryReading } from '../iot/telemetry-reading.entity';
 
 export const ENTITIES = [
   Station,
@@ -126,4 +134,12 @@ export const ENTITIES = [
   ComplianceItem,
   MaintenancePlan,
   DeliveryAllocation,
+  WorkflowDefinition,
+  WorkflowStep,
+  ApprovalTask,
+  Notification,
+  NotificationDelivery,
+  NotificationPreference,
+  IoTDevice,
+  TelemetryReading,
 ];

@@ -1,5 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, Repository } from 'typeorm';
+import {
+  NotificationChannel,
+  NotificationDeliveryStatus,
+  NotificationStatus,
+} from '../common/enums';
+import { NotificationDelivery } from './notification-delivery.entity';
+import { NotificationPreference } from './notification-preference.entity';
+import { Notification } from './notification.entity';
 
 export interface SmsResult {
   sent: boolean;
@@ -8,11 +18,162 @@ export interface SmsResult {
   error?: string;
 }
 
+const MAX_DELIVERY_ATTEMPTS = 5;
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    @InjectRepository(Notification)
+    private readonly notificationsRepo: Repository<Notification>,
+    @InjectRepository(NotificationDelivery)
+    private readonly deliveriesRepo: Repository<NotificationDelivery>,
+    @InjectRepository(NotificationPreference)
+    private readonly preferencesRepo: Repository<NotificationPreference>,
+  ) {}
+
+  async dispatch(params: {
+    eventType: string;
+    title: string;
+    body: string;
+    userId?: string;
+    entityType?: string;
+    entityId?: string;
+    channels?: NotificationChannel[];
+    phone?: string;
+    email?: string;
+    mandatory?: boolean;
+  }) {
+    const channels =
+      params.channels ??
+      (await this.resolveChannels(params.userId, params.eventType, params.mandatory));
+
+    const notification = await this.notificationsRepo.save(
+      this.notificationsRepo.create({
+        userId: params.userId,
+        eventType: params.eventType,
+        title: params.title,
+        body: params.body,
+        status: NotificationStatus.PENDING,
+        entityType: params.entityType,
+        entityId: params.entityId,
+      }),
+    );
+
+    const deliveries: NotificationDelivery[] = [];
+    for (const channel of channels) {
+      let recipient: string | undefined;
+      if (channel === NotificationChannel.SMS || channel === NotificationChannel.WHATSAPP) {
+        recipient = params.phone;
+      } else if (channel === NotificationChannel.EMAIL) {
+        recipient = params.email;
+      } else {
+        recipient = params.userId;
+      }
+
+      deliveries.push(
+        this.deliveriesRepo.create({
+          notificationId: notification.id,
+          channel,
+          recipient,
+          status:
+            channel === NotificationChannel.IN_APP
+              ? NotificationDeliveryStatus.SENT
+              : NotificationDeliveryStatus.QUEUED,
+          nextRetryAt: new Date(),
+        }),
+      );
+    }
+
+    await this.deliveriesRepo.save(deliveries);
+    if (channels.includes(NotificationChannel.IN_APP)) {
+      notification.status = NotificationStatus.DELIVERED;
+      await this.notificationsRepo.save(notification);
+    }
+    return notification;
+  }
+
+  listForUser(userId: string, unreadOnly = false) {
+    return this.notificationsRepo.find({
+      where: {
+        userId,
+        ...(unreadOnly ? { readAt: IsNull() } : {}),
+      },
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
+  }
+
+  async markRead(id: string, userId: string) {
+    const note = await this.notificationsRepo.findOne({ where: { id, userId } });
+    if (!note) throw new NotFoundException('Notification not found');
+    note.readAt = new Date();
+    note.status = NotificationStatus.READ;
+    return this.notificationsRepo.save(note);
+  }
+
+  async processQueue(limit = 25) {
+    const pending = await this.deliveriesRepo.find({
+      where: { status: NotificationDeliveryStatus.QUEUED },
+      relations: { notification: true },
+      order: { nextRetryAt: 'ASC' },
+      take: limit,
+    });
+
+    let sent = 0;
+    let failed = 0;
+    for (const delivery of pending) {
+      if (delivery.nextRetryAt && delivery.nextRetryAt > new Date()) continue;
+
+      const result = await this.sendDelivery(delivery);
+      delivery.attempts += 1;
+      if (result.ok) {
+        delivery.status = NotificationDeliveryStatus.SENT;
+        delivery.providerRef = result.ref;
+        delivery.lastError = null;
+        sent += 1;
+      } else {
+        delivery.lastError = result.error;
+        if (delivery.attempts >= MAX_DELIVERY_ATTEMPTS) {
+          delivery.status = NotificationDeliveryStatus.FAILED;
+          failed += 1;
+        } else {
+          const retry = new Date();
+          retry.setMinutes(retry.getMinutes() + delivery.attempts * 5);
+          delivery.nextRetryAt = retry;
+        }
+      }
+      await this.deliveriesRepo.save(delivery);
+    }
+    return { processed: pending.length, sent, failed };
+  }
+
+  listPreferences(userId: string) {
+    return this.preferencesRepo.find({ where: { userId } });
+  }
+
+  async upsertPreference(params: {
+    userId: string;
+    eventType: string;
+    channel: NotificationChannel;
+    enabled: boolean;
+  }) {
+    let pref = await this.preferencesRepo.findOne({
+      where: {
+        userId: params.userId,
+        eventType: params.eventType,
+        channel: params.channel,
+      },
+    });
+    if (!pref) {
+      pref = this.preferencesRepo.create(params);
+    } else if (!pref.isMandatory) {
+      pref.enabled = params.enabled;
+    }
+    return this.preferencesRepo.save(pref);
+  }
 
   async sendSms(to: string | undefined, message: string): Promise<SmsResult> {
     const phone = this.normalizePhone(to);
@@ -81,6 +242,97 @@ export class NotificationsService {
     const opsPhone =
       params.phone ?? this.config.get<string>('SMS_OPS_PHONE');
     return this.sendSms(opsPhone, msg);
+  }
+
+  private async sendDelivery(
+    delivery: NotificationDelivery,
+  ): Promise<{ ok: boolean; ref?: string; error?: string }> {
+    const note = delivery.notification;
+    if (!note) return { ok: false, error: 'missing_notification' };
+
+    switch (delivery.channel) {
+      case NotificationChannel.IN_APP:
+        return { ok: true, ref: 'in-app' };
+      case NotificationChannel.SMS: {
+        const sms = await this.sendSms(delivery.recipient ?? undefined, note.body);
+        return sms.sent
+          ? { ok: true, ref: sms.to }
+          : { ok: sms.mode === 'log', ref: 'log', error: sms.error };
+      }
+      case NotificationChannel.WHATSAPP:
+        return this.sendWhatsApp(delivery.recipient ?? undefined, note.body);
+      case NotificationChannel.EMAIL:
+        return this.sendEmail(delivery.recipient ?? undefined, note.title, note.body);
+      default:
+        return { ok: false, error: 'unsupported_channel' };
+    }
+  }
+
+  private async sendWhatsApp(
+    to: string | undefined,
+    message: string,
+  ): Promise<{ ok: boolean; ref?: string; error?: string }> {
+    const phone = this.normalizePhone(to);
+    const enabled =
+      this.config.get<string>('WHATSAPP_ENABLED', 'false') === 'true';
+    const url = this.config.get<string>('WHATSAPP_API_URL');
+    if (!enabled || !url || !phone) {
+      this.logger.log(`[WhatsApp] ${phone ?? 'n/a'}: ${message}`);
+      return { ok: true, ref: 'log' };
+    }
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: phone, message }),
+      });
+      if (!res.ok) {
+        return { ok: false, error: await res.text() };
+      }
+      return { ok: true, ref: phone };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  private async sendEmail(
+    to: string | undefined,
+    subject: string,
+    body: string,
+  ): Promise<{ ok: boolean; ref?: string; error?: string }> {
+    const enabled = this.config.get<string>('EMAIL_ENABLED', 'false') === 'true';
+    const host = this.config.get<string>('EMAIL_SMTP_HOST');
+    if (!enabled || !host || !to) {
+      this.logger.log(`[Email] ${to ?? 'n/a'}: ${subject}`);
+      return { ok: true, ref: 'log' };
+    }
+    this.logger.log(`[Email queued] ${to}: ${subject} — ${body.slice(0, 80)}`);
+    return { ok: true, ref: to };
+  }
+
+  private async resolveChannels(
+    userId: string | undefined,
+    eventType: string,
+    mandatory?: boolean,
+  ) {
+    if (mandatory) {
+      return [
+        NotificationChannel.IN_APP,
+        NotificationChannel.SMS,
+        NotificationChannel.EMAIL,
+      ];
+    }
+    if (!userId) {
+      return [NotificationChannel.IN_APP];
+    }
+    const prefs = await this.preferencesRepo.find({ where: { userId, eventType } });
+    if (!prefs.length) {
+      return [NotificationChannel.IN_APP, NotificationChannel.SMS];
+    }
+    return prefs.filter((p) => p.enabled).map((p) => p.channel);
   }
 
   private normalizePhone(phone?: string) {
