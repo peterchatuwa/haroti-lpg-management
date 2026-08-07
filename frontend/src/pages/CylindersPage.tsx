@@ -47,7 +47,7 @@ export function CylindersPage() {
     queryKey: ['cylinder-stocktakes', stationId],
     enabled: !!stationId,
     queryFn: async () =>
-      (await api.get('/cylinders/stocktakes', { params: { stationId } })).data,
+      (await api.get('/cylinders/stocktakes/list', { params: { stationId } })).data,
   });
 
   const createStocktakeMutation = useMutation({
