@@ -1,0 +1,241 @@
+================================================================================
+DNS RECORDS FOR HAROTIHOLDINGSLIMITED.COM
+================================================================================
+
+Configure these DNS records in your domain registrar's control panel
+(e.g., Namecheap, GoDaddy, Cloudflare, etc.)
+
+VPS IP Address: 169.58.127.129
+
+================================================================================
+REQUIRED DNS RECORDS
+================================================================================
+
+1. MAIN DOMAIN (A Record)
+   -------------------------
+   Type: A
+   Name: @ (or leave blank for root domain)
+   Value: 169.58.127.129
+   TTL: 3600 (or Automatic)
+   
+   Purpose: Points harotiholdingslimited.com to your VPS
+   Result: https://harotiholdingslimited.com → Corporate Website
+
+
+2. WWW SUBDOMAIN (CNAME Record)
+   -------------------------------
+   Type: CNAME
+   Name: www
+   Value: harotiholdingslimited.com
+   TTL: 3600 (or Automatic)
+   
+   Purpose: Points www.harotiholdingslimited.com to main domain
+   Result: https://www.harotiholdingslimited.com → Corporate Website
+
+
+================================================================================
+OPTIONAL SUBDOMAINS (For Management App)
+================================================================================
+
+Choose ONE of these options for accessing the management system:
+
+OPTION A: Path-based (RECOMMENDED - No extra DNS needed)
+   URL: https://harotiholdingslimited.com/app
+   DNS: No additional records needed
+   Setup: Already configured in nginx
+
+
+OPTION B: Subdomain-based (If you prefer separate subdomain)
+
+   3a. ADMIN SUBDOMAIN
+       Type: A
+       Name: admin
+       Value: 169.58.127.129
+       TTL: 3600
+       Result: https://admin.harotiholdingslimited.com → Management System
+
+   OR
+
+   3b. PORTAL SUBDOMAIN
+       Type: A
+       Name: portal
+       Value: 169.58.127.129
+       TTL: 3600
+       Result: https://portal.harotiholdingslimited.com → Management System
+
+   OR
+
+   3c. APP SUBDOMAIN
+       Type: A
+       Name: app
+       Value: 169.58.127.129
+       TTL: 3600
+       Result: https://app.harotiholdingslimited.com → Management System
+
+================================================================================
+EMAIL CONFIGURATION (Optional - For Future)
+================================================================================
+
+If you want to use email with your domain:
+
+4. MX RECORD (For Email)
+   Type: MX
+   Name: @
+   Value: mail.harotiholdingslimited.com (or your email provider's server)
+   Priority: 10
+   TTL: 3600
+
+5. MAIL SUBDOMAIN
+   Type: A
+   Name: mail
+   Value: [Your email server IP]
+   TTL: 3600
+
+================================================================================
+DNS CONFIGURATION EXAMPLES BY PROVIDER
+================================================================================
+
+NAMECHEAP:
+----------
+1. Login to Namecheap
+2. Go to Domain List → Manage
+3. Click "Advanced DNS"
+4. Add New Record for each entry above
+
+GODADDY:
+--------
+1. Login to GoDaddy
+2. My Products → DNS
+3. Click "Add" for each record
+
+CLOUDFLARE:
+-----------
+1. Login to Cloudflare
+2. Select your domain
+3. Go to DNS tab
+4. Add records
+5. Set Proxy status to "DNS only" (grey cloud) for now
+   (Can enable proxy later once working)
+
+================================================================================
+VERIFICATION
+================================================================================
+
+After adding DNS records, verify propagation:
+
+Command Line:
+  nslookup harotiholdingslimited.com
+  dig harotiholdingslimited.com +short
+  
+Online Tools:
+  https://www.whatsmydns.net/#A/harotiholdingslimited.com
+  https://dnschecker.org/
+
+Expected Results:
+  harotiholdingslimited.com → 169.58.127.129
+  www.harotiholdingslimited.com → harotiholdingslimited.com → 169.58.127.129
+
+================================================================================
+DNS PROPAGATION TIME
+================================================================================
+
+DNS changes take time to propagate globally:
+  - Minimum: 5-15 minutes
+  - Typical: 30-60 minutes
+  - Maximum: 24-48 hours (rare)
+
+During propagation:
+  - Some locations may see old records
+  - Some may see new records
+  - This is normal and temporary
+
+================================================================================
+TESTING ACCESS
+================================================================================
+
+Once DNS propagates, test these URLs:
+
+1. https://harotiholdingslimited.com
+   Expected: Corporate website homepage with Haroti Gas branding
+
+2. https://www.harotiholdingslimited.com
+   Expected: Same as above (redirects to main domain)
+
+3. https://harotiholdingslimited.com/app
+   Expected: Management system login page
+
+4. https://harotiholdingslimited.com/api/docs
+   Expected: Swagger API documentation
+
+5. SSL Certificate Check:
+   https://www.ssllabs.com/ssltest/analyze.html?d=harotiholdingslimited.com
+   Expected: A or A+ rating
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+DNS Not Resolving:
+  1. Wait longer (can take up to 48 hours)
+  2. Clear your DNS cache:
+     Windows: ipconfig /flushdns
+     Mac: sudo dscacheutil -flushcache
+     Linux: sudo systemd-resolve --flush-caches
+  3. Try different DNS server (8.8.8.8 or 1.1.1.1)
+
+Still Can't Access:
+  1. Check VPS firewall: sudo ufw status
+  2. Verify Docker containers: docker ps
+  3. Check nginx logs: docker logs haroti-web
+  4. Verify SSL certificates: ls -la /opt/haroti-lpg/ssl/
+
+================================================================================
+RECOMMENDED URL STRUCTURE
+================================================================================
+
+For the best setup, use:
+
+PUBLIC WEBSITE:
+  • https://harotiholdingslimited.com (main website)
+  • https://www.harotiholdingslimited.com (alias)
+
+STAFF/ADMIN ACCESS:
+  • https://harotiholdingslimited.com/app (management system)
+  
+This keeps everything clean and doesn't require extra DNS records!
+
+================================================================================
+SUMMARY
+================================================================================
+
+MINIMUM REQUIRED RECORDS (just 2):
+1. A Record: @ → 169.58.127.129
+2. CNAME: www → harotiholdingslimited.com
+
+This gives you:
+✓ Corporate website at harotiholdingslimited.com
+✓ Management system at harotiholdingslimited.com/app
+✓ API at harotiholdingslimited.com/api
+✓ WWW redirect working
+
+Additional subdomains are OPTIONAL!
+
+================================================================================
+CONTACT FOR DNS HELP
+================================================================================
+
+If you need help configuring DNS:
+1. Check your domain registrar's help documentation
+2. Contact their support team
+3. Provide them with:
+   - Domain: harotiholdingslimited.com
+   - IP Address: 169.58.127.129
+   - Record types needed: A and CNAME (from above)
+
+================================================================================
+
+Last Updated: August 5, 2026
+VPS IP: 169.58.127.129
+Domain: harotiholdingslimited.com
+
+================================================================================
