@@ -40,7 +40,12 @@ import { Station } from '../stations/station.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { Tank } from '../tanks/tank.entity';
 import { TankReading } from '../tanks/tank-reading.entity';
-import { Attachment } from '../attachments/attachment.entity';
+import { ComplianceItem } from '../safety/compliance-item.entity';
+import { SafetyIncident } from '../safety/safety-incident.entity';
+import { CylinderStocktakeLine } from '../cylinders/cylinder-stocktake-line.entity';
+import { CylinderStocktake } from '../cylinders/cylinder-stocktake.entity';
+import { DeliveryAllocation } from '../deliveries/delivery-allocation.entity';
+import { MaintenancePlan } from '../maintenance/maintenance-plan.entity';
 import { BankAccount } from '../banking/bank-account.entity';
 import { BankStatementLine } from '../banking/bank-statement-line.entity';
 import { FiscalPeriod } from '../finance/fiscal-period.entity';
@@ -53,6 +58,7 @@ import { MobileMoneyLine } from '../banking/mobile-money-line.entity';
 import { TransferItem } from '../transfers/transfer-item.entity';
 import { Transfer } from '../transfers/transfer.entity';
 import { SupplierInvoice } from '../procurement/supplier-invoice.entity';
+import { Attachment } from '../attachments/attachment.entity';
 import { Target } from '../targets/target.entity';
 import { User } from '../users/user.entity';
 
@@ -114,4 +120,10 @@ export const ENTITIES = [
   BankStatementLine,
   SupplierInvoice,
   Attachment,
+  CylinderStocktake,
+  CylinderStocktakeLine,
+  SafetyIncident,
+  ComplianceItem,
+  MaintenancePlan,
+  DeliveryAllocation,
 ];

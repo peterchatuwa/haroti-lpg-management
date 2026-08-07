@@ -11,6 +11,7 @@ export function CylindersPage() {
   const [incomingSerial, setIncomingSerial] = useState('');
   const [outgoingSerial, setOutgoingSerial] = useState('');
   const [customerId, setCustomerId] = useState('');
+  const [passportSerial, setPassportSerial] = useState('');
   const [message, setMessage] = useState('');
 
   const { data: stations } = useQuery({
@@ -28,6 +29,34 @@ export function CylindersPage() {
   const { data: customers } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => (await api.get('/customers')).data,
+  });
+
+  const passportCylinder = (cylinders ?? []).find(
+    (c: { serialNumber: string }) =>
+      c.serialNumber.toLowerCase() === passportSerial.trim().toLowerCase(),
+  );
+
+  const { data: passport } = useQuery({
+    queryKey: ['cylinder-passport', passportCylinder?.id],
+    enabled: !!passportCylinder?.id,
+    queryFn: async () =>
+      (await api.get(`/cylinders/${passportCylinder!.id}/passport`)).data,
+  });
+
+  const { data: stocktakes } = useQuery({
+    queryKey: ['cylinder-stocktakes', stationId],
+    enabled: !!stationId,
+    queryFn: async () =>
+      (await api.get('/cylinders/stocktakes', { params: { stationId } })).data,
+  });
+
+  const createStocktakeMutation = useMutation({
+    mutationFn: async () =>
+      (await api.post('/cylinders/stocktakes', { stationId })).data,
+    onSuccess: () => {
+      setMessage('Stocktake session opened');
+      queryClient.invalidateQueries({ queryKey: ['cylinder-stocktakes'] });
+    },
   });
 
   const swapMutation = useMutation({
@@ -57,9 +86,77 @@ export function CylindersPage() {
     <div className="stack">
       <PageHeader
         title="Cylinder register"
-        subtitle="Track company cylinders and process swap-in / swap-out at refill"
+        subtitle="Track company cylinders, passport lookup and stocktakes"
       />
       {message && <div className="success">{message}</div>}
+
+      <div className="grid two">
+        <div className="panel stack">
+          <h3 style={{ marginTop: 0 }}>Cylinder passport (QR)</h3>
+          <label>
+            Serial number
+            <input
+              value={passportSerial}
+              onChange={(e) => setPassportSerial(e.target.value)}
+              placeholder="HH-LLW-01-0001"
+            />
+          </label>
+          {passport && (
+            <div className="stack">
+              <p>
+                <strong>{passport.serialNumber}</strong> · {passport.sizeKg} kg ·{' '}
+                {passport.status}
+              </p>
+              <p className="muted">Next inspection: {passport.nextInspectionDate ?? '—'}</p>
+              <code style={{ fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                {passport.qrPayload}
+              </code>
+            </div>
+          )}
+          {passportSerial && !passportCylinder && (
+            <p className="muted">Serial not found at this station</p>
+          )}
+        </div>
+
+        <div className="panel stack">
+          <h3 style={{ marginTop: 0 }}>Cylinder stocktake</h3>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!stationId || createStocktakeMutation.isPending}
+            onClick={() => createStocktakeMutation.mutate()}
+          >
+            Open new stocktake
+          </button>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Scanned</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(stocktakes ?? []).slice(0, 5).map(
+                  (s: {
+                    id: string;
+                    createdAt: string;
+                    status: string;
+                    scannedCount?: number;
+                  }) => (
+                    <tr key={s.id}>
+                      <td>{new Date(s.createdAt).toLocaleDateString()}</td>
+                      <td>{s.status}</td>
+                      <td>{s.scannedCount ?? 0}</td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
       <form className="panel stack" onSubmit={onSwap}>
         <h3 style={{ marginTop: 0 }}>Cylinder swap (CYL-004)</h3>

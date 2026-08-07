@@ -55,6 +55,11 @@ export function InventoryPage() {
       (await api.get('/tanks/loss-cases', { params: { stationId } })).data,
   });
 
+  const { data: reorderSuggestions } = useQuery({
+    queryKey: ['reorder-suggestions'],
+    queryFn: async () => (await api.get('/tanks/reorder-suggestions')).data,
+  });
+
   const adjustMutation = useMutation({
     mutationFn: async () =>
       (
@@ -105,6 +110,45 @@ export function InventoryPage() {
           <div className="value">{formatKg(position?.components?.soldKg)}</div>
         </div>
       </div>
+
+      {(reorderSuggestions ?? []).length > 0 && (
+        <div className="panel">
+          <h3 style={{ marginTop: 0 }}>Reorder suggestions</h3>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Station</th>
+                  <th>Current</th>
+                  <th>Reorder level</th>
+                  <th>Suggested order</th>
+                  <th>Days to runout</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reorderSuggestions.map(
+                  (r: {
+                    stationId: string;
+                    stationCode: string;
+                    currentStockKg: string;
+                    reorderLevelKg: string;
+                    suggestedOrderKg: string;
+                    daysToRunout: number;
+                  }) => (
+                    <tr key={r.stationId}>
+                      <td>{r.stationCode}</td>
+                      <td>{formatKg(r.currentStockKg)}</td>
+                      <td>{formatKg(r.reorderLevelKg)}</td>
+                      <td>{formatKg(r.suggestedOrderKg)}</td>
+                      <td>{r.daysToRunout >= 999 ? '—' : `~${r.daysToRunout}d`}</td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="grid two">
         <form className="panel stack" onSubmit={onAdjust}>

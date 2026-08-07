@@ -18,6 +18,8 @@ import { ActionCentrePage } from './pages/ActionCentrePage';
 import { ExecutivePage } from './pages/ExecutivePage';
 import { FinancePage } from './pages/FinancePage';
 import { TargetsPage } from './pages/TargetsPage';
+import { NetworkMapPage } from './pages/NetworkMapPage';
+import { SafetyPage } from './pages/SafetyPage';
 import { SyncCentrePage } from './pages/SyncCentrePage';
 import { FranchisePage } from './pages/FranchisePage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -103,6 +105,7 @@ export default function App() {
         <Route path="accessories" element={<AccessoriesPage />} />
         <Route path="shifts" element={<ShiftsPage />} />
         <Route path="inventory" element={<InventoryPage />} />
+        <Route path="network" element={<NetworkMapPage />} />
         <Route path="deliveries" element={<DeliveriesPage />} />
         <Route path="procurement" element={<ProcurementPage />} />
         <Route path="requisitions" element={<RequisitionsPage />} />
@@ -112,6 +115,7 @@ export default function App() {
         <Route path="customers/:id/statement" element={<CustomerStatementPage />} />
         <Route path="payc" element={<PaycPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
+        <Route path="safety" element={<SafetyPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="franchise" element={<FranchisePage />} />
         <Route path="expenses" element={<ExpensesPage />} />

@@ -270,6 +270,56 @@ export class TanksService {
     return results.sort((a, b) => a.daysToRunout - b.daysToRunout);
   }
 
+  async reorderSuggestions() {
+    const runout = await this.runoutForecast();
+    const stations = await this.stationsRepo.find({
+      where: { status: StationStatus.ACTIVE },
+    });
+    const suggestions = [];
+
+    for (const station of stations) {
+      const stockKg = toNumber(station.currentStockKg);
+      const capacity = toNumber(station.tankCapacityKg);
+      const reorderLevel = station.reorderLevelKg
+        ? toNumber(station.reorderLevelKg)
+        : capacity * 0.25;
+      const safetyStock = station.safetyStockKg
+        ? toNumber(station.safetyStockKg)
+        : capacity * 0.15;
+      const minStock = station.minStockKg
+        ? toNumber(station.minStockKg)
+        : capacity * 0.1;
+
+      if (stockKg > reorderLevel) continue;
+
+      const forecast = runout.find((r) => r.stationId === station.id);
+      const dailyAvg = forecast?.dailyAvgKg ?? 0;
+      const targetFill = Math.min(
+        capacity * 0.9 - stockKg,
+        Math.max(reorderLevel * 2, dailyAvg * 14),
+      );
+      const suggestedQty = round3(Math.max(0, targetFill));
+
+      suggestions.push({
+        stationId: station.id,
+        stationCode: station.code,
+        currentStockKg: stockKg,
+        reorderLevelKg: reorderLevel,
+        safetyStockKg: safetyStock,
+        minStockKg: minStock,
+        daysToRunout: forecast?.daysToRunout ?? null,
+        suggestedReplenishmentKg: suggestedQty,
+        priority:
+          stockKg <= minStock ? 'URGENT' : stockKg <= safetyStock ? 'HIGH' : 'NORMAL',
+      });
+    }
+
+    return suggestions.sort((a, b) => {
+      const order = { URGENT: 0, HIGH: 1, NORMAL: 2 };
+      return order[a.priority as keyof typeof order] - order[b.priority as keyof typeof order];
+    });
+  }
+
   async stockIntegrityCheck() {
     const stations = await this.stationsRepo.find();
     const issues: Array<{ stationCode: string; summary: string }> = [];

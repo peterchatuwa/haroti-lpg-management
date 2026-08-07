@@ -29,6 +29,38 @@ export class CylindersController {
     return this.cylindersService.findBySerial(serial);
   }
 
+  @Get('stocktakes/list')
+  stocktakes(@Query('stationId') stationId?: string) {
+    return this.cylindersService.listStocktakes(stationId);
+  }
+
+  @Post('stocktakes')
+  startStocktake(
+    @Body() body: { stationId: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    this.stationScope.assertStationAccess(user, body.stationId);
+    return this.cylindersService.startStocktake(body.stationId, user.sub);
+  }
+
+  @Post('stocktakes/:id/scan')
+  scanStocktake(
+    @Param('id') id: string,
+    @Body() body: { serialNumber: string },
+  ) {
+    return this.cylindersService.scanStocktake(id, body.serialNumber);
+  }
+
+  @Post('stocktakes/:id/close')
+  closeStocktake(@Param('id') id: string) {
+    return this.cylindersService.closeStocktake(id);
+  }
+
+  @Get(':id/passport')
+  passport(@Param('id') id: string) {
+    return this.cylindersService.passport(id);
+  }
+
   @Post('swap')
   swap(
     @Body()

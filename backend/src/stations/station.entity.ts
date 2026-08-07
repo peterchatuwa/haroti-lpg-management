@@ -86,6 +86,39 @@ export class Station extends BaseEntity {
   })
   weightedAvgCostPerKg!: string;
 
+  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+  latitude?: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+  longitude?: string;
+
+  @Column({
+    name: 'min_stock_kg',
+    type: 'decimal',
+    precision: 12,
+    scale: 3,
+    nullable: true,
+  })
+  minStockKg?: string;
+
+  @Column({
+    name: 'reorder_level_kg',
+    type: 'decimal',
+    precision: 12,
+    scale: 3,
+    nullable: true,
+  })
+  reorderLevelKg?: string;
+
+  @Column({
+    name: 'safety_stock_kg',
+    type: 'decimal',
+    precision: 12,
+    scale: 3,
+    nullable: true,
+  })
+  safetyStockKg?: string;
+
   @OneToMany(() => User, (user) => user.station)
   users!: User[];
 }

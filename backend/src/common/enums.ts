@@ -363,6 +363,8 @@ export enum AttachmentEntityType {
   REQUISITION = 'REQUISITION',
   CUSTOMER = 'CUSTOMER',
   SUPPLIER_INVOICE = 'SUPPLIER_INVOICE',
+  INCIDENT = 'INCIDENT',
+  COMPLIANCE = 'COMPLIANCE',
 }
 
 export enum SupplierInvoiceStatus {
@@ -378,4 +380,58 @@ export enum ThreeWayMatchStatus {
   MATCHED = 'MATCHED',
   VARIANCE = 'VARIANCE',
   APPROVED = 'APPROVED',
+}
+
+export enum IncidentType {
+  GAS_LEAK = 'GAS_LEAK',
+  FIRE = 'FIRE',
+  INJURY = 'INJURY',
+  VEHICLE_INCIDENT = 'VEHICLE_INCIDENT',
+  EQUIPMENT_FAILURE = 'EQUIPMENT_FAILURE',
+  UNSAFE_ACT = 'UNSAFE_ACT',
+  NEAR_MISS = 'NEAR_MISS',
+  OTHER = 'OTHER',
+}
+
+export enum IncidentSeverity {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL',
+}
+
+export enum IncidentStatus {
+  OPEN = 'OPEN',
+  TRIAGED = 'TRIAGED',
+  INVESTIGATING = 'INVESTIGATING',
+  CORRECTIVE_ACTION = 'CORRECTIVE_ACTION',
+  REVIEW = 'REVIEW',
+  CLOSED = 'CLOSED',
+}
+
+export enum ComplianceItemType {
+  PERMIT = 'PERMIT',
+  TANK_INSPECTION = 'TANK_INSPECTION',
+  FIRE_EQUIPMENT = 'FIRE_EQUIPMENT',
+  SCALE_CALIBRATION = 'SCALE_CALIBRATION',
+  INSURANCE = 'INSURANCE',
+  CYLINDER_CERTIFICATE = 'CYLINDER_CERTIFICATE',
+  OTHER = 'OTHER',
+}
+
+export enum ComplianceItemStatus {
+  VALID = 'VALID',
+  EXPIRING_SOON = 'EXPIRING_SOON',
+  EXPIRED = 'EXPIRED',
+}
+
+export enum StocktakeStatus {
+  OPEN = 'OPEN',
+  CLOSED = 'CLOSED',
+}
+
+export enum StationHealthStatus {
+  GREEN = 'GREEN',
+  AMBER = 'AMBER',
+  RED = 'RED',
 }

@@ -8,6 +8,7 @@ import { CylinderStatus, WorkOrderStatus, WorkOrderType } from '../common/enums'
 import { Cylinder } from '../cylinders/cylinder.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Asset } from './asset.entity';
+import { MaintenancePlan } from './maintenance-plan.entity';
 import { MaintenanceWorkOrder } from './work-order.entity';
 
 @Injectable()
@@ -19,6 +20,8 @@ export class MaintenanceService {
     private readonly cylindersRepo: Repository<Cylinder>,
     @InjectRepository(Asset)
     private readonly assetsRepo: Repository<Asset>,
+    @InjectRepository(MaintenancePlan)
+    private readonly plansRepo: Repository<MaintenancePlan>,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -124,5 +127,63 @@ export class MaintenanceService {
     wo.status = WorkOrderStatus.COMPLETED;
     wo.completedAt = new Date();
     return this.woRepo.save(wo);
+  }
+
+  listPlans(stationId?: string) {
+    return this.plansRepo.find({
+      where: stationId ? { stationId } : {},
+      relations: { station: true, asset: true },
+      order: { nextDueDate: 'ASC' },
+    });
+  }
+
+  async createPlan(dto: {
+    name: string;
+    assetCategory: string;
+    stationId?: string;
+    assetId?: string;
+    intervalDays: number;
+    nextDueDate: string;
+    description?: string;
+  }) {
+    return this.plansRepo.save(
+      this.plansRepo.create({
+        name: dto.name,
+        assetCategory: dto.assetCategory as never,
+        stationId: dto.stationId,
+        assetId: dto.assetId,
+        intervalDays: dto.intervalDays,
+        nextDueDate: dto.nextDueDate,
+        description: dto.description,
+        isActive: true,
+      }),
+    );
+  }
+
+  async runDuePlans() {
+    const today = new Date().toISOString().slice(0, 10);
+    const due = await this.plansRepo.find({
+      where: { isActive: true },
+    });
+    const created: MaintenanceWorkOrder[] = [];
+    for (const plan of due.filter((p) => p.nextDueDate <= today)) {
+      const wo = await this.woRepo.save(
+        this.woRepo.create({
+          woNumber: `WO-PM-${Date.now().toString().slice(-6)}`,
+          type: WorkOrderType.STATION_EQUIPMENT,
+          title: plan.name,
+          description: plan.description ?? `Preventive maintenance: ${plan.name}`,
+          stationId: plan.stationId,
+          dueDate: plan.nextDueDate,
+        }),
+      );
+      created.push(wo);
+      const next = new Date(plan.nextDueDate);
+      next.setDate(next.getDate() + plan.intervalDays);
+      plan.lastRunDate = today;
+      plan.nextDueDate = next.toISOString().slice(0, 10);
+      await this.plansRepo.save(plan);
+    }
+    return created;
   }
 }

@@ -27,6 +27,9 @@ export class Delivery extends BaseEntity {
   @Column({ name: 'delivery_date', type: 'date' })
   deliveryDate!: string;
 
+  @Column({ name: 'expected_arrival_at', type: 'timestamptz', nullable: true })
+  expectedArrivalAt?: Date;
+
   @Column({ name: 'delivery_note_number', length: 80, nullable: true })
   deliveryNoteNumber?: string;
 

@@ -11,6 +11,8 @@ import { InventoryService } from '../inventory/inventory.service';
 import { JournalEventType } from '../common/enums';
 import { FinanceService, GL_ACCOUNTS } from '../finance/finance.service';
 import { StationsService } from '../stations/stations.service';
+import { TanksService } from '../tanks/tanks.service';
+import { DeliveryAllocation } from './delivery-allocation.entity';
 import { Delivery } from './delivery.entity';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 
@@ -29,9 +31,12 @@ export class DeliveriesService {
   constructor(
     @InjectRepository(Delivery)
     private readonly deliveriesRepo: Repository<Delivery>,
+    @InjectRepository(DeliveryAllocation)
+    private readonly allocationsRepo: Repository<DeliveryAllocation>,
     private readonly inventoryService: InventoryService,
     private readonly stationsService: StationsService,
     private readonly financeService: FinanceService,
+    private readonly tanksService: TanksService,
   ) {}
 
   findAll(stationId?: string) {
@@ -140,5 +145,69 @@ export class DeliveriesService {
       throw new BadRequestException('Delivery is not awaiting manager approval');
     }
     return this.advanceStatus(id, userId);
+  }
+
+  async calendar(from?: string, to?: string) {
+    const start = from ?? new Date().toISOString().slice(0, 10);
+    const endDate = to ? new Date(to) : new Date();
+    if (!to) endDate.setDate(endDate.getDate() + 30);
+    const end = endDate.toISOString().slice(0, 10);
+
+    return this.deliveriesRepo
+      .createQueryBuilder('d')
+      .leftJoinAndSelect('d.station', 'station')
+      .leftJoinAndSelect('d.supplier', 'supplier')
+      .where('d.delivery_date >= :start AND d.delivery_date <= :end', {
+        start,
+        end,
+      })
+      .orderBy('d.delivery_date', 'ASC')
+      .getMany();
+  }
+
+  async suggestedAllocation(totalKg: number) {
+    const suggestions = await this.tanksService.reorderSuggestions();
+    const totalSuggested = suggestions.reduce(
+      (s, x) => s + x.suggestedReplenishmentKg,
+      0,
+    );
+    const scale = totalSuggested > 0 ? totalKg / totalSuggested : 0;
+
+    return suggestions.map((s) => ({
+      stationId: s.stationId,
+      stationCode: s.stationCode,
+      priority: s.priority,
+      suggestedKg: round3(s.suggestedReplenishmentKg * scale),
+      daysToRunout: s.daysToRunout,
+    }));
+  }
+
+  async createAllocations(
+    bulkDeliveryId: string,
+    allocations: Array<{ stationId: string; allocatedKg: number }>,
+  ) {
+    const delivery = await this.deliveriesRepo.findOne({
+      where: { id: bulkDeliveryId },
+    });
+    if (!delivery) throw new NotFoundException('Delivery not found');
+
+    const rows = await this.allocationsRepo.save(
+      allocations.map((a) =>
+        this.allocationsRepo.create({
+          bulkDeliveryId,
+          stationId: a.stationId,
+          allocatedKg: asDecimal(a.allocatedKg, 3),
+          status: 'PLANNED',
+        }),
+      ),
+    );
+    return rows;
+  }
+
+  listAllocations(bulkDeliveryId: string) {
+    return this.allocationsRepo.find({
+      where: { bulkDeliveryId },
+      relations: { station: true },
+    });
   }
 }

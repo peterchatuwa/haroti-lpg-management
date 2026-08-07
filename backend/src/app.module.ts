@@ -65,7 +65,7 @@ import { SaleItem } from './sales/sale-item.entity';
 import { SalePayment } from './sales/sale-payment.entity';
 import { Sale } from './sales/sale.entity';
 import { SalesModule } from './sales/sales.module';
-import { SeedModule } from './seed/seed.module';
+import { SafetyModule } from './safety/safety.module';
 import { Shift } from './shifts/shift.entity';
 import { ShiftsModule } from './shifts/shifts.module';
 import { Station } from './stations/station.entity';
@@ -75,7 +75,7 @@ import { TanksModule } from './tanks/tanks.module';
 import { TransferItem } from './transfers/transfer-item.entity';
 import { Transfer } from './transfers/transfer.entity';
 import { TransfersModule } from './transfers/transfers.module';
-import { User } from './users/user.entity';
+import { SeedModule } from './seed/seed.module';
 
 @Module({
   imports: [
@@ -132,6 +132,7 @@ import { User } from './users/user.entity';
     ActionCentreModule,
     ExecutiveModule,
     JobsModule,
+    SafetyModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

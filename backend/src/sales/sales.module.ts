@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccessoriesModule } from '../accessories/accessories.module';
 import { AuditLog } from '../audit/audit-log.entity';
 import { AuditService } from '../audit/audit.service';
+import { CylindersModule } from '../cylinders/cylinders.module';
+import { CylindersService } from '../cylinders/cylinders.service';
 import { CustomersModule } from '../customers/customers.module';
 import { FinanceModule } from '../finance/finance.module';
 import { FranchiseModule } from '../franchise/franchise.module';
@@ -27,6 +29,7 @@ import { SalesService } from './sales.service';
     AccessoriesModule,
     FinanceModule,
     CustomersModule,
+    CylindersModule,
     FranchiseModule,
     NotificationsModule,
   ],

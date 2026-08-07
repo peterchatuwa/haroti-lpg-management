@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, UseGuards, Body } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -47,5 +47,33 @@ export class MaintenanceController {
     @Query('certificateRef') certificateRef?: string,
   ) {
     return this.maintenanceService.completeHydro(id, certificateRef);
+  }
+
+  @Get('plans')
+  plans(@Query('stationId') stationId?: string) {
+    return this.maintenanceService.listPlans(stationId);
+  }
+
+  @Post('plans')
+  @Roles(UserRole.OPERATIONS_MANAGER, UserRole.SYSTEM_ADMIN)
+  createPlan(
+    @Body()
+    body: {
+      name: string;
+      assetCategory: string;
+      stationId?: string;
+      assetId?: string;
+      intervalDays: number;
+      nextDueDate: string;
+      description?: string;
+    },
+  ) {
+    return this.maintenanceService.createPlan(body);
+  }
+
+  @Post('plans/run-due')
+  @Roles(UserRole.OPERATIONS_MANAGER, UserRole.SYSTEM_ADMIN)
+  runDuePlans() {
+    return this.maintenanceService.runDuePlans();
   }
 }

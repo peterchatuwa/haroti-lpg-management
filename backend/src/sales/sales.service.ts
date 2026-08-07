@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, IsNull, Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { AccessoriesService } from '../accessories/accessories.service';
+import { CylindersService } from '../cylinders/cylinders.service';
 import { CustomersService } from '../customers/customers.service';
 import { asDecimal, round2, round3, toNumber } from '../common/decimal';
 import {
@@ -56,6 +57,7 @@ export class SalesService {
     private readonly franchiseService: FranchiseService,
     private readonly shiftsService: ShiftsService,
     private readonly notificationsService: NotificationsService,
+    private readonly cylindersService: CylindersService,
   ) {}
 
   async getActivePrice(stationId: string) {
@@ -118,6 +120,12 @@ export class SalesService {
       station.commercialStream ?? CommercialStream.RETAIL_FORECOURT;
 
     let saleItems = dto.items ?? [];
+
+    for (const item of saleItems) {
+      if (item.cylinderSerial) {
+        await this.cylindersService.assertSerialEligible(item.cylinderSerial);
+      }
+    }
 
     if (dto.bundleId) {
       const components = await this.accessoriesService.explodeBundle(dto.bundleId);

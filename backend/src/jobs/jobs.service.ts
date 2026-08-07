@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MaintenanceService } from '../maintenance/maintenance.service';
+import { SafetyService } from '../safety/safety.service';
 import { AgeingService } from '../finance/ageing.service';
 import { TanksService } from '../tanks/tanks.service';
 import { JobRun } from './job-run.entity';
@@ -17,6 +18,7 @@ export class JobsService {
     private readonly maintenanceService: MaintenanceService,
     private readonly tanksService: TanksService,
     private readonly ageingService: AgeingService,
+    private readonly safetyService: SafetyService,
   ) {}
 
   private async track(jobName: string, fn: () => Promise<string>) {
@@ -64,6 +66,22 @@ export class JobsService {
     await this.track('ageing-report', async () => {
       const snapshot = await this.ageingService.snapshot();
       return `AR total MWK ${snapshot.ar.total}, AP total MWK ${snapshot.ap.total}`;
+    });
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_4AM)
+  async maintenancePlanJob() {
+    await this.track('maintenance-plans', async () => {
+      const created = await this.maintenanceService.runDuePlans();
+      return `Created ${created.length} preventive work order(s)`;
+    });
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_5AM)
+  async complianceStatusJob() {
+    await this.track('compliance-status', async () => {
+      const result = await this.safetyService.refreshComplianceStatuses();
+      return `Refreshed ${result.updated} compliance item(s)`;
     });
   }
 

@@ -72,6 +72,11 @@ export class TanksController {
     return this.tanksService.runoutForecast(Number(windowDays) || 14);
   }
 
+  @Get('reorder-suggestions')
+  reorder() {
+    return this.tanksService.reorderSuggestions();
+  }
+
   @Post('loss-cases/:id')
   updateLossCase(
     @Param('id') id: string,
