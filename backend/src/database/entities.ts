@@ -40,6 +40,10 @@ import { Station } from '../stations/station.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { Tank } from '../tanks/tank.entity';
 import { TankReading } from '../tanks/tank-reading.entity';
+import { FiscalPeriod } from '../finance/fiscal-period.entity';
+import { PostingRule } from '../finance/posting-rule.entity';
+import { JobRun } from '../jobs/job-run.entity';
+import { LossCaseAction } from '../tanks/loss-case-action.entity';
 import { LossCase } from '../tanks/loss-case.entity';
 import { CylinderMovement } from '../cylinders/cylinder-movement.entity';
 import { MobileMoneyLine } from '../banking/mobile-money-line.entity';
@@ -77,6 +81,8 @@ export const ENTITIES = [
   JournalEntry,
   JournalLine,
   BudgetLine,
+  FiscalPeriod,
+  PostingRule,
   PaycMeter,
   PaycTelemetry,
   PaycCreditTransaction,
@@ -92,8 +98,10 @@ export const ENTITIES = [
   Tank,
   TankReading,
   LossCase,
+  LossCaseAction,
   CylinderMovement,
   MobileMoneyLine,
   Requisition,
   RequisitionLine,
+  JobRun,
 ];

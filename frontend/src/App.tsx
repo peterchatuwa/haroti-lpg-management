@@ -14,7 +14,10 @@ import { MaintenancePage } from './pages/MaintenancePage';
 import { PaycPage } from './pages/PaycPage';
 import { PosPage } from './pages/PosPage';
 import { ProcurementPage } from './pages/ProcurementPage';
+import { ActionCentrePage } from './pages/ActionCentrePage';
+import { ExecutivePage } from './pages/ExecutivePage';
 import { FinancePage } from './pages/FinancePage';
+import { SyncCentrePage } from './pages/SyncCentrePage';
 import { FranchisePage } from './pages/FranchisePage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -90,6 +93,9 @@ export default function App() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="executive" element={<ExecutivePage />} />
+        <Route path="action-centre" element={<ActionCentrePage />} />
+        <Route path="sync-centre" element={<SyncCentrePage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="pos" element={<PosPage />} />
         <Route path="accessories" element={<AccessoriesPage />} />

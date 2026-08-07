@@ -1,5 +1,4 @@
-# Isolated production stack for Aircargo VPS.
-# Does not publish Postgres/Redis on the host. Web is localhost-only.
+# Production stack for dedicated VPS (public port 80).
 #
 # Usage:
 #   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
@@ -25,6 +24,16 @@ services:
     networks:
       - haroti_net
 
+  redis:
+    image: redis:7-alpine
+    container_name: haroti-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - haroti_redis_data:/data
+    networks:
+      - haroti_net
+
   api:
     build:
       context: ./backend
@@ -34,9 +43,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       NODE_ENV: production
       PORT: 3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
       DATABASE_USER: ${DATABASE_USER:-haroti}
@@ -64,6 +77,7 @@ services:
 
 volumes:
   haroti_pg_data:
+  haroti_redis_data:
 
 networks:
   haroti_net:

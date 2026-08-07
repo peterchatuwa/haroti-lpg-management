@@ -66,4 +66,33 @@ export class TanksController {
     const scoped = this.stationScope.resolveStationFilter(user, stationId);
     return this.tanksService.listLossCases(scoped);
   }
+
+  @Get('runout-forecast')
+  runout(@Query('windowDays') windowDays?: string) {
+    return this.tanksService.runoutForecast(Number(windowDays) || 14);
+  }
+
+  @Post('loss-cases/:id')
+  updateLossCase(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      status?: string;
+      category?: string;
+      investigatorId?: string;
+      rootCause?: string;
+      correctiveAction?: string;
+      notes?: string;
+    },
+  ) {
+    return this.tanksService.updateLossCase(id, body as never);
+  }
+
+  @Post('loss-cases/:id/actions')
+  addLossAction(
+    @Param('id') id: string,
+    @Body() body: { description: string; assignedToId?: string; dueDate?: string },
+  ) {
+    return this.tanksService.addLossCaseAction(id, body);
+  }
 }

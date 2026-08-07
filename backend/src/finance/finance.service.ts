@@ -1,38 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { asDecimal, round2 } from '../common/decimal';
-import { Currency, JournalEventType } from '../common/enums';
+import {
+  Currency,
+  JournalEventType,
+  JournalPostingStatus,
+} from '../common/enums';
 import { BudgetLine } from './budget-line.entity';
+import { FiscalPeriodService } from './fiscal-period.service';
+import { GL_ACCOUNTS, DEFAULT_LPG_COST_PER_KG } from './gl-accounts';
 import { JournalEntry } from './journal-entry.entity';
 import { JournalLine } from './journal-line.entity';
+import { asDecimal, round2 } from '../common/decimal';
 
-/** GL account codes aligned to Charter §4 accounting matrix. */
-export const GL_ACCOUNTS = {
-  INVENTORY_CENTRAL: { code: '1200', name: 'Inventory: Accessories (Central Hub)' },
-  INVENTORY_STATION: { code: '1210', name: 'Inventory: Station Accessories' },
-  INVENTORY_CONSIGNMENT: { code: '1220', name: 'Inventory: Franchise Consignment' },
-  INVENTORY_BULK_LPG: { code: '1250', name: 'Inventory: Bulk LPG' },
-  ACCOUNTS_PAYABLE: { code: '2100', name: 'Accounts Payable' },
-  CASH: { code: '1100', name: 'Cash-in-Hand / Mobile Money Clearing' },
-  AR_FRANCHISE: { code: '1300', name: 'Accounts Receivable: Franchise' },
-  AR_CUSTOMER: { code: '1310', name: 'Accounts Receivable: Customers' },
-  REVENUE_ACCESSORY: { code: '4100', name: 'Revenue: Accessory Sales' },
-  REVENUE_BUNDLE: { code: '4110', name: 'Revenue: Accessory Bundles' },
-  REVENUE_LPG: { code: '4200', name: 'Revenue: LPG Refill Sales' },
-  REVENUE_PAYC: { code: '4300', name: 'Revenue: PAYC Burn' },
-  REVENUE_FRANCHISE: { code: '4350', name: 'Revenue: Franchise Royalty' },
-  COGS_LPG: { code: '5200', name: 'COGS: LPG Refill Sales' },
-  COGS_ACCESSORY: { code: '5100', name: 'COGS: Accessories' },
-  DEFERRED_PAYC: { code: '2300', name: 'Deferred Revenue: PAYC Credit' },
-  CWIP: { code: '1400', name: 'Capital Work-in-Progress (CWIP)' },
-  COMMISSION_PAYABLE: { code: '2200', name: 'Commission Payable: Agents' },
-  EXPENSE_STATION: { code: '6100', name: 'Station Operating Expenses' },
-  PETTY_CASH: { code: '1110', name: 'Petty Cash' },
-} as const;
-
-/** Default bulk LPG inventory cost (MWK/kg) until tank costing is implemented. */
-export const DEFAULT_LPG_COST_PER_KG = 1200;
+export { GL_ACCOUNTS, DEFAULT_LPG_COST_PER_KG };
 
 @Injectable()
 export class FinanceService {
@@ -43,6 +27,7 @@ export class FinanceService {
     private readonly linesRepo: Repository<JournalLine>,
     @InjectRepository(BudgetLine)
     private readonly budgetRepo: Repository<BudgetLine>,
+    private readonly fiscalPeriodService: FiscalPeriodService,
   ) {}
 
   private entryNumber(event: JournalEventType) {
@@ -62,9 +47,12 @@ export class FinanceService {
       credit?: number;
     }>;
   }) {
+    await this.fiscalPeriodService.assertOpenForPosting();
+
     const entry = this.entriesRepo.create({
       entryNumber: this.entryNumber(params.eventType),
       eventType: params.eventType,
+      postingStatus: JournalPostingStatus.POSTED,
       description: params.description,
       referenceType: params.referenceType,
       referenceId: params.referenceId,
@@ -79,6 +67,96 @@ export class FinanceService {
       ),
     });
     return this.entriesRepo.save(entry);
+  }
+
+  async reverseEntry(
+    originalId: string,
+    reason: string,
+    userId?: string,
+  ): Promise<JournalEntry> {
+    const original = await this.entriesRepo.findOne({
+      where: { id: originalId },
+      relations: { lines: true },
+    });
+    if (!original) throw new BadRequestException('Journal entry not found');
+    if (original.postingStatus === JournalPostingStatus.REVERSED) {
+      throw new BadRequestException('Entry already reversed');
+    }
+    if (original.reversedByEntryId) {
+      throw new BadRequestException('Entry already has a reversal');
+    }
+
+    await this.fiscalPeriodService.assertOpenForPosting();
+
+    const reversal = this.entriesRepo.create({
+      entryNumber: this.entryNumber(JournalEventType.SALE_REVERSAL),
+      eventType: JournalEventType.SALE_REVERSAL,
+      postingStatus: JournalPostingStatus.POSTED,
+      description: `Reversal of ${original.entryNumber}: ${reason}`,
+      referenceType: original.referenceType,
+      referenceId: original.referenceId,
+      reversesEntryId: original.id,
+      reversalReason: reason,
+      currency: original.currency,
+      lines: (original.lines ?? []).map((l) =>
+        this.linesRepo.create({
+          accountCode: l.accountCode,
+          accountName: l.accountName,
+          debitAmount: l.creditAmount,
+          creditAmount: l.debitAmount,
+        }),
+      ),
+    });
+    const saved = await this.entriesRepo.save(reversal);
+    original.postingStatus = JournalPostingStatus.REVERSED;
+    original.reversedByEntryId = saved.id;
+    await this.entriesRepo.save(original);
+    return saved;
+  }
+
+  async reverseAllForReference(
+    referenceType: string,
+    referenceId: string,
+    reason: string,
+  ) {
+    const entries = await this.entriesRepo.find({
+      where: {
+        referenceType,
+        referenceId,
+        postingStatus: JournalPostingStatus.POSTED,
+      },
+    });
+    const reversed: JournalEntry[] = [];
+    for (const entry of entries) {
+      reversed.push(await this.reverseEntry(entry.id, reason));
+    }
+    return reversed;
+  }
+
+  async postBundleSale(amount: number, refId: string) {
+    return this.postEntry({
+      eventType: JournalEventType.BUNDLE_SALE,
+      description: `Bundle sale ${refId}`,
+      referenceType: 'Sale',
+      referenceId: refId,
+      lines: [
+        { account: GL_ACCOUNTS.CASH, debit: amount },
+        { account: GL_ACCOUNTS.REVENUE_BUNDLE, credit: amount },
+      ],
+    });
+  }
+
+  async postAgentCommission(amount: number, refId: string) {
+    return this.postEntry({
+      eventType: JournalEventType.AGENT_COMMISSION,
+      description: `Agent commission ${refId}`,
+      referenceType: 'Sale',
+      referenceId: refId,
+      lines: [
+        { account: GL_ACCOUNTS.COGS_ACCESSORY, debit: amount },
+        { account: GL_ACCOUNTS.COMMISSION_PAYABLE, credit: amount },
+      ],
+    });
   }
 
   async postAccessoryRetailSale(amount: number, cogs: number, refId: string) {

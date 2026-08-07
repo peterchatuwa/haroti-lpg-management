@@ -1,8 +1,11 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { JwtPayload } from '../auth/jwt-payload';
 import { StationScopeService } from '../auth/station-scope.service';
+import { UserRole } from '../common/enums';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { SalesService } from './sales.service';
 
@@ -55,6 +58,23 @@ export class SalesController {
   @Post(':id/approve-discount')
   approveDiscount(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.salesService.approveDiscount(id, user.sub, user.role);
+  }
+
+  @Post(':id/void')
+  @UseGuards(RolesGuard)
+  @Roles(
+    UserRole.STATION_MANAGER,
+    UserRole.OPERATIONS_MANAGER,
+    UserRole.FINANCE_MANAGER,
+    UserRole.DIRECTOR,
+    UserRole.SYSTEM_ADMIN,
+  )
+  voidSale(
+    @Param('id') id: string,
+    @Body() body: { reason: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.salesService.voidSale(id, user.sub, body.reason);
   }
 
   @Get(':id')

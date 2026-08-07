@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccessoryStock } from './accessories/accessory-stock.entity';
 import { AccessoriesModule } from './accessories/accessories.module';
@@ -37,6 +39,10 @@ import { StockMovement } from './inventory/stock-movement.entity';
 import { Asset } from './maintenance/asset.entity';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ActionCentreModule } from './action-centre/action-centre.module';
+import { ExecutiveModule } from './executive/executive.module';
+import { HealthModule } from './health/health.module';
+import { JobsModule } from './jobs/jobs.module';
 import { PaycCreditTransaction } from './payc/payc-credit-transaction.entity';
 import { PaycMeter } from './payc/payc-meter.entity';
 import { PaycTelemetry } from './payc/payc-telemetry.entity';
@@ -72,6 +78,7 @@ import { User } from './users/user.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -117,6 +124,11 @@ import { User } from './users/user.entity';
     RequisitionsModule,
     SuppliersModule,
     NotificationsModule,
+    HealthModule,
+    ActionCentreModule,
+    ExecutiveModule,
+    JobsModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

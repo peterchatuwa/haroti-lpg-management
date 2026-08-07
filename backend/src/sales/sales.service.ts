@@ -386,6 +386,13 @@ export class SalesService {
       (p) => p.method === PaymentMethod.CUSTOMER_ACCOUNT,
     );
 
+    if (dto.bundleId) {
+      const bundleTotal = round2(
+        items.reduce((s, i) => s + toNumber(i.lineTotal), 0),
+      );
+      await this.financeService.postBundleSale(bundleTotal, saved.id);
+    }
+
     if (lpgQuantityKg > 0) {
       await this.inventoryService.applyMovement({
         stationId: dto.stationId,
@@ -456,11 +463,15 @@ export class SalesService {
       salesChannel === SalesChannel.AGENT_COMMISSION &&
       dto.customerId
     ) {
-      await this.franchiseService.accrueAgentCommission(
+      const commission = await this.franchiseService.accrueAgentCommission(
         saved.id,
         dto.customerId,
         total,
         8,
+      );
+      await this.financeService.postAgentCommission(
+        toNumber(commission.commissionAmount),
+        saved.id,
       );
     }
 
@@ -533,6 +544,52 @@ export class SalesService {
         {} as Record<string, number>,
       ),
     };
+  }
+
+  async voidSale(id: string, userId: string, reason: string) {
+    const sale = await this.findOne(id);
+    if (sale.status !== SaleStatus.COMPLETED) {
+      throw new BadRequestException('Only completed sales can be voided');
+    }
+
+    await this.financeService.reverseAllForReference('Sale', id, reason);
+
+    const lpgQty = toNumber(sale.lpgQuantityKg);
+    if (lpgQty > 0) {
+      await this.inventoryService.applyMovement({
+        stationId: sale.stationId,
+        type: StockMovementType.STOCK_ADJUSTMENT,
+        quantityKg: lpgQty,
+        reason: `Void sale ${sale.receiptNumber}: ${reason}`,
+        referenceType: 'Sale',
+        referenceId: sale.id,
+        userId,
+      });
+    }
+
+    const hasCredit = (sale.payments ?? []).some(
+      (p) => p.method === PaymentMethod.CUSTOMER_ACCOUNT,
+    );
+    if (hasCredit && sale.customerId) {
+      await this.customersService.relieveCredit(
+        sale.customerId,
+        toNumber(sale.totalAmount),
+      );
+    }
+
+    sale.status = SaleStatus.VOIDED;
+    await this.salesRepo.save(sale);
+
+    await this.auditService.log({
+      userId,
+      action: 'SALE_VOIDED',
+      entityType: 'Sale',
+      entityId: sale.id,
+      newValues: { reason, receiptNumber: sale.receiptNumber },
+      stationId: sale.stationId,
+    });
+
+    return sale;
   }
 
   private offlinePayloadConflict(existing: Sale, dto: CreateSaleDto): boolean {

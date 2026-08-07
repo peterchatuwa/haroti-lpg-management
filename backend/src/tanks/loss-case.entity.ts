@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../common/entities/base.entity';
-import { LossCaseStatus } from '../common/enums';
+import { LossCaseCategory, LossCaseStatus } from '../common/enums';
 import { Station } from '../stations/station.entity';
 import { Tank } from './tank.entity';
 
@@ -77,6 +77,27 @@ export class LossCase extends BaseEntity {
   @Column({ type: 'enum', enum: LossCaseStatus, default: LossCaseStatus.OPEN })
   status!: LossCaseStatus;
 
+  @Column({ type: 'enum', enum: LossCaseCategory, nullable: true })
+  category?: LossCaseCategory;
+
+  @Column({ name: 'investigator_id', type: 'uuid', nullable: true })
+  investigatorId?: string;
+
+  @Column({
+    name: 'wac_value_mwk',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
+  wacValueMwk?: string;
+
   @Column({ type: 'text', nullable: true })
   notes?: string;
+
+  @Column({ name: 'root_cause', type: 'text', nullable: true })
+  rootCause?: string;
+
+  @Column({ name: 'corrective_action', type: 'text', nullable: true })
+  correctiveAction?: string;
 }

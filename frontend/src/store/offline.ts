@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { idbLoadQueue, idbSaveQueue } from '../lib/offline-db';
 
 export interface OfflineSale {
   clientTxnId: string;
@@ -23,13 +24,29 @@ interface OfflineState {
 
 const KEY = 'haroti_offline_sales';
 
+function migrateFromLocalStorage(): OfflineSale[] {
+  const raw = localStorage.getItem(KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as OfflineSale[];
+    localStorage.removeItem(KEY);
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+async function persistQueue(queue: OfflineSale[]) {
+  await idbSaveQueue(queue);
+}
+
 export const useOfflineStore = create<OfflineState>((set, get) => ({
   online: navigator.onLine,
   queue: [],
   setOnline: (online) => set({ online }),
   enqueue: (sale) => {
     const queue = [...get().queue, sale];
-    localStorage.setItem(KEY, JSON.stringify(queue));
+    void persistQueue(queue);
     set({ queue });
   },
   markSynced: (clientTxnId) => {
@@ -38,7 +55,7 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
         ? { ...s, synced: true, conflict: false, errorMessage: undefined }
         : s,
     );
-    localStorage.setItem(KEY, JSON.stringify(queue));
+    void persistQueue(queue);
     set({ queue });
   },
   markConflict: (clientTxnId, message) => {
@@ -47,7 +64,7 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
         ? { ...s, conflict: true, errorMessage: message }
         : s,
     );
-    localStorage.setItem(KEY, JSON.stringify(queue));
+    void persistQueue(queue);
     set({ queue });
   },
   markFailed: (clientTxnId, message) => {
@@ -56,16 +73,19 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
         ? { ...s, errorMessage: message }
         : s,
     );
-    localStorage.setItem(KEY, JSON.stringify(queue));
+    void persistQueue(queue);
     set({ queue });
   },
   clearResolved: () => {
     const queue = get().queue.filter((s) => !s.synced && !s.conflict);
-    localStorage.setItem(KEY, JSON.stringify(queue));
+    void persistQueue(queue);
     set({ queue });
   },
   load: () => {
-    const raw = localStorage.getItem(KEY);
-    set({ queue: raw ? (JSON.parse(raw) as OfflineSale[]) : [] });
+    const legacy = migrateFromLocalStorage();
+    void idbLoadQueue<OfflineSale>(legacy).then((queue) => {
+      if (legacy.length) void persistQueue(queue);
+      set({ queue });
+    });
   },
 }));

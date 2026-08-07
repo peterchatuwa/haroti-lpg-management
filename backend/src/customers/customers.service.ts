@@ -84,6 +84,15 @@ export class CustomersService {
     return this.customersRepo.save(customer);
   }
 
+  async relieveCredit(customerId: string, amount: number) {
+    const customer = await this.findOne(customerId);
+    customer.outstandingBalance = asDecimal(
+      Math.max(0, toNumber(customer.outstandingBalance) - amount),
+      2,
+    );
+    return this.customersRepo.save(customer);
+  }
+
   async recordPayment(
     customerId: string,
     dto: RecordCustomerPaymentDto,

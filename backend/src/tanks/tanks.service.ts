@@ -5,14 +5,17 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
-import { asDecimal, round3, toNumber } from '../common/decimal';
+import { asDecimal, round2, round3, toNumber } from '../common/decimal';
 import {
+  LossCaseCategory,
   LossCaseStatus,
+  StationStatus,
   StockMovementType,
   TankReadingContext,
 } from '../common/enums';
 import { StockMovement } from '../inventory/stock-movement.entity';
 import { Station } from '../stations/station.entity';
+import { LossCaseAction } from './loss-case-action.entity';
 import { LossCase } from './loss-case.entity';
 import { TankReading } from './tank-reading.entity';
 import { Tank } from './tank.entity';
@@ -28,6 +31,8 @@ export class TanksService {
     private readonly readingsRepo: Repository<TankReading>,
     @InjectRepository(LossCase)
     private readonly lossRepo: Repository<LossCase>,
+    @InjectRepository(LossCaseAction)
+    private readonly lossActionRepo: Repository<LossCaseAction>,
     @InjectRepository(StockMovement)
     private readonly movementsRepo: Repository<StockMovement>,
     @InjectRepository(Station)
@@ -151,6 +156,9 @@ export class TanksService {
 
     let lossCase: LossCase | null = null;
     if (breach) {
+      const station = await this.stationsRepo.findOne({ where: { id: stationId } });
+      const wac = toNumber(station?.weightedAvgCostPerKg ?? 1200);
+      const wacValue = round2(Math.abs(varianceKg) * wac);
       lossCase = await this.lossRepo.save(
         this.lossRepo.create({
           caseNumber: `LOSS-${Date.now().toString().slice(-8)}`,
@@ -164,6 +172,7 @@ export class TanksService {
           variancePercent: asDecimal(variancePercent, 3),
           thresholdPercent: asDecimal(threshold, 2),
           status: LossCaseStatus.OPEN,
+          wacValueMwk: asDecimal(wacValue, 2),
           notes: 'Auto-generated from gas reconciliation threshold breach',
         }),
       );
@@ -218,6 +227,97 @@ export class TanksService {
         safeWorkingCapacityKg: asDecimal(toNumber(station.tankCapacityKg) * 0.9),
         currentStockKg: station.currentStockKg,
       }),
+    );
+  }
+
+  async runoutForecast(windowDays = 14) {
+    const stations = await this.stationsRepo.find({
+      where: { status: StationStatus.ACTIVE },
+    });
+    const since = new Date();
+    since.setDate(since.getDate() - windowDays);
+    const results = [];
+
+    for (const station of stations) {
+      const movements = await this.movementsRepo.find({
+        where: {
+          stationId: station.id,
+          type: StockMovementType.REFILL_SALE,
+        },
+        order: { createdAt: 'DESC' },
+        take: 500,
+      });
+      const recent = movements.filter((m) => m.createdAt >= since);
+      const soldKg = recent.reduce(
+        (s, m) => s + Math.abs(toNumber(m.quantityKg)),
+        0,
+      );
+      const dailyAvg = soldKg / Math.max(windowDays, 1);
+      const stockKg = toNumber(station.currentStockKg);
+      const daysToRunout =
+        dailyAvg > 0 ? round2(stockKg / dailyAvg) : 999;
+
+      results.push({
+        stationId: station.id,
+        stationCode: station.code,
+        currentStockKg: stockKg,
+        dailyAvgKg: round3(dailyAvg),
+        daysToRunout,
+        windowDays,
+      });
+    }
+
+    return results.sort((a, b) => a.daysToRunout - b.daysToRunout);
+  }
+
+  async stockIntegrityCheck() {
+    const stations = await this.stationsRepo.find();
+    const issues: Array<{ stationCode: string; summary: string }> = [];
+
+    for (const station of stations) {
+      const movements = await this.movementsRepo.find({
+        where: { stationId: station.id },
+      });
+      let net = 0;
+      for (const m of movements) {
+        net += toNumber(m.quantityKg);
+      }
+      const summaryStock = toNumber(station.currentStockKg);
+      const delta = round3(summaryStock - net);
+      if (Math.abs(delta) > 0.5) {
+        issues.push({
+          stationCode: station.code,
+          summary: `Station stock ${summaryStock} kg vs movement net ${round3(net)} kg (delta ${delta})`,
+        });
+      }
+    }
+
+    return { checkedAt: new Date().toISOString(), issueCount: issues.length, issues };
+  }
+
+  async updateLossCase(
+    id: string,
+    patch: {
+      status?: LossCaseStatus;
+      category?: LossCaseCategory;
+      investigatorId?: string;
+      rootCause?: string;
+      correctiveAction?: string;
+      notes?: string;
+    },
+  ) {
+    const lc = await this.lossRepo.findOne({ where: { id } });
+    if (!lc) throw new NotFoundException('Loss case not found');
+    Object.assign(lc, patch);
+    return this.lossRepo.save(lc);
+  }
+
+  async addLossCaseAction(
+    lossCaseId: string,
+    body: { description: string; assignedToId?: string; dueDate?: string },
+  ) {
+    return this.lossActionRepo.save(
+      this.lossActionRepo.create({ lossCaseId, ...body }),
     );
   }
 }

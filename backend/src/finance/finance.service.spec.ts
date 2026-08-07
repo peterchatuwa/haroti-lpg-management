@@ -1,9 +1,6 @@
 import { JournalEventType } from '../common/enums';
-import {
-  DEFAULT_LPG_COST_PER_KG,
-  FinanceService,
-  GL_ACCOUNTS,
-} from './finance.service';
+import { FinanceService } from './finance.service';
+import { GL_ACCOUNTS } from './gl-accounts';
 
 describe('FinanceService LPG COGS (AC-11)', () => {
   const savedEntries: Array<{ eventType: JournalEventType; lines: unknown[] }> =
@@ -22,11 +19,15 @@ describe('FinanceService LPG COGS (AC-11)', () => {
   };
   const linesRepo = { create: jest.fn((l) => l) };
   const budgetRepo = {};
+  const fiscalPeriodService = {
+    assertOpenForPosting: jest.fn(async () => undefined),
+  };
 
   const service = new FinanceService(
     entriesRepo as never,
     linesRepo as never,
     budgetRepo as never,
+    fiscalPeriodService as never,
   );
 
   beforeEach(() => {

@@ -206,6 +206,7 @@ export enum JournalEventType {
   CUSTOMER_CREDIT_SALE = 'CUSTOMER_CREDIT_SALE',
   CUSTOMER_PAYMENT = 'CUSTOMER_PAYMENT',
   SUPPLIER_PAYMENT = 'SUPPLIER_PAYMENT',
+  SALE_REVERSAL = 'SALE_REVERSAL',
 }
 
 export enum TankReadingContext {
@@ -218,8 +219,34 @@ export enum TankReadingContext {
 
 export enum LossCaseStatus {
   OPEN = 'OPEN',
-  APPROVED = 'APPROVED',
+  ASSIGNED = 'ASSIGNED',
+  INVESTIGATING = 'INVESTIGATING',
+  ROOT_CAUSE_IDENTIFIED = 'ROOT_CAUSE_IDENTIFIED',
+  ACTION_REQUIRED = 'ACTION_REQUIRED',
+  CLOSED = 'CLOSED',
   REJECTED = 'REJECTED',
+}
+
+export enum LossCaseCategory {
+  METER_ERROR = 'METER_ERROR',
+  LEAKAGE = 'LEAKAGE',
+  VENTING = 'VENTING',
+  DELIVERY_VARIANCE = 'DELIVERY_VARIANCE',
+  THEFT = 'THEFT',
+  DATA_ENTRY = 'DATA_ENTRY',
+  MEASUREMENT = 'MEASUREMENT',
+  UNKNOWN = 'UNKNOWN',
+}
+
+export enum JournalPostingStatus {
+  POSTED = 'POSTED',
+  REVERSED = 'REVERSED',
+}
+
+export enum FiscalPeriodStatus {
+  OPEN = 'OPEN',
+  SOFT_CLOSED = 'SOFT_CLOSED',
+  HARD_CLOSED = 'HARD_CLOSED',
 }
 
 export enum CylinderMovementType {

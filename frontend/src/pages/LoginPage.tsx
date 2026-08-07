@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FlameMark } from '../components/FlameMark';
 import api from '../lib/api';
+import { landingRouteForRole } from '../lib/landing-route';
 import { useAuthStore } from '../store/auth';
 
 const DEMOS = [
@@ -26,7 +27,7 @@ export function LoginPage() {
     try {
       const { data } = await api.post('/auth/login', { username, password });
       setSession(data.accessToken, data.user);
-      navigate('/');
+      navigate(landingRouteForRole(data.user.role));
     } catch {
       setError('Invalid username or password');
     } finally {

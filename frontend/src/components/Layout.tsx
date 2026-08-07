@@ -5,6 +5,8 @@ import {
   Calculator,
   ClipboardList,
   Gauge,
+  Inbox,
+  RefreshCw,
   Handshake,
   LayoutDashboard,
   LogOut,
@@ -28,6 +30,9 @@ import { FlameMark } from './FlameMark';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/executive', label: 'Executive cockpit', icon: BarChart3 },
+  { to: '/action-centre', label: 'Action centre', icon: Inbox },
+  { to: '/sync-centre', label: 'Sync centre', icon: RefreshCw },
   { to: '/reports', label: 'Executive BI', icon: BarChart3 },
   { to: '/pos', label: 'Refill POS', icon: ShoppingCart },
   { to: '/accessories', label: 'Accessories', icon: Tag },
@@ -164,7 +169,7 @@ export function Layout() {
               <span className="badge warn">{pending} queued offline</span>
             )}
             {conflicts > 0 && (
-              <NavLink to="/pos" className="badge warn">
+              <NavLink to="/sync-centre" className="badge warn">
                 {conflicts} sync conflict{conflicts > 1 ? 's' : ''}
               </NavLink>
             )}
