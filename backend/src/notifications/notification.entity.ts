@@ -32,11 +32,11 @@ export class Notification extends BaseEntity {
   @Column({ name: 'read_at', type: 'timestamptz', nullable: true })
   readAt?: Date | null;
 
-  @Column({ name: 'entity_type', length: 40, nullable: true })
-  entityType?: string | null;
+  @Column({ name: 'entity_type', type: 'varchar', length: 40, nullable: true })
+  relatedEntityType?: string | null;
 
   @Column({ name: 'entity_id', type: 'uuid', nullable: true })
-  entityId?: string | null;
+  relatedEntityId?: string | null;
 
   @OneToMany(() => NotificationDelivery, (d) => d.notification)
   deliveries!: NotificationDelivery[];

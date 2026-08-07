@@ -57,8 +57,8 @@ export class NotificationsService {
         title: params.title,
         body: params.body,
         status: NotificationStatus.PENDING,
-        entityType: params.entityType,
-        entityId: params.entityId,
+        relatedEntityType: params.entityType,
+        relatedEntityId: params.entityId,
       }),
     );
 
