@@ -6,10 +6,10 @@ import { Tank } from '../tanks/tank.entity';
 
 @Entity('iot_devices')
 export class IoTDevice extends BaseEntity {
-  @Column({ name: 'device_key', length: 80, unique: true })
+  @Column({ name: 'device_key', type: 'varchar', length: 80, unique: true })
   deviceKey!: string;
 
-  @Column({ length: 120 })
+  @Column({ type: 'varchar', length: 120 })
   name!: string;
 
   @Column({ type: 'enum', enum: IoTDeviceType })
@@ -22,7 +22,7 @@ export class IoTDevice extends BaseEntity {
   })
   status!: IoTDeviceStatus;
 
-  @Column({ name: 'station_id' })
+  @Column({ name: 'station_id', type: 'uuid' })
   stationId!: string;
 
   @ManyToOne(() => Station, { onDelete: 'CASCADE' })

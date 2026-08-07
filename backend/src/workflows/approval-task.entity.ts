@@ -10,14 +10,14 @@ import { User } from '../users/user.entity';
 
 @Entity('approval_tasks')
 export class ApprovalTask extends BaseEntity {
-  @Column({ name: 'task_number', length: 40, unique: true })
+  @Column({ name: 'task_number', type: 'varchar', length: 40, unique: true })
   taskNumber!: string;
 
   @Column({ name: 'entity_type', type: 'varchar', length: 40 })
-  entityType!: WorkflowEntityType;
+  subjectEntityType!: WorkflowEntityType;
 
   @Column({ name: 'entity_id', type: 'uuid' })
-  entityId!: string;
+  subjectEntityId!: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   amount!: string;

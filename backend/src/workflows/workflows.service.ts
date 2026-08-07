@@ -71,8 +71,8 @@ export class WorkflowsService {
     return this.tasksRepo.save(
       this.tasksRepo.create({
         taskNumber,
-        entityType: params.entityType,
-        entityId: params.entityId,
+        subjectEntityType: params.entityType,
+        subjectEntityId: params.entityId,
         amount: String(params.amount),
         status: ApprovalTaskStatus.PENDING,
         currentStep: first.stepOrder,
@@ -125,7 +125,7 @@ export class WorkflowsService {
       if (task.dueAt > now) continue;
 
       const definition = await this.definitionsRepo.findOne({
-        where: { entityType: task.entityType, isActive: true },
+        where: { entityType: task.subjectEntityType, isActive: true },
         relations: { steps: true },
       });
       if (!definition?.steps?.length) continue;

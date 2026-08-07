@@ -13,10 +13,10 @@ export class Notification extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user?: User | null;
 
-  @Column({ name: 'event_type', length: 60 })
+  @Column({ name: 'event_type', type: 'varchar', length: 60 })
   eventType!: string;
 
-  @Column({ length: 200 })
+  @Column({ type: 'varchar', length: 200 })
   title!: string;
 
   @Column({ type: 'text' })

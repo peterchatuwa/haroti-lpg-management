@@ -56,7 +56,7 @@ export function ApprovalInboxPage() {
                 (t: {
                   id: string;
                   taskNumber: string;
-                  entityType: string;
+                    subjectEntityType: string;
                   amount: string;
                   summary?: string;
                   dueAt: string;
@@ -68,7 +68,7 @@ export function ApprovalInboxPage() {
                       <br />
                       <span className="muted">{t.summary ?? '—'}</span>
                     </td>
-                    <td>{t.entityType.replaceAll('_', ' ')}</td>
+                    <td>{t.subjectEntityType.replaceAll('_', ' ')}</td>
                     <td>{formatMoney(t.amount)}</td>
                     <td>{t.station?.code ?? 'Network'}</td>
                     <td>{new Date(t.dueAt).toLocaleString()}</td>

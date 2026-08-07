@@ -13,7 +13,7 @@ export class NotificationPreference extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ name: 'event_type', length: 60 })
+  @Column({ name: 'event_type', type: 'varchar', length: 60 })
   eventType!: string;
 
   @Column({ type: 'enum', enum: NotificationChannel })

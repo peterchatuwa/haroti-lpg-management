@@ -18,7 +18,7 @@ export class NotificationDelivery extends BaseEntity {
   @Column({ type: 'enum', enum: NotificationChannel })
   channel!: NotificationChannel;
 
-  @Column({ name: 'recipient', length: 120, nullable: true })
+  @Column({ name: 'recipient', type: 'varchar', length: 120, nullable: true })
   recipient?: string | null;
 
   @Column({
@@ -31,7 +31,7 @@ export class NotificationDelivery extends BaseEntity {
   @Column({ type: 'int', default: 0 })
   attempts!: number;
 
-  @Column({ name: 'provider_ref', length: 120, nullable: true })
+  @Column({ name: 'provider_ref', type: 'varchar', length: 120, nullable: true })
   providerRef?: string | null;
 
   @Column({ name: 'last_error', type: 'text', nullable: true })

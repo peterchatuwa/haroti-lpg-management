@@ -5,7 +5,7 @@ import { WorkflowStep } from './workflow-step.entity';
 
 @Entity('workflow_definitions')
 export class WorkflowDefinition extends BaseEntity {
-  @Column({ length: 120 })
+  @Column({ type: 'varchar', length: 120 })
   name!: string;
 
   @Column({ name: 'entity_type', type: 'varchar', length: 40 })
