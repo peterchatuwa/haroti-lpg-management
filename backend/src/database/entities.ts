@@ -69,6 +69,10 @@ import { NotificationDelivery } from '../notifications/notification-delivery.ent
 import { NotificationPreference } from '../notifications/notification-preference.entity';
 import { IoTDevice } from '../iot/iot-device.entity';
 import { TelemetryReading } from '../iot/telemetry-reading.entity';
+import { LoyaltyAccount } from '../loyalty/loyalty-account.entity';
+import { LoyaltyTransaction } from '../loyalty/loyalty-transaction.entity';
+import { CustomerOtpChallenge } from '../customer-portal/customer-otp-challenge.entity';
+import { RefillRequest } from '../customer-portal/refill-request.entity';
 
 export const ENTITIES = [
   Station,
@@ -142,4 +146,8 @@ export const ENTITIES = [
   NotificationPreference,
   IoTDevice,
   TelemetryReading,
+  LoyaltyAccount,
+  LoyaltyTransaction,
+  CustomerOtpChallenge,
+  RefillRequest,
 ];

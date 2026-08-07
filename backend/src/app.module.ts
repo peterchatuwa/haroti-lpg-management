@@ -79,6 +79,9 @@ import { SeedModule } from './seed/seed.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { IoTModule } from './iot/iot.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
+import { CustomerPortalModule } from './customer-portal/customer-portal.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -139,6 +142,9 @@ import { IoTModule } from './iot/iot.module';
     WorkflowsModule,
     AnalyticsModule,
     IoTModule,
+    LoyaltyModule,
+    CustomerPortalModule,
+    AiModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

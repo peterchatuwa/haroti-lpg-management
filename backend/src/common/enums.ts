@@ -484,3 +484,32 @@ export enum IoTDeviceStatus {
   INACTIVE = 'INACTIVE',
   FAULT = 'FAULT',
 }
+
+export enum LoyaltyTxnType {
+  EARN = 'EARN',
+  REDEEM = 'REDEEM',
+  ADJUST = 'ADJUST',
+}
+
+export enum RefillRequestStatus {
+  PENDING = 'PENDING',
+  ACCEPTED = 'ACCEPTED',
+  SCHEDULED = 'SCHEDULED',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum AnomalySeverity {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+}
+
+export enum AnomalyCategory {
+  GAS_LOSS = 'GAS_LOSS',
+  DISCOUNT = 'DISCOUNT',
+  REFUND = 'REFUND',
+  STOCK_ADJUST = 'STOCK_ADJUST',
+  CASH_VARIANCE = 'CASH_VARIANCE',
+  PAYMENT = 'PAYMENT',
+}

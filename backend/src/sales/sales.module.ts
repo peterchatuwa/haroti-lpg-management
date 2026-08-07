@@ -8,6 +8,7 @@ import { CylindersService } from '../cylinders/cylinders.service';
 import { CustomersModule } from '../customers/customers.module';
 import { FinanceModule } from '../finance/finance.module';
 import { FranchiseModule } from '../franchise/franchise.module';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { PriceList } from '../pricing/price-list.entity';
@@ -32,6 +33,7 @@ import { SalesService } from './sales.service';
     CylindersModule,
     FranchiseModule,
     NotificationsModule,
+    LoyaltyModule,
   ],
   controllers: [SalesController],
   providers: [SalesService, AuditService],

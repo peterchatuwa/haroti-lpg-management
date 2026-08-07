@@ -23,6 +23,7 @@ import {
 import { FinanceService } from '../finance/finance.service';
 import { FranchiseService } from '../franchise/franchise.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PriceList } from '../pricing/price-list.entity';
 import { ShiftsService } from '../shifts/shifts.service';
@@ -58,6 +59,7 @@ export class SalesService {
     private readonly shiftsService: ShiftsService,
     private readonly notificationsService: NotificationsService,
     private readonly cylindersService: CylindersService,
+    private readonly loyaltyService: LoyaltyService,
   ) {}
 
   async getActivePrice(stationId: string) {
@@ -465,6 +467,10 @@ export class SalesService {
         receiptNumber: saved.receiptNumber,
         balance: toNumber(customer.outstandingBalance),
       });
+    }
+
+    if (dto.customerId && !hasCredit) {
+      void this.loyaltyService.earnFromSale(dto.customerId, total, saved.id);
     }
 
     if (

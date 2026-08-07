@@ -23,6 +23,10 @@ import { SafetyPage } from './pages/SafetyPage';
 import { ApprovalInboxPage } from './pages/ApprovalInboxPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { StaffAnalyticsPage } from './pages/StaffAnalyticsPage';
+import { CustomerPortalPage } from './pages/CustomerPortalPage';
+import { InsightsPage } from './pages/InsightsPage';
+import { LoyaltyPage } from './pages/LoyaltyPage';
+import { RefillRequestsPage } from './pages/RefillRequestsPage';
 import { SyncCentrePage } from './pages/SyncCentrePage';
 import { FranchisePage } from './pages/FranchisePage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -90,6 +94,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/portal" element={<CustomerPortalPage />} />
       <Route
         path="/"
         element={
@@ -104,6 +109,9 @@ export default function App() {
         <Route path="approval-inbox" element={<ApprovalInboxPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="staff-analytics" element={<StaffAnalyticsPage />} />
+        <Route path="insights" element={<InsightsPage />} />
+        <Route path="loyalty" element={<LoyaltyPage />} />
+        <Route path="refill-requests" element={<RefillRequestsPage />} />
         <Route path="targets" element={<TargetsPage />} />
         <Route path="sync-centre" element={<SyncCentrePage />} />
         <Route path="reports" element={<ReportsPage />} />
