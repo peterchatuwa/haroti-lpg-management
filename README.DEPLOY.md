@@ -7,10 +7,22 @@ Isolated Docker stack at `/opt/haroti-lpg`.
 
 ## Access
 
+### Current Access (IP-based)
+
 - **Web UI:** http://169.58.127.129/
 - **API:** http://169.58.127.129/api/
 - **Swagger:** http://169.58.127.129/api/docs
 - **Demo login:** `admin` / `Password123!`
+
+### Domain Access (DNS Configuration Required)
+
+⚠️ **DNS Not Configured**: As of August 10, 2026, the following domains are not accessible due to missing DNS records:
+- `harotilimited.com` / `harotilimited.mw` - No DNS records
+- `lpg.aircargo.mw` - No DNS records
+
+**To configure domain access**: See detailed instructions in [`docs/DOMAIN_DNS_SETUP.md`](docs/DOMAIN_DNS_SETUP.md)
+
+**Quick DNS check**: Run `scripts/check-access.sh` to diagnose connectivity issues
 
 Production secrets live in `/opt/haroti-lpg/.env` on the server (not in git).
 
