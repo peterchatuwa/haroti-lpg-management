@@ -1,9 +1,9 @@
 const PARTNERS = [
-  { name: 'GETF', logo: '/brand/partners/getf.png' },
+  { name: 'GETF Green Economic Transition Facility', logo: '/brand/partners/getf.png' },
   { name: 'UNDP', logo: '/brand/partners/undp.svg' },
   { name: 'Imani Development', logo: '/brand/partners/imani.png' },
-  { name: 'Landell Mills', logo: '/brand/partners/landell-mills.svg' },
-  { name: 'Irish Aid', logo: '/brand/partners/ireland.svg' },
+  { name: 'Landell Mills', logo: '/brand/partners/landell-mills.png' },
+  { name: 'Government of Ireland', logo: '/brand/partners/ireland.svg' },
 ];
 
 type Variant = 'light' | 'dark';
