@@ -24,9 +24,13 @@ const PARTNERS = [
 
 type Variant = 'light' | 'dark';
 
+const logoHover =
+  'origin-center transition-transform duration-200 ease-out hover:scale-110';
+
 const partnerLogoClass = (isDark: boolean, extra?: string) =>
   [
     extra ?? 'max-h-10 max-w-[150px] object-contain',
+    logoHover,
     isDark ? 'rounded-lg bg-haroti-paper/95 px-2 py-1' : 'grayscale-[0.05]',
   ]
     .filter(Boolean)
@@ -56,7 +60,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
           <img
             src="/brand/gdc-member-stamp.png"
             alt="Global Distributors Collective member"
-            className="block max-h-10 max-w-[150px] object-contain"
+            className={`block max-h-10 max-w-[150px] object-contain ${logoHover}`}
           />
         </div>
 
