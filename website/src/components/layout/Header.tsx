@@ -20,9 +20,9 @@ export const Header = () => {
   ];
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50">
+    <header className="bg-haroti-paper shadow-sm sticky top-0 z-50">
       {/* Top bar with contact info */}
-      <div className="bg-haroti-blue text-white py-2">
+      <div className="bg-haroti-forest text-white py-2">
         <div className="container-custom flex justify-between items-center text-sm">
           <div className="flex items-center gap-4">
             <a href="tel:+265" className="flex items-center gap-1 hover:text-haroti-orange transition-colors">
@@ -61,8 +61,8 @@ export const Header = () => {
               HG
             </div>
             <div className="hidden sm:block">
-              <div className="font-bold text-xl text-haroti-blue">HAROTI GAS</div>
-              <div className="text-xs text-gray-600">Powering the World</div>
+              <div className="font-bold text-xl text-haroti-forest">HAROTI GAS</div>
+              <div className="text-xs text-haroti-muted">Powering the World</div>
             </div>
           </Link>
 
@@ -72,7 +72,7 @@ export const Header = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-haroti-orange hover:bg-gray-50 rounded-md transition-colors"
+                className="px-3 py-2 text-sm font-medium text-haroti-ink/90 hover:text-haroti-flame hover:bg-haroti-mist rounded-md transition-colors"
               >
                 {item.name}
               </Link>
@@ -89,7 +89,7 @@ export const Header = () => {
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100"
+            className="lg:hidden p-2 rounded-md text-haroti-ink/90 hover:bg-haroti-mist"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -104,7 +104,7 @@ export const Header = () => {
                   key={item.name}
                   to={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="px-3 py-2 text-base font-medium text-gray-700 hover:text-haroti-orange hover:bg-gray-50 rounded-md transition-colors"
+                  className="px-3 py-2 text-base font-medium text-haroti-ink/90 hover:text-haroti-orange hover:bg-haroti-paper rounded-md transition-colors"
                 >
                   {item.name}
                 </Link>

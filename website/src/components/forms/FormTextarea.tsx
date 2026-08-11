@@ -21,7 +21,7 @@ export const FormTextarea = ({
 }: FormTextareaProps) => {
   return (
     <div>
-      <label htmlFor={name} className="block text-sm font-semibold text-gray-700 mb-2">
+      <label htmlFor={name} className="block text-sm font-semibold text-haroti-ink/90 mb-2">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <textarea
@@ -32,8 +32,8 @@ export const FormTextarea = ({
         placeholder={placeholder}
         required={required}
         rows={rows}
-        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-haroti-blue focus:border-transparent transition-all ${
-          error ? 'border-red-500' : 'border-gray-300'
+        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-haroti-forest focus:border-transparent transition-all ${
+          error ? 'border-red-500' : 'border-haroti-muted/30'
         }`}
       />
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}

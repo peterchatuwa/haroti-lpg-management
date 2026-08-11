@@ -54,16 +54,16 @@ export const FranchisePage = () => {
   ];
 
   return (
-    <div className="bg-white">
+    <div className="bg-haroti-paper">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-haroti-orange to-orange-600 text-white py-16 md:py-24">
+      <section className="relative bg-gradient-to-r from-haroti-orange to-haroti-flame-hot text-white py-16 md:py-24">
         <div className="container-custom">
           <div className="max-w-3xl">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">Franchise Opportunities</h1>
-            <p className="text-xl md:text-2xl text-orange-100 mb-8">
+            <p className="text-xl md:text-2xl text-white/80 mb-8">
               Join our growing network of women- and youth-led LPG distribution stations across Malawi
             </p>
-            <a href="#apply" className="bg-white text-haroti-orange hover:bg-gray-100 font-semibold py-3 px-8 rounded-lg transition-colors inline-block">
+            <a href="#apply" className="bg-haroti-paper text-haroti-orange hover:bg-haroti-mist font-semibold py-3 px-8 rounded-lg transition-colors inline-block">
               Apply Now
             </a>
           </div>
@@ -101,42 +101,42 @@ export const FranchisePage = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-xl shadow-md text-center">
-              <div className="w-16 h-16 bg-haroti-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="text-haroti-blue" size={32} />
+            <div className="bg-haroti-paper p-6 rounded-xl shadow-md text-center">
+              <div className="w-16 h-16 bg-haroti-forest/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="text-haroti-forest" size={32} />
               </div>
               <h3 className="font-bold text-lg mb-3">Growing Market</h3>
-              <p className="text-gray-600 text-sm">
+              <p className="text-haroti-muted text-sm">
                 Expanding demand for clean cooking solutions across Malawi
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-md text-center">
+            <div className="bg-haroti-paper p-6 rounded-xl shadow-md text-center">
               <div className="w-16 h-16 bg-haroti-orange/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Award className="text-haroti-orange" size={32} />
               </div>
               <h3 className="font-bold text-lg mb-3">Proven Model</h3>
-              <p className="text-gray-600 text-sm">
+              <p className="text-haroti-muted text-sm">
                 Established business systems and ongoing operational support
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-md text-center">
+            <div className="bg-haroti-paper p-6 rounded-xl shadow-md text-center">
               <div className="w-16 h-16 bg-haroti-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Heart className="text-haroti-green" size={32} />
               </div>
               <h3 className="font-bold text-lg mb-3">Social Impact</h3>
-              <p className="text-gray-600 text-sm">
+              <p className="text-haroti-muted text-sm">
                 Make a difference while earning a sustainable income
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-md text-center">
+            <div className="bg-haroti-paper p-6 rounded-xl shadow-md text-center">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="text-purple-600" size={32} />
               </div>
               <h3 className="font-bold text-lg mb-3">Priority Support</h3>
-              <p className="text-gray-600 text-sm">
+              <p className="text-haroti-muted text-sm">
                 Women and youth-led initiatives receive special consideration
               </p>
             </div>
@@ -145,7 +145,7 @@ export const FranchisePage = () => {
       </section>
 
       {/* Benefits & Requirements */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-haroti-paper">
         <div className="container-custom">
           <div className="grid md:grid-cols-2 gap-12">
             {/* Benefits */}
@@ -153,9 +153,9 @@ export const FranchisePage = () => {
               <h2 className="text-3xl font-bold mb-6">Franchise Benefits</h2>
               <div className="space-y-3">
                 {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-start gap-3 bg-white p-4 rounded-lg shadow-sm">
+                  <div key={index} className="flex items-start gap-3 bg-haroti-paper p-4 rounded-lg shadow-sm">
                     <Check className="text-haroti-green flex-shrink-0 mt-1" size={20} />
-                    <span className="text-gray-700">{benefit}</span>
+                    <span className="text-haroti-ink/90">{benefit}</span>
                   </div>
                 ))}
               </div>
@@ -166,9 +166,9 @@ export const FranchisePage = () => {
               <h2 className="text-3xl font-bold mb-6">Basic Requirements</h2>
               <div className="space-y-3">
                 {requirements.map((requirement, index) => (
-                  <div key={index} className="flex items-start gap-3 bg-white p-4 rounded-lg shadow-sm">
-                    <Check className="text-haroti-blue flex-shrink-0 mt-1" size={20} />
-                    <span className="text-gray-700">{requirement}</span>
+                  <div key={index} className="flex items-start gap-3 bg-haroti-paper p-4 rounded-lg shadow-sm">
+                    <Check className="text-haroti-forest flex-shrink-0 mt-1" size={20} />
+                    <span className="text-haroti-ink/90">{requirement}</span>
                   </div>
                 ))}
               </div>
@@ -191,7 +191,7 @@ export const FranchisePage = () => {
                   1
                 </div>
                 <h3 className="font-bold mb-2">Apply</h3>
-                <p className="text-sm text-gray-600">Submit your application online</p>
+                <p className="text-sm text-haroti-muted">Submit your application online</p>
               </div>
 
               <div className="text-center">
@@ -199,7 +199,7 @@ export const FranchisePage = () => {
                   2
                 </div>
                 <h3 className="font-bold mb-2">Review</h3>
-                <p className="text-sm text-gray-600">We assess your application and location</p>
+                <p className="text-sm text-haroti-muted">We assess your application and location</p>
               </div>
 
               <div className="text-center">
@@ -207,7 +207,7 @@ export const FranchisePage = () => {
                   3
                 </div>
                 <h3 className="font-bold mb-2">Training</h3>
-                <p className="text-sm text-gray-600">Complete our franchise training programme</p>
+                <p className="text-sm text-haroti-muted">Complete our franchise training programme</p>
               </div>
 
               <div className="text-center">
@@ -215,7 +215,7 @@ export const FranchisePage = () => {
                   4
                 </div>
                 <h3 className="font-bold mb-2">Launch</h3>
-                <p className="text-sm text-gray-600">Open your station with our support</p>
+                <p className="text-sm text-haroti-muted">Open your station with our support</p>
               </div>
             </div>
           </div>
@@ -223,17 +223,17 @@ export const FranchisePage = () => {
       </section>
 
       {/* Application Form */}
-      <section id="apply" className="py-16 bg-gray-50">
+      <section id="apply" className="py-16 bg-haroti-paper">
         <div className="container-custom">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="section-heading">Franchise Application Form</h2>
-              <p className="text-gray-600">
+              <p className="text-haroti-muted">
                 Fill out the form below to start your journey as a Haroti Gas franchisee
               </p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="bg-haroti-paper rounded-xl shadow-lg p-8">
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Personal Information */}
                 <div>
@@ -375,14 +375,14 @@ export const FranchisePage = () => {
                 </div>
 
                 {/* Terms */}
-                <div className="bg-gray-50 p-6 rounded-lg">
+                <div className="bg-haroti-paper p-6 rounded-lg">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       required
-                      className="mt-1 w-5 h-5 text-haroti-blue focus:ring-haroti-blue border-gray-300 rounded"
+                      className="mt-1 w-5 h-5 text-haroti-forest focus:ring-haroti-forest border-haroti-muted/30 rounded"
                     />
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm text-haroti-ink/90">
                       I confirm that the information provided is accurate and complete. I understand that 
                       Haroti Gas will review my application and contact me regarding next steps. I agree 
                       to the terms and conditions of the franchise programme.
@@ -394,7 +394,7 @@ export const FranchisePage = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-haroti-orange hover:bg-orange-600 disabled:bg-gray-400 text-white font-bold py-4 px-8 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-haroti-orange hover:bg-haroti-flame-hot disabled:bg-gray-400 text-white font-bold py-4 px-8 rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>
@@ -409,7 +409,7 @@ export const FranchisePage = () => {
                   )}
                 </button>
 
-                <p className="text-center text-sm text-gray-600">
+                <p className="text-center text-sm text-haroti-muted">
                   Applications are typically reviewed within 5 business days. You will receive 
                   confirmation via email and phone.
                 </p>
@@ -420,19 +420,19 @@ export const FranchisePage = () => {
       </section>
 
       {/* Contact CTA */}
-      <section className="py-16 bg-haroti-blue text-white">
+      <section className="py-16 bg-haroti-forest text-white">
         <div className="container-custom text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Have Questions About Franchising?
           </h2>
-          <p className="text-xl mb-8 text-blue-100 max-w-2xl mx-auto">
+          <p className="text-xl mb-8 text-white/80 max-w-2xl mx-auto">
             Our Franchise Compliance Manager is here to help you understand the process
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="/contact" className="btn-primary">
               Contact Us
             </a>
-            <a href="tel:+265" className="bg-white text-haroti-blue hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-colors">
+            <a href="tel:+265" className="bg-haroti-paper text-haroti-forest hover:bg-haroti-mist font-semibold py-3 px-6 rounded-lg transition-colors">
               Call +265 XXX XXX XXX
             </a>
           </div>

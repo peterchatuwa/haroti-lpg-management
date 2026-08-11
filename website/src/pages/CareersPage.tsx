@@ -25,12 +25,12 @@ export const CareersPage = () => {
   ];
 
   return (
-    <div className="bg-white">
+    <div className="bg-haroti-paper">
       {/* Hero */}
-      <section className="relative bg-gradient-to-r from-haroti-orange to-orange-600 text-white py-16 md:py-24">
+      <section className="relative bg-gradient-to-r from-haroti-orange to-haroti-flame-hot text-white py-16 md:py-24">
         <div className="container-custom">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Careers at Haroti Gas</h1>
-          <p className="text-xl md:text-2xl text-orange-100">
+          <p className="text-xl md:text-2xl text-white/80">
             Join our team and help power Malawi's clean energy revolution
           </p>
         </div>
@@ -50,47 +50,47 @@ export const CareersPage = () => {
           <h2 className="section-heading text-center mb-12">Why Work at Haroti Gas?</h2>
           <div className="grid md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-haroti-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="text-haroti-blue" size={32} />
+              <div className="w-16 h-16 bg-haroti-forest/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="text-haroti-forest" size={32} />
               </div>
               <h3 className="font-bold mb-2">Growth Opportunity</h3>
-              <p className="text-gray-600 text-sm">Expanding company with career advancement</p>
+              <p className="text-haroti-muted text-sm">Expanding company with career advancement</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-haroti-orange/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Heart className="text-haroti-orange" size={32} />
               </div>
               <h3 className="font-bold mb-2">Meaningful Work</h3>
-              <p className="text-gray-600 text-sm">Make a real difference in communities</p>
+              <p className="text-haroti-muted text-sm">Make a real difference in communities</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-haroti-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="text-haroti-green" size={32} />
               </div>
               <h3 className="font-bold mb-2">Great Team</h3>
-              <p className="text-gray-600 text-sm">Collaborative, supportive culture</p>
+              <p className="text-haroti-muted text-sm">Collaborative, supportive culture</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Briefcase className="text-purple-600" size={32} />
               </div>
               <h3 className="font-bold mb-2">Competitive Benefits</h3>
-              <p className="text-gray-600 text-sm">Fair compensation and benefits</p>
+              <p className="text-haroti-muted text-sm">Fair compensation and benefits</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Open Positions */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-haroti-paper">
         <div className="container-custom">
           <h2 className="section-heading text-center mb-12">Current Openings</h2>
           <div className="max-w-4xl mx-auto space-y-4">
             {openPositions.map((job, idx) => (
-              <div key={idx} className="bg-white rounded-lg p-6 shadow-md flex items-center justify-between">
+              <div key={idx} className="bg-haroti-paper rounded-lg p-6 shadow-md flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-lg mb-1">{job.title}</h3>
-                  <div className="flex gap-4 text-sm text-gray-600">
+                  <div className="flex gap-4 text-sm text-haroti-muted">
                     <span>{job.location}</span>
                     <span>•</span>
                     <span>{job.type}</span>
@@ -111,7 +111,7 @@ export const CareersPage = () => {
       <section id="apply" className="py-16">
         <div className="container-custom max-w-3xl">
           <h2 className="section-heading text-center mb-8">Apply for a Position</h2>
-          <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="bg-haroti-paper rounded-xl shadow-lg p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <FormInput label="First Name" name="firstName" required />
@@ -127,13 +127,13 @@ export const CareersPage = () => {
               />
               <FormTextarea label="Cover Letter" name="coverLetter" required rows={6} placeholder="Tell us why you're a great fit..." />
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-haroti-ink/90 mb-2">
                   Upload CV/Resume <span className="text-red-500">*</span>
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <div className="border-2 border-dashed border-haroti-muted/30 rounded-lg p-6 text-center">
                   <Upload className="mx-auto text-gray-400 mb-2" size={32} />
-                  <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-                  <p className="text-xs text-gray-500">PDF, DOC, DOCX (Max 5MB)</p>
+                  <p className="text-sm text-haroti-muted">Click to upload or drag and drop</p>
+                  <p className="text-xs text-haroti-muted">PDF, DOC, DOCX (Max 5MB)</p>
                 </div>
               </div>
               <button type="submit" disabled={isSubmitting} className="w-full btn-primary flex items-center justify-center gap-2">

@@ -29,7 +29,7 @@ const partnerLogoClass = (isDark: boolean, extra?: string) =>
   [
     extra ??
       'max-h-14 max-w-[200px] object-contain md:max-h-16 md:max-w-[240px]',
-    isDark ? 'rounded-lg bg-white/95 px-3 py-2' : 'grayscale-[0.05]',
+    isDark ? 'rounded-lg bg-haroti-paper/95 px-3 py-2' : 'grayscale-[0.05]',
   ]
     .filter(Boolean)
     .join(' ');
@@ -45,7 +45,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
       className={`border-t ${
         isDark
           ? 'border-white/10 bg-[#020f0c] text-white/80'
-          : 'border-gray-200 bg-[#f3f7f4] text-gray-900'
+          : 'border-haroti-mist bg-[#f3f7f4] text-haroti-ink'
       }`}
       aria-label="Affiliations and supporters"
     >
@@ -53,7 +53,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
         <div>
           <p
             className={`mb-4 text-xs font-bold uppercase tracking-widest ${
-              isDark ? 'text-white/55' : 'text-gray-500'
+              isDark ? 'text-white/55' : 'text-haroti-muted'
             }`}
           >
             Proud member of
@@ -70,7 +70,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
         <div>
           <p
             className={`mb-4 text-xs font-bold uppercase tracking-widest ${
-              isDark ? 'text-white/55' : 'text-gray-500'
+              isDark ? 'text-white/55' : 'text-haroti-muted'
             }`}
           >
             Supported by

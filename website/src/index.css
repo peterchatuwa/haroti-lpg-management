@@ -6,9 +6,21 @@
   html {
     scroll-behavior: smooth;
   }
-  
+
   body {
-    @apply text-gray-900 bg-white;
+    @apply bg-haroti-paper text-haroti-ink;
+    background:
+      radial-gradient(ellipse 80% 50% at 0% -10%, rgba(240, 180, 41, 0.12), transparent 50%),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(26, 107, 77, 0.08), transparent 45%),
+      linear-gradient(165deg, #f6faf7 0%, #e8f1ec 42%, #f2f6f3 100%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-serif;
   }
 }
 
@@ -16,24 +28,24 @@
   .container-custom {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
-  
+
   .btn-primary {
-    @apply bg-haroti-orange hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 inline-block text-center;
+    @apply bg-haroti-flame hover:bg-haroti-flame-hot text-haroti-forest-deep font-semibold py-3 px-6 rounded-lg transition-colors duration-200 inline-block text-center;
   }
-  
+
   .btn-secondary {
-    @apply bg-haroti-blue hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 inline-block text-center;
+    @apply bg-haroti-forest hover:bg-haroti-leaf text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 inline-block text-center;
   }
-  
+
   .btn-outline {
-    @apply border-2 border-haroti-blue text-haroti-blue hover:bg-haroti-blue hover:text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 inline-block text-center;
+    @apply border-2 border-haroti-forest text-haroti-forest hover:bg-haroti-forest hover:text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 inline-block text-center;
   }
-  
+
   .section-heading {
-    @apply text-3xl md:text-4xl font-bold text-gray-900 mb-4;
+    @apply text-3xl md:text-4xl font-bold text-haroti-ink mb-4;
   }
-  
+
   .section-subheading {
-    @apply text-xl text-gray-600 mb-8;
+    @apply text-xl text-haroti-muted mb-8;
   }
 }
