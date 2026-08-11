@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { SiteBrandStrip } from './SiteBrandFooter';
 
 export function PortalBrandLayout({ children }: { children: ReactNode }) {
   return (
@@ -15,7 +14,6 @@ export function PortalBrandLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
       <div className="portal-brand-content">{children}</div>
-      <SiteBrandStrip variant="light" />
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FlameMark } from '../components/FlameMark';
-import { SiteBrandStrip } from '../components/SiteBrandFooter';
 import api from '../lib/api';
 import { landingRouteForRole } from '../lib/landing-route';
 import { useAuthStore } from '../store/auth';
@@ -122,7 +121,6 @@ export function LoginPage() {
         </form>
         </section>
       </div>
-      <SiteBrandStrip variant="dark" />
     </div>
   );
 }
