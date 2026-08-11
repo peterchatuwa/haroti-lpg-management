@@ -41,4 +41,13 @@ export class User extends BaseEntity {
 
   @Column({ name: 'discount_limit_percent', type: 'decimal', precision: 5, scale: 2, default: 0 })
   discountLimitPercent!: string;
+
+  @Column({ name: 'invite_token_hash', nullable: true })
+  inviteTokenHash?: string | null;
+
+  @Column({ name: 'invite_expires_at', type: 'timestamptz', nullable: true })
+  inviteExpiresAt?: Date | null;
+
+  @Column({ name: 'must_set_password', default: false })
+  mustSetPassword!: boolean;
 }

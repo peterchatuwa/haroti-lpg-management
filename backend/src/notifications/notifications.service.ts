@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as nodemailer from 'nodemailer';
 import { IsNull, Repository } from 'typeorm';
 import {
   NotificationChannel,
@@ -23,6 +24,7 @@ const MAX_DELIVERY_ATTEMPTS = 5;
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  private mailTransporter?: nodemailer.Transporter;
 
   constructor(
     private readonly config: ConfigService,
@@ -305,12 +307,49 @@ export class NotificationsService {
   ): Promise<{ ok: boolean; ref?: string; error?: string }> {
     const enabled = this.config.get<string>('EMAIL_ENABLED', 'false') === 'true';
     const host = this.config.get<string>('EMAIL_SMTP_HOST');
-    if (!enabled || !host || !to) {
-      this.logger.log(`[Email] ${to ?? 'n/a'}: ${subject}`);
+    if (!to) {
+      return { ok: false, error: 'Missing recipient' };
+    }
+    if (!enabled || !host) {
+      this.logger.log(`[Email] ${to}: ${subject}\n${body}`);
       return { ok: true, ref: 'log' };
     }
-    this.logger.log(`[Email queued] ${to}: ${subject} — ${body.slice(0, 80)}`);
-    return { ok: true, ref: to };
+
+    try {
+      const transporter = this.getMailTransporter();
+      const from = this.config.get<string>(
+        'EMAIL_FROM',
+        'Haroti Gas ERP <noreply@harotiholdingslimited.com>',
+      );
+      const info = await transporter.sendMail({
+        from,
+        to,
+        subject,
+        text: body,
+        html: body.replace(/\n/g, '<br/>'),
+      });
+      return { ok: true, ref: info.messageId };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  private getMailTransporter() {
+    if (this.mailTransporter) return this.mailTransporter;
+    const host = this.config.get<string>('EMAIL_SMTP_HOST', '');
+    const port = Number(this.config.get<string>('EMAIL_SMTP_PORT', '587'));
+    const user = this.config.get<string>('EMAIL_SMTP_USER');
+    const pass = this.config.get<string>('EMAIL_SMTP_PASS');
+    this.mailTransporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: user ? { user, pass } : undefined,
+    });
+    return this.mailTransporter;
   }
 
   private async resolveChannels(

@@ -62,6 +62,13 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
       CORS_ORIGIN: ${CORS_ORIGIN:-https://harotiholdingslimited.com,http://harotiholdingslimited.com}
+      ERP_PUBLIC_URL: ${ERP_PUBLIC_URL:-https://harotiholdingslimited.com/erp}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-587}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-}
+      EMAIL_SMTP_PASS: ${EMAIL_SMTP_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-Haroti Gas ERP <noreply@harotiholdingslimited.com>}
     networks:
       - haroti_net
     # API is only reachable via the ERP web container proxy (no host port)

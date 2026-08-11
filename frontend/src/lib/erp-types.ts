@@ -265,6 +265,19 @@ export interface StaffUserRow {
   isActive: boolean;
   canOverridePrice: boolean;
   discountLimitPercent: number;
+  invitePending?: boolean;
+  mustSetPassword?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PermissionRow {
+  key: string;
+  description: string;
+  category: string;
+}
+
+export interface RolePermissionBundle {
+  role: import('./types').UserRole;
+  permissions: string[];
 }

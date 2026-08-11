@@ -21,16 +21,21 @@ export class CreateUserDto {
   @MinLength(2)
   fullName!: string;
 
+  @IsOptional()
   @IsString()
   @MinLength(8)
-  password!: string;
+  password?: string;
 
-  @IsEnum(UserRole)
-  role!: UserRole;
+  @IsOptional()
+  @IsBoolean()
+  sendInvite?: boolean;
 
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsEnum(UserRole)
+  role!: UserRole;
 
   @IsOptional()
   @IsString()

@@ -25,6 +25,7 @@ import { ApprovalInboxPage } from './pages/ApprovalInboxPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { StaffAnalyticsPage } from './pages/StaffAnalyticsPage';
 import { StaffPage } from './pages/StaffPage';
+import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import { CustomerPortalPage } from './pages/CustomerPortalPage';
 import { InsightsPage } from './pages/InsightsPage';
 import { LoyaltyPage } from './pages/LoyaltyPage';
@@ -96,6 +97,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/accept-invite" element={<AcceptInvitePage />} />
       <Route path="/portal" element={<CustomerPortalPage />} />
       <Route
         path="/"

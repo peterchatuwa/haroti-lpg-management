@@ -24,6 +24,7 @@ export interface AuthUser {
   } | null;
   canOverridePrice: boolean;
   discountLimitPercent: number;
+  permissions?: string[];
 }
 
 export interface Station {

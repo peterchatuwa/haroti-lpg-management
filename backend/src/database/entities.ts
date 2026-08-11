@@ -60,6 +60,8 @@ import { Transfer } from '../transfers/transfer.entity';
 import { SupplierInvoice } from '../procurement/supplier-invoice.entity';
 import { Attachment } from '../attachments/attachment.entity';
 import { Target } from '../targets/target.entity';
+import { Permission } from '../permissions/permission.entity';
+import { RolePermission } from '../permissions/role-permission.entity';
 import { User } from '../users/user.entity';
 import { WorkflowDefinition } from '../workflows/workflow-definition.entity';
 import { WorkflowStep } from '../workflows/workflow-step.entity';
@@ -150,4 +152,6 @@ export const ENTITIES = [
   LoyaltyTransaction,
   CustomerOtpChallenge,
   RefillRequest,
+  Permission,
+  RolePermission,
 ];

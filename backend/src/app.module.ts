@@ -83,6 +83,7 @@ import { LoyaltyModule } from './loyalty/loyalty.module';
 import { CustomerPortalModule } from './customer-portal/customer-portal.module';
 import { AiModule } from './ai/ai.module';
 import { SearchModule } from './search/search.module';
+import { PermissionsModule } from './permissions/permissions.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -108,6 +109,7 @@ import { UsersModule } from './users/users.module';
       }),
     }),
     StationScopeModule,
+    PermissionsModule,
     AuthModule,
     StationsModule,
     InventoryModule,

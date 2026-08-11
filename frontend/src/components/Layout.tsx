@@ -103,10 +103,9 @@ export function Layout() {
     user?.role === 'DIRECTOR' ||
     user?.role === 'FINANCE_MANAGER';
 
-  const isStaffAdmin =
-    user?.role === 'SYSTEM_ADMIN' ||
-    user?.role === 'DIRECTOR' ||
-    user?.role === 'OPERATIONS_MANAGER';
+  const isStaffAdmin = user?.permissions?.some((p) =>
+    ['staff.view', 'staff.create', 'staff.edit'].includes(p),
+  );
 
   const visibleLinks = links.filter(
     (link) => !('adminOnly' in link && link.adminOnly) || isStaffAdmin,
