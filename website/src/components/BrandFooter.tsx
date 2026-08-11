@@ -1,17 +1,41 @@
 const PARTNERS = [
-  { name: 'GETF Green Economic Transition Facility', logo: '/brand/partners/getf.png' },
-  { name: 'UNDP', logo: '/brand/partners/undp.svg' },
-  { name: 'Imani Development', logo: '/brand/partners/imani.png' },
-  { name: 'Landell Mills', logo: '/brand/partners/landell-mills.png' },
-  { name: 'Government of Ireland', logo: '/brand/partners/ireland.svg' },
+  {
+    name: 'GETF Green Economic Transition Facility',
+    logo: '/brand/partners/getf.png',
+  },
+  {
+    name: 'UNDP',
+    logo: '/brand/partners/undp.svg',
+    className:
+      'h-16 w-[4.75rem] object-contain object-center md:h-20 md:w-[5.75rem]',
+  },
+  {
+    name: 'Imani Development',
+    logo: '/brand/partners/imani.png',
+  },
+  {
+    name: 'Landell Mills',
+    logo: '/brand/partners/landell-mills.png',
+  },
+  {
+    name: 'Government of Ireland',
+    logo: '/brand/partners/ireland.svg',
+  },
 ];
 
 type Variant = 'light' | 'dark';
 
-const logoClass = (isDark: boolean) =>
-  `max-h-14 max-w-[200px] object-contain md:max-h-16 md:max-w-[240px] ${
-    isDark ? 'rounded-lg bg-white/95 px-3 py-2' : 'grayscale-[0.05]'
-  }`;
+const partnerLogoClass = (isDark: boolean, extra?: string) =>
+  [
+    extra ??
+      'max-h-14 max-w-[200px] object-contain md:max-h-16 md:max-w-[240px]',
+    isDark ? 'rounded-lg bg-white/95 px-3 py-2' : 'grayscale-[0.05]',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+const gdcLogoClass =
+  'max-h-14 max-w-[200px] object-contain md:max-h-16 md:max-w-[240px]';
 
 export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
   const isDark = variant === 'dark';
@@ -38,7 +62,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
             <img
               src="/brand/gdc-member-stamp.png"
               alt="Global Distributors Collective member"
-              className={logoClass(isDark)}
+              className={gdcLogoClass}
             />
           </div>
         </div>
@@ -58,7 +82,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
                   src={partner.logo}
                   alt={partner.name}
                   loading="lazy"
-                  className={logoClass(isDark)}
+                  className={partnerLogoClass(isDark, partner.className)}
                 />
               </li>
             ))}
