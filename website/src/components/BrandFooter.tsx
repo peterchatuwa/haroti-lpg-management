@@ -44,16 +44,16 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
           >
             Supported by
           </p>
-          <ul className="flex flex-wrap items-center gap-x-7 gap-y-5">
+          <ul className="flex flex-wrap items-center gap-x-8 gap-y-6">
             {PARTNERS.map((partner) => (
               <li key={partner.name} className="flex items-center justify-center">
                 <img
                   src={partner.logo}
                   alt={partner.name}
                   loading="lazy"
-                  className={`max-h-10 max-w-[150px] object-contain ${
+                  className={`max-h-14 max-w-[200px] object-contain md:max-h-16 md:max-w-[240px] ${
                     isDark
-                      ? 'rounded-lg bg-white/90 px-2 py-1'
+                      ? 'rounded-lg bg-white/90 px-3 py-2'
                       : 'grayscale-[0.05]'
                   }`}
                 />
