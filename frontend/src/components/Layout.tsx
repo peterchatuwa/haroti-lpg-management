@@ -1,33 +1,5 @@
 import {
-  ArrowLeftRight,
-  BarChart3,
-  Building2,
-  Calculator,
-  Sparkles,
-  Gift,
-  Bell,
-  ClipboardCheck,
-  ClipboardList,
-  UserCog,
-  UsersRound,
-  Gauge,
-  Inbox,
-  Target,
-  RefreshCw,
-  Handshake,
-  LayoutDashboard,
   LogOut,
-  Package,
-  Map,
-  Shield,
-  Radio,
-  Receipt,
-  ShoppingCart,
-  Tag,
-  Truck,
-  Users,
-  Wallet,
-  Wrench,
 } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -37,41 +9,7 @@ import { useAuthStore } from '../store/auth';
 import { useOfflineStore } from '../store/offline';
 import { FlameMark } from './FlameMark';
 import { GlobalSearch } from './GlobalSearch';
-
-const links = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/executive', label: 'Executive cockpit', icon: BarChart3 },
-  { to: '/action-centre', label: 'Action centre', icon: Inbox },
-  { to: '/approval-inbox', label: 'Approval inbox', icon: ClipboardCheck },
-  { to: '/insights', label: 'AI insights', icon: Sparkles },
-  { to: '/loyalty', label: 'Loyalty', icon: Gift },
-  { to: '/refill-requests', label: 'Refill requests', icon: Truck },
-  { to: '/notifications', label: 'Notifications', icon: Bell },
-  { to: '/staff-analytics', label: 'Staff analytics', icon: UsersRound },
-  { to: '/staff', label: 'Staff & roles', icon: UserCog, adminOnly: true },
-  { to: '/targets', label: 'Targets', icon: Target },
-  { to: '/sync-centre', label: 'Sync centre', icon: RefreshCw },
-  { to: '/reports', label: 'Executive BI', icon: BarChart3 },
-  { to: '/pos', label: 'Refill POS', icon: ShoppingCart },
-  { to: '/accessories', label: 'Accessories', icon: Tag },
-  { to: '/shifts', label: 'Shifts', icon: Gauge },
-  { to: '/inventory', label: 'LPG Stock', icon: Package },
-  { to: '/network', label: 'Network map', icon: Map },
-  { to: '/deliveries', label: 'Deliveries', icon: Truck },
-  { to: '/procurement', label: 'Procurement', icon: Receipt },
-  { to: '/requisitions', label: 'Requisitions', icon: ClipboardList },
-  { to: '/transfers', label: 'Transfers', icon: ArrowLeftRight },
-  { to: '/cylinders', label: 'Cylinders', icon: Tag },
-  { to: '/customers', label: 'Customers', icon: Users },
-  { to: '/payc', label: 'PAYC IoT', icon: Radio },
-  { to: '/maintenance', label: 'CMMS', icon: Wrench },
-  { to: '/safety', label: 'Safety', icon: Shield },
-  { to: '/projects', label: 'Capital projects', icon: Building2 },
-  { to: '/franchise', label: 'Franchise', icon: Handshake },
-  { to: '/expenses', label: 'Cash & Expenses', icon: Wallet },
-  { to: '/finance', label: 'Finance & GL', icon: Calculator },
-  { to: '/stations', label: 'Stations', icon: Receipt },
-];
+import { SidebarNav } from './SidebarNav';
 
 export function Layout() {
   const { user, clearSession } = useAuthStore();
@@ -107,10 +45,6 @@ export function Layout() {
     ['staff.view', 'staff.create', 'staff.edit'].includes(p),
   );
 
-  const visibleLinks = links.filter(
-    (link) => !('adminOnly' in link && link.adminOnly) || isStaffAdmin,
-  );
-
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -123,19 +57,7 @@ export function Layout() {
             </div>
           </div>
         </div>
-        <nav className="nav-links">
-          {visibleLinks.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) => (isActive ? 'active' : undefined)}
-            >
-              <Icon size={18} />
-              {label}
-            </NavLink>
-          ))}
-        </nav>
+        <SidebarNav isStaffAdmin={!!isStaffAdmin} />
         <div className="user-card">
           <strong>{user?.fullName}</strong>
           <span>{user?.role.replaceAll('_', ' ')}</span>
