@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FlameMark } from '../components/FlameMark';
+import { SiteBrandStrip } from '../components/SiteBrandFooter';
 import api from '../lib/api';
 import { landingRouteForRole } from '../lib/landing-route';
 import { useAuthStore } from '../store/auth';
@@ -36,34 +37,42 @@ export function LoginPage() {
   }
 
   return (
-    <div className="login-page">
-      <section className="login-hero" aria-label="Haroti Holdings brand">
-        <div className="login-hero-content">
-          <FlameMark size={64} />
-          <h1>Haroti Holdings</h1>
-          <p className="lede">
-            Central command for LPG across Salima, Lilongwe and Blantyre —
-            stock, sales, cash and cylinders in one flame-lit view.
-          </p>
-        </div>
-        <div className="login-metrics">
-          <div className="login-metric">
-            <strong>8</strong>
-            <span>Active stations</span>
+    <div className="login-shell">
+      <div className="login-page">
+        <section className="login-hero login-hero--photo" aria-label="Haroti Holdings brand">
+          <img
+            src="/brand/malawian-mother.png"
+            alt="Malawian mother cooking safely with Haroti Gas smart metered LPG"
+            className="login-hero-photo"
+          />
+          <div className="login-hero-overlay" />
+          <div className="login-hero-content">
+            <FlameMark size={64} />
+            <h1>Haroti Holdings</h1>
+            <p className="lede">
+              Clean, smart LPG for households and businesses across Salima, Lilongwe
+              and Blantyre — safe cooking, reliable supply, and enterprise operations
+              in one platform.
+            </p>
           </div>
-          <div className="login-metric">
-            <strong>3</strong>
-            <span>Operating districts</span>
+          <div className="login-metrics">
+            <div className="login-metric">
+              <strong>8</strong>
+              <span>Active stations</span>
+            </div>
+            <div className="login-metric">
+              <strong>3</strong>
+              <span>Operating districts</span>
+            </div>
+            <div className="login-metric">
+              <strong>24/7</strong>
+              <span>Offline-ready POS</span>
+            </div>
           </div>
-          <div className="login-metric">
-            <strong>24/7</strong>
-            <span>Offline-ready POS</span>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="login-panel">
-        <form className="login-card" onSubmit={onSubmit}>
+        <section className="login-panel">
+          <form className="login-card" onSubmit={onSubmit}>
           <FlameMark size={44} />
           <h2>Sign in</h2>
           <p>Access the LPG operations console for your role and station.</p>
@@ -111,7 +120,9 @@ export function LoginPage() {
             <Link to="/portal">Open the self-service portal</Link>
           </p>
         </form>
-      </section>
+        </section>
+      </div>
+      <SiteBrandStrip variant="dark" />
     </div>
   );
 }

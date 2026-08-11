@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useState } from 'react';
 import { PageHeader } from '../components/PageHeader';
+import { PortalBrandLayout } from '../components/PortalBrandLayout';
 import { formatKg, formatMoney } from '../lib/format';
 
 const portalApi = axios.create({ baseURL: '/api/customer-portal' });
@@ -83,7 +84,7 @@ export function CustomerPortalPage() {
 
   if (step === 'phone') {
     return (
-      <div className="stack">
+      <PortalBrandLayout>
         <PageHeader title="Customer portal" subtitle="Sign in with your registered mobile number" />
         <form className="panel stack" onSubmit={requestOtp}>
           <label>
@@ -92,13 +93,13 @@ export function CustomerPortalPage() {
           </label>
           <button type="submit" className="btn btn-primary">Send login code</button>
         </form>
-      </div>
+      </PortalBrandLayout>
     );
   }
 
   if (step === 'otp') {
     return (
-      <div className="stack">
+      <PortalBrandLayout>
         <PageHeader title="Enter OTP" subtitle="Check SMS for your 6-digit code" />
         {devCode && <div className="panel muted">Dev code: {devCode}</div>}
         <form className="panel stack" onSubmit={verifyOtp}>
@@ -108,11 +109,12 @@ export function CustomerPortalPage() {
           </label>
           <button type="submit" className="btn btn-primary">Sign in</button>
         </form>
-      </div>
+      </PortalBrandLayout>
     );
   }
 
   return (
+    <PortalBrandLayout>
     <div className="stack">
       <PageHeader
         title="My Haroti account"
@@ -196,5 +198,6 @@ export function CustomerPortalPage() {
 
       <button type="button" className="btn btn-ghost" onClick={signOut}>Sign out</button>
     </div>
+    </PortalBrandLayout>
   );
 }

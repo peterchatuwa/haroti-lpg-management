@@ -126,6 +126,13 @@ export function Layout() {
             </NavLink>
           ))}
         </nav>
+        <div className="sidebar-affiliation">
+          <img
+            src="/brand/gdc-member-stamp.png"
+            alt="Global Distributors Collective member"
+            className="sidebar-gdc-stamp"
+          />
+        </div>
         <div className="user-card">
           <strong>{user?.fullName}</strong>
           <span>{user?.role.replaceAll('_', ' ')}</span>

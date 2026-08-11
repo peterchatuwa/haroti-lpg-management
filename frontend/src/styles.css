@@ -891,11 +891,203 @@ tr.row-ready-pay td {
 }
 
 /* ——— Login ——— */
-.login-page {
+.login-shell {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--forest-deep);
+}
+
+.login-page {
+  flex: 1;
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
   background: var(--forest-deep);
+}
+
+.login-hero--photo {
+  padding: 0;
+  background: none;
+}
+
+.login-hero-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+
+.login-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(4, 31, 24, 0.55) 0%, rgba(4, 31, 24, 0.82) 55%, rgba(2, 15, 12, 0.95) 100%),
+    linear-gradient(90deg, rgba(4, 31, 24, 0.35), rgba(4, 31, 24, 0.1));
+  pointer-events: none;
+}
+
+.login-hero--photo .login-hero-content,
+.login-hero--photo .login-metrics {
+  position: relative;
+  z-index: 1;
+  padding: clamp(2rem, 5vw, 4rem);
+  padding-bottom: 0;
+}
+
+.login-hero--photo .login-metrics {
+  padding-top: 1.5rem;
+  padding-bottom: clamp(2rem, 5vw, 4rem);
+}
+
+.site-brand-strip {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.site-brand-strip--dark {
+  background: #020f0c;
+  color: rgba(247, 250, 248, 0.82);
+}
+
+.site-brand-strip--light {
+  background: #f3f7f4;
+  color: var(--ink);
+  border-top-color: var(--line);
+}
+
+.site-brand-footer {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.5rem clamp(1rem, 4vw, 3rem) 2rem;
+}
+
+@media (min-width: 900px) {
+  .site-brand-footer {
+    grid-template-columns: minmax(220px, 320px) 1fr;
+    align-items: start;
+  }
+}
+
+.site-brand-footer--dark .site-brand-kicker {
+  color: rgba(247, 250, 248, 0.55);
+}
+
+.site-brand-kicker {
+  margin: 0 0 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.site-brand-gdc-logo {
+  display: block;
+  width: min(320px, 100%);
+  height: auto;
+}
+
+.site-brand-partner-logos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem 1.75rem;
+}
+
+.site-brand-partner-logos li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.site-brand-partner-logos img {
+  display: block;
+  max-height: 42px;
+  max-width: 150px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: grayscale(0.05);
+}
+
+.site-brand-footer--dark .site-brand-partner-logos img {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 10px;
+  padding: 0.35rem 0.55rem;
+}
+
+.portal-brand-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+.portal-brand-banner {
+  position: relative;
+  min-height: 220px;
+  overflow: hidden;
+}
+
+.portal-brand-banner img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+}
+
+.portal-brand-banner-copy {
+  position: relative;
+  z-index: 1;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.5rem clamp(1rem, 4vw, 2.5rem);
+  background:
+    linear-gradient(180deg, rgba(4, 31, 24, 0.15), rgba(4, 31, 24, 0.88));
+  color: #f7faf8;
+}
+
+.portal-brand-banner-copy p {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(247, 250, 248, 0.7);
+}
+
+.portal-brand-banner-copy h1 {
+  margin: 0.35rem 0 0;
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  letter-spacing: -0.03em;
+}
+
+.portal-brand-content {
+  flex: 1;
+  width: min(980px, 100%);
+  margin: 0 auto;
+  padding: 1.25rem clamp(1rem, 4vw, 2rem) 2rem;
+}
+
+.sidebar-affiliation {
+  padding: 0 1rem 0.75rem;
+}
+
+.sidebar-gdc-stamp {
+  display: block;
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 8px;
 }
 
 .login-hero {
@@ -1292,6 +1484,11 @@ tr.row-ready-pay td {
   .hero-dash,
   .login-page {
     grid-template-columns: 1fr;
+  }
+
+  .site-brand-partner-logos img {
+    max-height: 36px;
+    max-width: 120px;
   }
 }
 
