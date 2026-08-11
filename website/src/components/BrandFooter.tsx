@@ -6,8 +6,7 @@ const PARTNERS = [
   {
     name: 'UNDP',
     logo: '/brand/partners/undp.svg',
-    className:
-      'h-16 w-[4.75rem] object-contain object-center md:h-20 md:w-[5.75rem]',
+    className: 'h-10 w-[3.5rem] object-contain object-center',
   },
   {
     name: 'Imani Development',
@@ -27,15 +26,11 @@ type Variant = 'light' | 'dark';
 
 const partnerLogoClass = (isDark: boolean, extra?: string) =>
   [
-    extra ??
-      'max-h-14 max-w-[200px] object-contain md:max-h-16 md:max-w-[240px]',
-    isDark ? 'rounded-lg bg-haroti-paper/95 px-3 py-2' : 'grayscale-[0.05]',
+    extra ?? 'max-h-10 max-w-[150px] object-contain',
+    isDark ? 'rounded-lg bg-haroti-paper/95 px-2 py-1' : 'grayscale-[0.05]',
   ]
     .filter(Boolean)
     .join(' ');
-
-const gdcLogoClass =
-  'max-h-14 max-w-[200px] object-contain md:max-h-16 md:max-w-[240px]';
 
 export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
   const isDark = variant === 'dark';
@@ -45,39 +40,37 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
       className={`border-t ${
         isDark
           ? 'border-white/10 bg-[#020f0c] text-white/80'
-          : 'border-haroti-mist bg-[#f3f7f4] text-haroti-ink'
+          : 'border-haroti-mist bg-haroti-paper text-haroti-ink'
       }`}
       aria-label="Affiliations and supporters"
     >
-      <div className="container-custom grid gap-8 py-8 md:grid-cols-2 md:items-start">
+      <div className="container-custom grid gap-6 py-8 md:grid-cols-[minmax(220px,320px)_1fr] md:items-start">
         <div>
           <p
-            className={`mb-4 text-xs font-bold uppercase tracking-widest ${
+            className={`mb-3 text-xs font-bold uppercase tracking-widest ${
               isDark ? 'text-white/55' : 'text-haroti-muted'
             }`}
           >
             Proud member of
           </p>
-          <div className="flex items-center">
-            <img
-              src="/brand/gdc-member-stamp.png"
-              alt="Global Distributors Collective member"
-              className={gdcLogoClass}
-            />
-          </div>
+          <img
+            src="/brand/gdc-member-stamp.png"
+            alt="Global Distributors Collective member"
+            className="block h-auto w-full max-w-[320px]"
+          />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <p
-            className={`mb-4 text-xs font-bold uppercase tracking-widest ${
+            className={`mb-3 text-xs font-bold uppercase tracking-widest ${
               isDark ? 'text-white/55' : 'text-haroti-muted'
             }`}
           >
             Supported by
           </p>
-          <ul className="flex flex-wrap items-center gap-x-8 gap-y-6">
+          <ul className="flex flex-nowrap items-center gap-x-7 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {PARTNERS.map((partner) => (
-              <li key={partner.name} className="flex items-center justify-center">
+              <li key={partner.name} className="flex shrink-0 items-center justify-center">
                 <img
                   src={partner.logo}
                   alt={partner.name}
