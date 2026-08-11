@@ -1,0 +1,18 @@
+harotiholdingslimited.com, www.harotiholdingslimited.com {
+	encode gzip
+
+	# ERP API (proxied through the ERP nginx container)
+	handle /api/* {
+		reverse_proxy 127.0.0.1:9081
+	}
+
+	# ERP web app (staff login, customer portal, operations UI)
+	handle_path /erp/* {
+		reverse_proxy 127.0.0.1:9081
+	}
+
+	# Public marketing website
+	handle {
+		reverse_proxy 127.0.0.1:9080
+	}
+}

@@ -2,8 +2,8 @@
 export const ERP_BASE_URL =
   import.meta.env.VITE_ERP_BASE_URL ||
   (import.meta.env.PROD
-    ? 'http://harotiholdingslimited.com:8080'
-    : 'http://localhost:8080');
+    ? 'https://harotiholdingslimited.com/erp'
+    : 'http://localhost:5173');
 
 export const erpUrl = (path: string) =>
   `${ERP_BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;

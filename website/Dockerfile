@@ -1,6 +1,6 @@
 FROM node:22-alpine AS build
 WORKDIR /app
-ARG VITE_ERP_BASE_URL=http://harotiholdingslimited.com:8080
+ARG VITE_ERP_BASE_URL=https://harotiholdingslimited.com/erp
 ENV VITE_ERP_BASE_URL=$VITE_ERP_BASE_URL
 COPY package*.json ./
 RUN npm ci

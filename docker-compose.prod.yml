@@ -1,7 +1,8 @@
 # Production stack for dedicated VPS.
 #
-#   Port 80  → public marketing website (harotiholdingslimited.com)
-#   Port 8080 → ERP web UI + /api proxy (harotiholdingslimited.com:8080)
+#   Caddy (host)     → HTTPS :443 / HTTP :80
+#   marketing :9080  → public website
+#   web :9081        → ERP at /erp/ + API at /api/
 #
 # Usage:
 #   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
@@ -60,7 +61,7 @@ services:
       DATABASE_NAME: ${DATABASE_NAME:-haroti_lpg}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://harotiholdingslimited.com:8080,http://localhost:8080}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://harotiholdingslimited.com,http://harotiholdingslimited.com}
     networks:
       - haroti_net
     # API is only reachable via the ERP web container proxy (no host port)
@@ -70,11 +71,11 @@ services:
       context: ./website
       dockerfile: Dockerfile
       args:
-        VITE_ERP_BASE_URL: ${VITE_ERP_BASE_URL:-http://harotiholdingslimited.com:8080}
+        VITE_ERP_BASE_URL: ${VITE_ERP_BASE_URL:-https://harotiholdingslimited.com/erp}
     container_name: haroti-marketing
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "127.0.0.1:9080:80"
     networks:
       - haroti_net
 
@@ -82,12 +83,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/erp/}
     container_name: haroti-web
     restart: unless-stopped
     depends_on:
       - api
     ports:
-      - "8080:80"
+      - "127.0.0.1:9081:80"
     networks:
       - haroti_net
 

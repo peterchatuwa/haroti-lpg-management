@@ -19,7 +19,8 @@ api.interceptors.response.use(
       localStorage.removeItem('haroti_token');
       localStorage.removeItem('haroti_user');
       if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
+        const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+        window.location.href = `${base}/login`;
       }
     }
     return Promise.reject(error);
