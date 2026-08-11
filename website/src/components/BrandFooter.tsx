@@ -44,7 +44,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
       }`}
       aria-label="Affiliations and supporters"
     >
-      <div className="container-custom grid gap-6 py-8 md:grid-cols-[minmax(220px,320px)_1fr] md:items-start">
+      <div className="container-custom grid gap-6 py-8 md:grid-cols-[auto_1fr] md:items-start">
         <div>
           <p
             className={`mb-3 text-xs font-bold uppercase tracking-widest ${
@@ -56,7 +56,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
           <img
             src="/brand/gdc-member-stamp.png"
             alt="Global Distributors Collective member"
-            className="block h-auto w-full max-w-[320px]"
+            className="block max-h-10 max-w-[150px] object-contain"
           />
         </div>
 
