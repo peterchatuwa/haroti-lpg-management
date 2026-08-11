@@ -82,6 +82,7 @@ import { IoTModule } from './iot/iot.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { CustomerPortalModule } from './customer-portal/customer-portal.module';
 import { AiModule } from './ai/ai.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -145,6 +146,7 @@ import { AiModule } from './ai/ai.module';
     LoyaltyModule,
     CustomerPortalModule,
     AiModule,
+    SearchModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

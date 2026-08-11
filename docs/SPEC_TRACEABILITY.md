@@ -195,6 +195,8 @@ Workflow: **DRAFT** (+ Quotation) → submit → **PENDING_APPROVAL** → approv
 | PROC-004 | PDF export for procurement docs | `procurement/procurement-documents.service.ts` | `tier-d-plus.e2e-spec.ts` | DONE |
 | FRN-002 | Franchise consignment GL auto-post | `finance/finance.service.ts`, `franchise/franchise.service.ts` | manual | DONE |
 | POS-001 | Hardware scale (Web Serial) on POS | `frontend/src/lib/useSerialScale.ts`, `PosPage.tsx` | manual | DONE |
+| UX-001 | Global search | `search/search.service.ts`, `GlobalSearch.tsx` | manual | DONE |
+| FIN-011 | Financial statements (P&L, BS, cash flow) | `finance/finance.service.ts`, `FinancePage.tsx` | manual | DONE |
 
 Configure SMS in production `.env`: `SMS_ENABLED=true`, `SMS_API_URL`, `SMS_API_KEY`, optional `SMS_OPS_PHONE`.
 
@@ -285,6 +287,8 @@ Customer portal uses a separate JWT (`kind: 'customer'`) stored in `sessionStora
 | Customer 360 profile | `CustomerProfilePage.tsx` | `GET /customers/:id/profile` |
 | Refill requests | `RefillRequestsPage.tsx` | `GET /customer-portal/admin/refill-requests` |
 | Customer portal entry | `LoginPage.tsx` | Link to `/portal` |
+| Global search | `GlobalSearch.tsx` in `Layout.tsx` | `GET /search?q=` |
+| Financial statements | `FinancePage.tsx` | `GET /finance/statements/income`, `/balance-sheet`, `/cash-flow` |
 
 ---
 
@@ -311,5 +315,5 @@ Run automated pilot: `node scripts/pilot-checklist.mjs http://169.58.127.129/api
 
 ---
 
-*Last updated: Phases 2–4 (LPG excellence, automation, strategic growth).*
+*Last updated: Global search (UX-001) and financial statements (FIN-011).*
 

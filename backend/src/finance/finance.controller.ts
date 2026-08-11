@@ -28,8 +28,41 @@ export class FinanceController {
     UserRole.AUDITOR,
     UserRole.SYSTEM_ADMIN,
   )
-  trialBalance() {
-    return this.financeService.trialBalance();
+  trialBalance(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.financeService.trialBalance(from, to);
+  }
+
+  @Get('statements/income')
+  @Roles(
+    UserRole.FINANCE_MANAGER,
+    UserRole.DIRECTOR,
+    UserRole.AUDITOR,
+    UserRole.SYSTEM_ADMIN,
+  )
+  incomeStatement(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.financeService.incomeStatement(from, to);
+  }
+
+  @Get('statements/balance-sheet')
+  @Roles(
+    UserRole.FINANCE_MANAGER,
+    UserRole.DIRECTOR,
+    UserRole.AUDITOR,
+    UserRole.SYSTEM_ADMIN,
+  )
+  balanceSheet(@Query('asOf') asOf?: string) {
+    return this.financeService.balanceSheet(asOf);
+  }
+
+  @Get('statements/cash-flow')
+  @Roles(
+    UserRole.FINANCE_MANAGER,
+    UserRole.DIRECTOR,
+    UserRole.AUDITOR,
+    UserRole.SYSTEM_ADMIN,
+  )
+  cashFlow(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.financeService.cashFlowStatement(from, to);
   }
 
   @Get('budget-vs-actual')

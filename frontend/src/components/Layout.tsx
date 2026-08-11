@@ -35,6 +35,7 @@ import api from '../lib/api';
 import { useAuthStore } from '../store/auth';
 import { useOfflineStore } from '../store/offline';
 import { FlameMark } from './FlameMark';
+import { GlobalSearch } from './GlobalSearch';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -154,6 +155,8 @@ export function Layout() {
       </aside>
       <main className="main">
         <div className="main-top">
+          <GlobalSearch />
+          <div className="main-top-right">
           <div className="clock-chip">
             <strong>
               {now.toLocaleTimeString([], {
@@ -197,6 +200,7 @@ export function Layout() {
               <span className="dot" />
               {online ? 'Online' : 'Offline mode'}
             </div>
+          </div>
           </div>
         </div>
         <Outlet />

@@ -11,7 +11,12 @@ import {
 } from '../common/enums';
 import { BudgetLine } from './budget-line.entity';
 import { FiscalPeriodService } from './fiscal-period.service';
-import { GL_ACCOUNTS, DEFAULT_LPG_COST_PER_KG } from './gl-accounts';
+import {
+  accountBalance,
+  classifyAccount,
+  GL_ACCOUNTS,
+  DEFAULT_LPG_COST_PER_KG,
+} from './gl-accounts';
 import { JournalEntry } from './journal-entry.entity';
 import { JournalLine } from './journal-line.entity';
 import { asDecimal, round2 } from '../common/decimal';
@@ -384,7 +389,29 @@ export class FinanceService {
     });
   }
 
-  async trialBalance() {
+  async trialBalance(from?: string, to?: string) {
+    const rows = await this.aggregateAccountBalances(from, to);
+    return rows
+      .map((a) => ({
+        code: a.code,
+        name: a.name,
+        debit: round2(a.debit),
+        credit: round2(a.credit),
+        balance: round2(a.debit - a.credit),
+      }))
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }
+
+  private parseDateRange(from?: string, to?: string) {
+    const start = from ? new Date(from) : new Date(0);
+    start.setHours(0, 0, 0, 0);
+    const end = to ? new Date(to) : new Date();
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  private async aggregateAccountBalances(from?: string, to?: string) {
+    const { start, end } = this.parseDateRange(from, to);
     const entries = await this.entriesRepo.find({ relations: { lines: true } });
     const accounts: Record<
       string,
@@ -392,6 +419,9 @@ export class FinanceService {
     > = {};
 
     for (const entry of entries) {
+      if (entry.postingStatus === JournalPostingStatus.REVERSED) continue;
+      const posted = new Date(entry.postedAt);
+      if (posted < start || posted > end) continue;
       for (const line of entry.lines ?? []) {
         if (!accounts[line.accountCode]) {
           accounts[line.accountCode] = {
@@ -406,14 +436,162 @@ export class FinanceService {
       }
     }
 
-    return Object.values(accounts)
-      .map((a) => ({
-        ...a,
-        debit: round2(a.debit),
-        credit: round2(a.credit),
-        balance: round2(a.debit - a.credit),
-      }))
-      .sort((a, b) => a.code.localeCompare(b.code));
+    return Object.values(accounts);
+  }
+
+  async incomeStatement(from?: string, to?: string) {
+    const { start, end } = this.parseDateRange(from, to);
+    const rows = await this.aggregateAccountBalances(from, to);
+
+    const revenue: Array<{ code: string; name: string; amount: number }> = [];
+    const cogs: Array<{ code: string; name: string; amount: number }> = [];
+    const expenses: Array<{ code: string; name: string; amount: number }> = [];
+
+    for (const row of rows) {
+      const cls = classifyAccount(row.code);
+      const amount = round2(accountBalance(cls, row.debit, row.credit));
+      if (amount === 0) continue;
+      const line = { code: row.code, name: row.name, amount };
+      if (cls === 'REVENUE') revenue.push(line);
+      else if (cls === 'COGS') cogs.push(line);
+      else if (cls === 'EXPENSE') expenses.push(line);
+    }
+
+    const totalRevenue = round2(revenue.reduce((s, l) => s + l.amount, 0));
+    const totalCogs = round2(cogs.reduce((s, l) => s + l.amount, 0));
+    const totalExpenses = round2(expenses.reduce((s, l) => s + l.amount, 0));
+    const grossProfit = round2(totalRevenue - totalCogs);
+    const netIncome = round2(grossProfit - totalExpenses);
+
+    return {
+      periodStart: start.toISOString().slice(0, 10),
+      periodEnd: end.toISOString().slice(0, 10),
+      revenue,
+      cogs,
+      expenses,
+      totalRevenue,
+      totalCogs,
+      grossProfit,
+      totalExpenses,
+      netIncome,
+    };
+  }
+
+  async balanceSheet(asOf?: string) {
+    const end = asOf ?? new Date().toISOString().slice(0, 10);
+    const rows = await this.aggregateAccountBalances(undefined, end);
+
+    const assets: Array<{ code: string; name: string; amount: number }> = [];
+    const liabilities: Array<{ code: string; name: string; amount: number }> = [];
+
+    for (const row of rows) {
+      const cls = classifyAccount(row.code);
+      const amount = round2(accountBalance(cls, row.debit, row.credit));
+      if (amount === 0) continue;
+      const line = { code: row.code, name: row.name, amount };
+      if (cls === 'ASSET') assets.push(line);
+      else if (cls === 'LIABILITY') liabilities.push(line);
+    }
+
+    const totalAssets = round2(assets.reduce((s, l) => s + l.amount, 0));
+    const totalLiabilities = round2(
+      liabilities.reduce((s, l) => s + l.amount, 0),
+    );
+
+    const pnl = await this.incomeStatement(undefined, end);
+    const retainedEarnings = pnl.netIncome;
+    const totalEquity = retainedEarnings;
+    const totalLiabilitiesAndEquity = round2(totalLiabilities + totalEquity);
+
+    return {
+      asOf: end,
+      assets,
+      liabilities,
+      equity: [
+        {
+          code: 'RE',
+          name: 'Retained earnings (cumulative net income)',
+          amount: retainedEarnings,
+        },
+      ],
+      totalAssets,
+      totalLiabilities,
+      totalEquity,
+      totalLiabilitiesAndEquity,
+      balanced: Math.abs(totalAssets - totalLiabilitiesAndEquity) < 0.02,
+    };
+  }
+
+  async cashFlowStatement(from?: string, to?: string) {
+    const { start, end } = this.parseDateRange(from, to);
+    const entries = await this.entriesRepo.find({ relations: { lines: true } });
+    const cashCodes = new Set(['1100', '1110']);
+
+    const operating: Array<{ label: string; amount: number }> = [];
+    const investing: Array<{ label: string; amount: number }> = [];
+    const financing: Array<{ label: string; amount: number }> = [];
+    const buckets = {
+      operating: new Map<string, number>(),
+      investing: new Map<string, number>(),
+      financing: new Map<string, number>(),
+    };
+
+    for (const entry of entries) {
+      if (entry.postingStatus === JournalPostingStatus.REVERSED) continue;
+      const posted = new Date(entry.postedAt);
+      if (posted < start || posted > end) continue;
+
+      for (const line of entry.lines ?? []) {
+        if (!cashCodes.has(line.accountCode)) continue;
+        const change = round2(Number(line.debitAmount) - Number(line.creditAmount));
+        if (change === 0) continue;
+
+        const bucket = this.cashFlowBucket(entry.eventType);
+        const label = entry.eventType.replaceAll('_', ' ');
+        buckets[bucket].set(label, round2((buckets[bucket].get(label) ?? 0) + change));
+      }
+    }
+
+    for (const [label, amount] of buckets.operating) {
+      operating.push({ label, amount });
+    }
+    for (const [label, amount] of buckets.investing) {
+      investing.push({ label, amount });
+    }
+    for (const [label, amount] of buckets.financing) {
+      financing.push({ label, amount });
+    }
+
+    const netOperating = round2(operating.reduce((s, l) => s + l.amount, 0));
+    const netInvesting = round2(investing.reduce((s, l) => s + l.amount, 0));
+    const netFinancing = round2(financing.reduce((s, l) => s + l.amount, 0));
+    const netChange = round2(netOperating + netInvesting + netFinancing);
+
+    return {
+      periodStart: start.toISOString().slice(0, 10),
+      periodEnd: end.toISOString().slice(0, 10),
+      operating,
+      investing,
+      financing,
+      netOperating,
+      netInvesting,
+      netFinancing,
+      netChange,
+    };
+  }
+
+  private cashFlowBucket(
+    eventType: JournalEventType,
+  ): 'operating' | 'investing' | 'financing' {
+    switch (eventType) {
+      case JournalEventType.CAPITAL_EXPENDITURE:
+        return 'investing';
+      case JournalEventType.FRANCHISE_SETTLEMENT:
+      case JournalEventType.FRANCHISE_CONSIGNMENT:
+        return 'financing';
+      default:
+        return 'operating';
+    }
   }
 
   async budgetVsActual(year: number, month: number) {

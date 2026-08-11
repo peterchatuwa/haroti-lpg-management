@@ -1,3 +1,27 @@
+export type AccountClass = 'ASSET' | 'LIABILITY' | 'REVENUE' | 'COGS' | 'EXPENSE';
+
+/** Classify GL account code for financial statements. */
+export function classifyAccount(code: string): AccountClass {
+  if (code.startsWith('1')) return 'ASSET';
+  if (code.startsWith('2')) return 'LIABILITY';
+  if (code.startsWith('4')) return 'REVENUE';
+  if (code.startsWith('5')) return 'COGS';
+  if (code.startsWith('6')) return 'EXPENSE';
+  return 'ASSET';
+}
+
+/** Normal balance for statement presentation (positive = natural direction). */
+export function accountBalance(
+  accountClass: AccountClass,
+  debit: number,
+  credit: number,
+): number {
+  if (accountClass === 'LIABILITY' || accountClass === 'REVENUE') {
+    return credit - debit;
+  }
+  return debit - credit;
+}
+
 /** GL account codes aligned to Charter §4 accounting matrix. */
 export const GL_ACCOUNTS = {
   INVENTORY_CENTRAL: { code: '1200', name: 'Inventory: Accessories (Central Hub)' },

@@ -1,9 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import { formatMoney } from '../lib/format';
 import { useAuthStore } from '../store/auth';
+
+function monthStartIso() {
+  const d = new Date();
+  d.setDate(1);
+  return d.toISOString().slice(0, 10);
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export function FinancePage() {
   const user = useAuthStore((s) => s.user);
@@ -12,6 +22,14 @@ export function FinancePage() {
     'date,reference,amount,provider\n2026-08-01,MM123456,15000,AIRTEL_MONEY',
   );
   const [message, setMessage] = useState('');
+  const [periodFrom, setPeriodFrom] = useState(monthStartIso);
+  const [periodTo, setPeriodTo] = useState(todayIso);
+  const [asOf, setAsOf] = useState(todayIso);
+
+  const statementParams = useMemo(
+    () => ({ from: periodFrom, to: periodTo }),
+    [periodFrom, periodTo],
+  );
 
   const canView =
     user?.role === 'FINANCE_MANAGER' ||
@@ -26,9 +44,31 @@ export function FinancePage() {
   });
 
   const { data: trialBalance } = useQuery({
-    queryKey: ['finance-trial-balance'],
+    queryKey: ['finance-trial-balance', statementParams],
     enabled: canView,
-    queryFn: async () => (await api.get('/finance/trial-balance')).data,
+    queryFn: async () =>
+      (await api.get('/finance/trial-balance', { params: statementParams })).data,
+  });
+
+  const { data: incomeStatement } = useQuery({
+    queryKey: ['finance-income', statementParams],
+    enabled: canView,
+    queryFn: async () =>
+      (await api.get('/finance/statements/income', { params: statementParams })).data,
+  });
+
+  const { data: balanceSheet } = useQuery({
+    queryKey: ['finance-balance-sheet', asOf],
+    enabled: canView,
+    queryFn: async () =>
+      (await api.get('/finance/statements/balance-sheet', { params: { asOf } })).data,
+  });
+
+  const { data: cashFlow } = useQuery({
+    queryKey: ['finance-cash-flow', statementParams],
+    enabled: canView,
+    queryFn: async () =>
+      (await api.get('/finance/statements/cash-flow', { params: statementParams })).data,
   });
 
   const { data: momoSummary } = useQuery({
@@ -126,9 +166,190 @@ export function FinancePage() {
     <div className="stack">
       <PageHeader
         title="Finance & GL"
-        subtitle="Journal entries, trial balance, and MoMo settlement import"
+        subtitle="Journal entries, financial statements, trial balance, and MoMo settlement"
       />
       {message && <div className="success">{message}</div>}
+
+      <div className="panel stack">
+        <h3 className="panel-title">Financial statements</h3>
+        <div className="row">
+          <label>
+            Period from
+            <input
+              type="date"
+              value={periodFrom}
+              onChange={(e) => setPeriodFrom(e.target.value)}
+            />
+          </label>
+          <label>
+            Period to
+            <input
+              type="date"
+              value={periodTo}
+              onChange={(e) => setPeriodTo(e.target.value)}
+            />
+          </label>
+          <label>
+            Balance sheet as of
+            <input
+              type="date"
+              value={asOf}
+              onChange={(e) => setAsOf(e.target.value)}
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="grid three">
+        <div className="panel">
+          <h3 style={{ marginTop: 0 }}>Income statement</h3>
+          <p className="muted">
+            {incomeStatement?.periodStart} → {incomeStatement?.periodEnd}
+          </p>
+          <div className="table-wrap">
+            <table>
+              <tbody>
+                <tr><td colSpan={2}><strong>Revenue</strong></td></tr>
+                {(incomeStatement?.revenue ?? []).map(
+                  (l: { code: string; name: string; amount: number }) => (
+                    <tr key={l.code}>
+                      <td>{l.code} · {l.name}</td>
+                      <td>{formatMoney(l.amount)}</td>
+                    </tr>
+                  ),
+                )}
+                <tr>
+                  <td><strong>Total revenue</strong></td>
+                  <td>{formatMoney(incomeStatement?.totalRevenue ?? 0)}</td>
+                </tr>
+                <tr><td colSpan={2}><strong>Cost of goods sold</strong></td></tr>
+                {(incomeStatement?.cogs ?? []).map(
+                  (l: { code: string; name: string; amount: number }) => (
+                    <tr key={l.code}>
+                      <td>{l.code} · {l.name}</td>
+                      <td>{formatMoney(l.amount)}</td>
+                    </tr>
+                  ),
+                )}
+                <tr>
+                  <td><strong>Gross profit</strong></td>
+                  <td>{formatMoney(incomeStatement?.grossProfit ?? 0)}</td>
+                </tr>
+                <tr><td colSpan={2}><strong>Operating expenses</strong></td></tr>
+                {(incomeStatement?.expenses ?? []).map(
+                  (l: { code: string; name: string; amount: number }) => (
+                    <tr key={l.code}>
+                      <td>{l.code} · {l.name}</td>
+                      <td>{formatMoney(l.amount)}</td>
+                    </tr>
+                  ),
+                )}
+                <tr>
+                  <td><strong>Net income</strong></td>
+                  <td>{formatMoney(incomeStatement?.netIncome ?? 0)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="panel">
+          <h3 style={{ marginTop: 0 }}>Balance sheet</h3>
+          <p className="muted">As of {balanceSheet?.asOf}</p>
+          <div className="table-wrap">
+            <table>
+              <tbody>
+                <tr><td colSpan={2}><strong>Assets</strong></td></tr>
+                {(balanceSheet?.assets ?? []).map(
+                  (l: { code: string; name: string; amount: number }) => (
+                    <tr key={l.code}>
+                      <td>{l.code} · {l.name}</td>
+                      <td>{formatMoney(l.amount)}</td>
+                    </tr>
+                  ),
+                )}
+                <tr>
+                  <td><strong>Total assets</strong></td>
+                  <td>{formatMoney(balanceSheet?.totalAssets ?? 0)}</td>
+                </tr>
+                <tr><td colSpan={2}><strong>Liabilities</strong></td></tr>
+                {(balanceSheet?.liabilities ?? []).map(
+                  (l: { code: string; name: string; amount: number }) => (
+                    <tr key={l.code}>
+                      <td>{l.code} · {l.name}</td>
+                      <td>{formatMoney(l.amount)}</td>
+                    </tr>
+                  ),
+                )}
+                <tr><td colSpan={2}><strong>Equity</strong></td></tr>
+                {(balanceSheet?.equity ?? []).map(
+                  (l: { code: string; name: string; amount: number }) => (
+                    <tr key={l.code}>
+                      <td>{l.name}</td>
+                      <td>{formatMoney(l.amount)}</td>
+                    </tr>
+                  ),
+                )}
+                <tr>
+                  <td><strong>Total L + E</strong></td>
+                  <td>{formatMoney(balanceSheet?.totalLiabilitiesAndEquity ?? 0)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {balanceSheet && !balanceSheet.balanced && (
+            <p className="muted">Note: statement may not balance until all activity is posted.</p>
+          )}
+        </div>
+
+        <div className="panel">
+          <h3 style={{ marginTop: 0 }}>Cash flow</h3>
+          <p className="muted">
+            {cashFlow?.periodStart} → {cashFlow?.periodEnd}
+          </p>
+          <div className="table-wrap">
+            <table>
+              <tbody>
+                <tr><td colSpan={2}><strong>Operating</strong></td></tr>
+                {(cashFlow?.operating ?? []).map(
+                  (l: { label: string; amount: number }) => (
+                    <tr key={l.label}>
+                      <td>{l.label}</td>
+                      <td>{formatMoney(l.amount)}</td>
+                    </tr>
+                  ),
+                )}
+                <tr>
+                  <td>Net operating</td>
+                  <td>{formatMoney(cashFlow?.netOperating ?? 0)}</td>
+                </tr>
+                <tr><td colSpan={2}><strong>Investing</strong></td></tr>
+                {(cashFlow?.investing ?? []).map(
+                  (l: { label: string; amount: number }) => (
+                    <tr key={l.label}>
+                      <td>{l.label}</td>
+                      <td>{formatMoney(l.amount)}</td>
+                    </tr>
+                  ),
+                )}
+                <tr><td colSpan={2}><strong>Financing</strong></td></tr>
+                {(cashFlow?.financing ?? []).map(
+                  (l: { label: string; amount: number }) => (
+                    <tr key={l.label}>
+                      <td>{l.label}</td>
+                      <td>{formatMoney(l.amount)}</td>
+                    </tr>
+                  ),
+                )}
+                <tr>
+                  <td><strong>Net change in cash</strong></td>
+                  <td>{formatMoney(cashFlow?.netChange ?? 0)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
       <div className="grid two">
         <div className="panel">

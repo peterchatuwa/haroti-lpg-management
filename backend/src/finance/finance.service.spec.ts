@@ -146,6 +146,8 @@ describe('FinanceService LPG COGS (AC-11)', () => {
   it('builds trial balance from journal lines', async () => {
     entriesRepo.find = jest.fn(async () => [
       {
+        postingStatus: 'POSTED',
+        postedAt: new Date(),
         lines: [
           {
             accountCode: '1100',
