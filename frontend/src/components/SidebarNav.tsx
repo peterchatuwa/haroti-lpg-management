@@ -2,31 +2,39 @@ import { ChevronDown } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
+  defaultExpandedSections,
   filterNavSections,
   findSectionForPath,
   navSections,
   type NavSection,
 } from '../config/nav-sections';
+import type { UserRole } from '../lib/types';
 
 type SidebarNavProps = {
+  role: UserRole;
   isStaffAdmin: boolean;
 };
 
-function buildInitialExpanded(pathname: string, sections: NavSection[]) {
+function buildInitialExpanded(
+  pathname: string,
+  sections: NavSection[],
+  role: UserRole,
+) {
   const activeSection = findSectionForPath(pathname, sections);
-  const expanded = new Set<string>(['overview', activeSection]);
+  const expanded = new Set(defaultExpandedSections(role));
+  expanded.add(activeSection);
   return expanded;
 }
 
-export function SidebarNav({ isStaffAdmin }: SidebarNavProps) {
+export function SidebarNav({ role, isStaffAdmin }: SidebarNavProps) {
   const { pathname } = useLocation();
   const sections = useMemo(
-    () => filterNavSections(navSections, isStaffAdmin),
-    [isStaffAdmin],
+    () => filterNavSections(navSections, role, isStaffAdmin),
+    [role, isStaffAdmin],
   );
 
   const [expanded, setExpanded] = useState(() =>
-    buildInitialExpanded(pathname, sections),
+    buildInitialExpanded(pathname, sections, role),
   );
 
   useEffect(() => {

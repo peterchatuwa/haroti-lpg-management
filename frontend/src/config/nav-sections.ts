@@ -29,11 +29,14 @@ import {
   Wallet,
   Wrench,
 } from 'lucide-react';
+import type { UserRole } from '../lib/types';
 
 export type NavItem = {
   to: string;
   label: string;
   icon: LucideIcon;
+  /** Visible to these roles. Omit = all roles. Admins/directors always see all. */
+  roles?: UserRole[];
   adminOnly?: boolean;
 };
 
@@ -47,6 +50,29 @@ export type NavSection = {
   label: string;
   groups: NavGroup[];
 };
+
+/** Role bundles for nav visibility */
+const NET: UserRole[] = [
+  'SYSTEM_ADMIN',
+  'DIRECTOR',
+  'OPERATIONS_MANAGER',
+  'FINANCE_MANAGER',
+  'AUDITOR',
+];
+const STATION: UserRole[] = [
+  'STATION_MANAGER',
+  'ATTENDANT',
+  'STOREKEEPER',
+  'SAFETY_OFFICER',
+];
+const FLOOR: UserRole[] = ['STATION_MANAGER', 'ATTENDANT'];
+const STOCK: UserRole[] = ['STATION_MANAGER', 'STOREKEEPER'];
+const EXEC: UserRole[] = ['SYSTEM_ADMIN', 'DIRECTOR', 'OPERATIONS_MANAGER'];
+const FINANCE: UserRole[] = ['SYSTEM_ADMIN', 'DIRECTOR', 'FINANCE_MANAGER', 'AUDITOR'];
+
+function vis(...groups: UserRole[][]): UserRole[] {
+  return [...new Set(groups.flat())];
+}
 
 export const navSections: NavSection[] = [
   {
@@ -66,17 +92,22 @@ export const navSections: NavSection[] = [
       {
         label: 'Cockpit',
         items: [
-          { to: '/executive', label: 'Executive cockpit', icon: BarChart3 },
-          { to: '/reports', label: 'Executive BI', icon: BarChart3 },
-          { to: '/targets', label: 'Targets', icon: Target },
+          { to: '/executive', label: 'Executive cockpit', icon: BarChart3, roles: vis(EXEC, FINANCE) },
+          { to: '/reports', label: 'Executive BI', icon: BarChart3, roles: vis(EXEC, FINANCE) },
+          { to: '/targets', label: 'Targets', icon: Target, roles: EXEC },
         ],
       },
       {
         label: 'Workflows',
         items: [
-          { to: '/action-centre', label: 'Action centre', icon: Inbox },
-          { to: '/approval-inbox', label: 'Approval inbox', icon: ClipboardCheck },
-          { to: '/insights', label: 'AI insights', icon: Sparkles },
+          { to: '/action-centre', label: 'Action centre', icon: Inbox, roles: vis(EXEC, ['STATION_MANAGER']) },
+          {
+            to: '/approval-inbox',
+            label: 'Approval inbox',
+            icon: ClipboardCheck,
+            roles: vis(EXEC, ['STATION_MANAGER', 'FINANCE_MANAGER']),
+          },
+          { to: '/insights', label: 'AI insights', icon: Sparkles, roles: EXEC },
         ],
       },
     ],
@@ -88,17 +119,17 @@ export const navSections: NavSection[] = [
       {
         label: 'Daily operations',
         items: [
-          { to: '/pos', label: 'Refill POS', icon: ShoppingCart },
-          { to: '/shifts', label: 'Shifts', icon: Gauge },
-          { to: '/accessories', label: 'Accessories', icon: Tag },
-          { to: '/sync-centre', label: 'Sync centre', icon: RefreshCw },
+          { to: '/pos', label: 'Refill POS', icon: ShoppingCart, roles: vis(FLOOR, NET) },
+          { to: '/shifts', label: 'Shifts', icon: Gauge, roles: vis(FLOOR, STOCK, NET) },
+          { to: '/accessories', label: 'Accessories', icon: Tag, roles: vis(FLOOR, NET) },
+          { to: '/sync-centre', label: 'Sync centre', icon: RefreshCw, roles: vis(FLOOR, NET) },
         ],
       },
       {
         label: 'Stock & assets',
         items: [
-          { to: '/inventory', label: 'LPG Stock', icon: Package },
-          { to: '/cylinders', label: 'Cylinders', icon: Tag },
+          { to: '/inventory', label: 'LPG Stock', icon: Package, roles: vis(STOCK, FLOOR, NET) },
+          { to: '/cylinders', label: 'Cylinders', icon: Tag, roles: vis(STOCK, FLOOR, NET) },
         ],
       },
     ],
@@ -110,14 +141,21 @@ export const navSections: NavSection[] = [
       {
         label: 'Inbound',
         items: [
-          { to: '/deliveries', label: 'Deliveries', icon: Truck },
-          { to: '/procurement', label: 'Procurement', icon: Receipt },
-          { to: '/requisitions', label: 'Requisitions', icon: ClipboardList },
+          { to: '/deliveries', label: 'Deliveries', icon: Truck, roles: vis(STOCK, ['STATION_MANAGER'], NET) },
+          { to: '/procurement', label: 'Procurement', icon: Receipt, roles: vis(NET) },
+          {
+            to: '/requisitions',
+            label: 'Requisitions',
+            icon: ClipboardList,
+            roles: vis(NET, ['STATION_MANAGER']),
+          },
         ],
       },
       {
         label: 'Movement',
-        items: [{ to: '/transfers', label: 'Transfers', icon: ArrowLeftRight }],
+        items: [
+          { to: '/transfers', label: 'Transfers', icon: ArrowLeftRight, roles: vis(STOCK, ['STATION_MANAGER'], NET) },
+        ],
       },
     ],
   },
@@ -128,14 +166,14 @@ export const navSections: NavSection[] = [
       {
         label: 'Customers',
         items: [
-          { to: '/customers', label: 'Customers', icon: Users },
-          { to: '/loyalty', label: 'Loyalty', icon: Gift },
-          { to: '/refill-requests', label: 'Refill requests', icon: Truck },
+          { to: '/customers', label: 'Customers', icon: Users, roles: vis(FLOOR, NET) },
+          { to: '/loyalty', label: 'Loyalty', icon: Gift, roles: vis(FLOOR, NET) },
+          { to: '/refill-requests', label: 'Refill requests', icon: Truck, roles: vis(FLOOR, NET) },
         ],
       },
       {
         label: 'Smart LPG',
-        items: [{ to: '/payc', label: 'PAYC IoT', icon: Radio }],
+        items: [{ to: '/payc', label: 'PAYC IoT', icon: Radio, roles: vis(NET, ['STATION_MANAGER']) }],
       },
     ],
   },
@@ -146,8 +184,13 @@ export const navSections: NavSection[] = [
       {
         label: 'Accounting',
         items: [
-          { to: '/expenses', label: 'Cash & Expenses', icon: Wallet },
-          { to: '/finance', label: 'Finance & GL', icon: Calculator },
+          {
+            to: '/expenses',
+            label: 'Cash & Expenses',
+            icon: Wallet,
+            roles: vis(FLOOR, STOCK, ['STATION_MANAGER'], NET),
+          },
+          { to: '/finance', label: 'Finance & GL', icon: Calculator, roles: FINANCE },
         ],
       },
     ],
@@ -159,15 +202,15 @@ export const navSections: NavSection[] = [
       {
         label: 'Locations',
         items: [
-          { to: '/network', label: 'Network map', icon: Map },
-          { to: '/stations', label: 'Stations', icon: Receipt },
+          { to: '/network', label: 'Network map', icon: Map, roles: NET },
+          { to: '/stations', label: 'Stations', icon: Receipt, roles: vis(NET, ['STATION_MANAGER', 'SAFETY_OFFICER']) },
         ],
       },
       {
         label: 'Expansion',
         items: [
-          { to: '/franchise', label: 'Franchise', icon: Handshake },
-          { to: '/projects', label: 'Capital projects', icon: Building2 },
+          { to: '/franchise', label: 'Franchise', icon: Handshake, roles: NET },
+          { to: '/projects', label: 'Capital projects', icon: Building2, roles: NET },
         ],
       },
     ],
@@ -179,8 +222,8 @@ export const navSections: NavSection[] = [
       {
         label: 'Safety & maintenance',
         items: [
-          { to: '/maintenance', label: 'CMMS', icon: Wrench },
-          { to: '/safety', label: 'Safety', icon: Shield },
+          { to: '/maintenance', label: 'CMMS', icon: Wrench, roles: vis(NET, ['STATION_MANAGER', 'SAFETY_OFFICER']) },
+          { to: '/safety', label: 'Safety', icon: Shield, roles: vis(NET, STATION) },
         ],
       },
     ],
@@ -192,7 +235,12 @@ export const navSections: NavSection[] = [
       {
         label: 'Staff',
         items: [
-          { to: '/staff-analytics', label: 'Staff analytics', icon: UsersRound },
+          {
+            to: '/staff-analytics',
+            label: 'Staff analytics',
+            icon: UsersRound,
+            roles: vis(EXEC, ['STATION_MANAGER']),
+          },
           {
             to: '/staff',
             label: 'Staff & roles',
@@ -209,8 +257,20 @@ export const navSections: NavSection[] = [
   },
 ];
 
+function canSeeItem(
+  item: NavItem,
+  role: UserRole,
+  isStaffAdmin: boolean,
+): boolean {
+  if (item.adminOnly && !isStaffAdmin) return false;
+  if (role === 'SYSTEM_ADMIN' || role === 'DIRECTOR') return true;
+  if (!item.roles) return true;
+  return item.roles.includes(role);
+}
+
 export function filterNavSections(
   sections: NavSection[],
+  role: UserRole,
   isStaffAdmin: boolean,
 ): NavSection[] {
   return sections
@@ -219,9 +279,7 @@ export function filterNavSections(
       groups: section.groups
         .map((group) => ({
           ...group,
-          items: group.items.filter(
-            (item) => !item.adminOnly || isStaffAdmin,
-          ),
+          items: group.items.filter((item) => canSeeItem(item, role, isStaffAdmin)),
         }))
         .filter((group) => group.items.length > 0),
     }))
@@ -243,4 +301,42 @@ export function findSectionForPath(pathname: string, sections: NavSection[]) {
     }
   }
   return 'overview';
+}
+
+export function isPathAllowed(
+  pathname: string,
+  role: UserRole,
+  isStaffAdmin: boolean,
+): boolean {
+  const sections = filterNavSections(navSections, role, isStaffAdmin);
+  return sections.some((section) =>
+    section.groups.some((group) =>
+      group.items.some((item) => {
+        if (item.to === '/') return pathname === '/';
+        return pathname === item.to || pathname.startsWith(`${item.to}/`);
+      }),
+    ),
+  );
+}
+
+/** Sections a role typically uses — expanded by default on first load. */
+export function defaultExpandedSections(role: UserRole): string[] {
+  switch (role) {
+    case 'ATTENDANT':
+      return ['overview', 'station', 'commercial'];
+    case 'STATION_MANAGER':
+      return ['overview', 'station', 'supply', 'commercial'];
+    case 'STOREKEEPER':
+      return ['overview', 'station', 'supply'];
+    case 'FINANCE_MANAGER':
+      return ['overview', 'finance', 'executive', 'supply'];
+    case 'OPERATIONS_MANAGER':
+      return ['overview', 'executive', 'station', 'network'];
+    case 'SAFETY_OFFICER':
+      return ['overview', 'compliance', 'network'];
+    case 'AUDITOR':
+      return ['overview', 'finance', 'executive'];
+    default:
+      return ['overview', 'executive'];
+  }
 }

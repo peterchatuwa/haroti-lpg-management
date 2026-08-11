@@ -1,10 +1,13 @@
 import {
   LogOut,
 } from 'lucide-react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useClock } from '../hooks/useClock';
+import { isPathAllowed } from '../config/nav-sections';
 import api from '../lib/api';
+import { landingRouteForRole } from '../lib/landing-route';
 import { useAuthStore } from '../store/auth';
 import { useOfflineStore } from '../store/offline';
 import { FlameMark } from './FlameMark';
@@ -21,6 +24,7 @@ export function Layout() {
     s.queue.filter((q) => q.conflict).length,
   );
   const navigate = useNavigate();
+  const location = useLocation();
   const now = useClock();
 
   const { data: reqSummary } = useQuery({
@@ -45,6 +49,13 @@ export function Layout() {
     ['staff.view', 'staff.create', 'staff.edit'].includes(p),
   );
 
+  useEffect(() => {
+    if (!user) return;
+    if (!isPathAllowed(location.pathname, user.role, !!isStaffAdmin)) {
+      navigate(landingRouteForRole(user.role), { replace: true });
+    }
+  }, [location.pathname, user, isStaffAdmin, navigate]);
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -57,7 +68,7 @@ export function Layout() {
             </div>
           </div>
         </div>
-        <SidebarNav isStaffAdmin={!!isStaffAdmin} />
+        <SidebarNav role={user!.role} isStaffAdmin={!!isStaffAdmin} />
         <div className="user-card">
           <strong>{user?.fullName}</strong>
           <span>{user?.role.replaceAll('_', ' ')}</span>
