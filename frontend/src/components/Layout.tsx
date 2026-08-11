@@ -8,6 +8,7 @@ import {
   Bell,
   ClipboardCheck,
   ClipboardList,
+  UserCog,
   UsersRound,
   Gauge,
   Inbox,
@@ -47,6 +48,7 @@ const links = [
   { to: '/refill-requests', label: 'Refill requests', icon: Truck },
   { to: '/notifications', label: 'Notifications', icon: Bell },
   { to: '/staff-analytics', label: 'Staff analytics', icon: UsersRound },
+  { to: '/staff', label: 'Staff & roles', icon: UserCog, adminOnly: true },
   { to: '/targets', label: 'Targets', icon: Target },
   { to: '/sync-centre', label: 'Sync centre', icon: RefreshCw },
   { to: '/reports', label: 'Executive BI', icon: BarChart3 },
@@ -101,6 +103,15 @@ export function Layout() {
     user?.role === 'DIRECTOR' ||
     user?.role === 'FINANCE_MANAGER';
 
+  const isStaffAdmin =
+    user?.role === 'SYSTEM_ADMIN' ||
+    user?.role === 'DIRECTOR' ||
+    user?.role === 'OPERATIONS_MANAGER';
+
+  const visibleLinks = links.filter(
+    (link) => !('adminOnly' in link && link.adminOnly) || isStaffAdmin,
+  );
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -114,7 +125,7 @@ export function Layout() {
           </div>
         </div>
         <nav className="nav-links">
-          {links.map(({ to, label, icon: Icon }) => (
+          {visibleLinks.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

@@ -240,3 +240,31 @@ export interface CashFlowForecast {
   capexCommitted: number;
   capexRemaining: number;
 }
+
+export interface StaffRoleOption {
+  value: import('./types').UserRole;
+  label: string;
+  description: string;
+  requiresStation: boolean;
+}
+
+export interface StaffUserRow {
+  id: string;
+  username: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  role: import('./types').UserRole;
+  stationId: string | null;
+  station: {
+    id: string;
+    code: string;
+    name: string;
+    district: string;
+  } | null;
+  isActive: boolean;
+  canOverridePrice: boolean;
+  discountLimitPercent: number;
+  createdAt: string;
+  updatedAt: string;
+}

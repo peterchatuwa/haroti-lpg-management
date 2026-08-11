@@ -83,6 +83,7 @@ import { LoyaltyModule } from './loyalty/loyalty.module';
 import { CustomerPortalModule } from './customer-portal/customer-portal.module';
 import { AiModule } from './ai/ai.module';
 import { SearchModule } from './search/search.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -147,6 +148,7 @@ import { SearchModule } from './search/search.module';
     CustomerPortalModule,
     AiModule,
     SearchModule,
+    UsersModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

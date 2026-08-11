@@ -24,6 +24,7 @@ import { SafetyPage } from './pages/SafetyPage';
 import { ApprovalInboxPage } from './pages/ApprovalInboxPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { StaffAnalyticsPage } from './pages/StaffAnalyticsPage';
+import { StaffPage } from './pages/StaffPage';
 import { CustomerPortalPage } from './pages/CustomerPortalPage';
 import { InsightsPage } from './pages/InsightsPage';
 import { LoyaltyPage } from './pages/LoyaltyPage';
@@ -110,6 +111,7 @@ export default function App() {
         <Route path="approval-inbox" element={<ApprovalInboxPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="staff-analytics" element={<StaffAnalyticsPage />} />
+        <Route path="staff" element={<StaffPage />} />
         <Route path="insights" element={<InsightsPage />} />
         <Route path="loyalty" element={<LoyaltyPage />} />
         <Route path="refill-requests" element={<RefillRequestsPage />} />
