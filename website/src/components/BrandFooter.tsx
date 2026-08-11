@@ -8,6 +8,11 @@ const PARTNERS = [
 
 type Variant = 'light' | 'dark';
 
+const logoClass = (isDark: boolean) =>
+  `max-h-14 max-w-[200px] object-contain md:max-h-16 md:max-w-[240px] ${
+    isDark ? 'rounded-lg bg-white/95 px-3 py-2' : 'grayscale-[0.05]'
+  }`;
+
 export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
   const isDark = variant === 'dark';
 
@@ -20,25 +25,27 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
       }`}
       aria-label="Affiliations and supporters"
     >
-      <div className="container-custom grid gap-6 py-8 md:grid-cols-[minmax(220px,320px)_1fr] md:items-start">
+      <div className="container-custom grid gap-8 py-8 md:grid-cols-2 md:items-start">
         <div>
           <p
-            className={`mb-3 text-xs font-bold uppercase tracking-widest ${
+            className={`mb-4 text-xs font-bold uppercase tracking-widest ${
               isDark ? 'text-white/55' : 'text-gray-500'
             }`}
           >
             Proud member of
           </p>
-          <img
-            src="/brand/gdc-member-stamp.png"
-            alt="Global Distributors Collective member"
-            className="block h-auto w-full max-w-[320px]"
-          />
+          <div className="flex items-center">
+            <img
+              src="/brand/gdc-member-stamp.png"
+              alt="Global Distributors Collective member"
+              className={logoClass(isDark)}
+            />
+          </div>
         </div>
 
         <div>
           <p
-            className={`mb-3 text-xs font-bold uppercase tracking-widest ${
+            className={`mb-4 text-xs font-bold uppercase tracking-widest ${
               isDark ? 'text-white/55' : 'text-gray-500'
             }`}
           >
@@ -51,11 +58,7 @@ export function BrandFooter({ variant = 'dark' }: { variant?: Variant }) {
                   src={partner.logo}
                   alt={partner.name}
                   loading="lazy"
-                  className={`max-h-14 max-w-[200px] object-contain md:max-h-16 md:max-w-[240px] ${
-                    isDark
-                      ? 'rounded-lg bg-white/90 px-3 py-2'
-                      : 'grayscale-[0.05]'
-                  }`}
+                  className={logoClass(isDark)}
                 />
               </li>
             ))}
