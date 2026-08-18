@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
 import type { PaycDashboard } from '../lib/erp-types';
@@ -8,57 +9,150 @@ interface PaycDashboardExtended extends PaycDashboard {
   alerts?: Array<{ meterSerial: string; type: string; message: string }>;
 }
 
+interface VendorStatus {
+  configured: boolean;
+  connected: boolean;
+  message?: string;
+  areaName?: string;
+  vendorMeterPages?: number;
+}
+
+interface PaycMeterRow {
+  id: string;
+  meterSerial: string;
+  imei?: string;
+  creditBalanceKg: string;
+  deferredRevenue: string;
+  dailyBurnKg: string;
+  status: string;
+  location?: string;
+  customer?: { fullName: string };
+}
+
 export function PaycPage() {
-  const { data } = useQuery({
+  const queryClient = useQueryClient();
+
+  const { data: vendor } = useQuery({
+    queryKey: ['payc-vendor-status'],
+    queryFn: async () => (await api.get<VendorStatus>('/payc/vendor/status')).data,
+    refetchInterval: 60000,
+  });
+
+  const { data: dashboard } = useQuery({
     queryKey: ['payc-dashboard'],
     queryFn: async () =>
       (await api.get<PaycDashboardExtended>('/payc/dashboard')).data,
     refetchInterval: 20000,
   });
 
-  if (!data) return <div className="panel">Loading PAYC platform…</div>;
+  const { data: meters } = useQuery({
+    queryKey: ['payc-meters'],
+    queryFn: async () => (await api.get<PaycMeterRow[]>('/payc/meters')).data,
+    refetchInterval: 30000,
+  });
+
+  const importMutation = useMutation({
+    mutationFn: async () => (await api.post('/payc/import-vendor')).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payc-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['payc-meters'] });
+      queryClient.invalidateQueries({ queryKey: ['payc-vendor-status'] });
+    },
+  });
+
+  const syncAllMutation = useMutation({
+    mutationFn: async () => (await api.post('/payc/sync-vendor')).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payc-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['payc-meters'] });
+    },
+  });
+
+  if (!dashboard) return <div className="panel">Loading PAYC platform…</div>;
 
   return (
     <div className="stack">
       <PageHeader
         title="Pay-As-You-Cook (PAYC)"
-        subtitle="IoT smart metering, telemetry ingest, credit top-up & offline detection (Phase 2)"
+        subtitle="Manage Zhongyi smart meters from Haroti ERP — fleet, top-ups, valve control & sync"
+        action={
+          <div className="pay-chips">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={importMutation.isPending || !vendor?.connected}
+              onClick={() => importMutation.mutate()}
+            >
+              {importMutation.isPending ? 'Importing…' : 'Import from Zhongyi'}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={syncAllMutation.isPending || !vendor?.connected}
+              onClick={() => syncAllMutation.mutate()}
+            >
+              {syncAllMutation.isPending ? 'Syncing…' : 'Sync all meters'}
+            </button>
+          </div>
+        }
       />
+
+      <div className="panel" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+        <div>
+          <strong>Zhongyi platform</strong>
+          <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+            {!vendor?.configured && (vendor?.message ?? 'Not configured')}
+            {vendor?.configured && !vendor.connected && (vendor.message ?? 'Not connected')}
+            {vendor?.connected &&
+              `Connected · ${vendor.areaName ?? 'Area'} · ${vendor.vendorMeterPages ?? '?'} meter page(s) on vendor`}
+          </p>
+        </div>
+        <span className={`badge ${vendor?.connected ? '' : 'warn'}`}>
+          {vendor?.connected ? 'Vendor online' : 'Vendor offline'}
+        </span>
+      </div>
+
+      {(importMutation.isSuccess || syncAllMutation.isSuccess) && (
+        <p className="panel" style={{ color: 'var(--ok)', margin: 0 }}>
+          {importMutation.isSuccess &&
+            `Imported ${importMutation.data.imported} meters (${importMutation.data.created} new, ${importMutation.data.updated} updated)`}
+          {syncAllMutation.isSuccess &&
+            `Synced ${syncAllMutation.data.synced} meter(s) from Zhongyi`}
+        </p>
+      )}
 
       <div className="grid stats">
         <div className="panel stat-card accent">
           <h3>Active meters</h3>
-          <div className="value">{data.activeMeters}</div>
-          <div className="hint">{data.totalMeters} installed</div>
+          <div className="value">{dashboard.activeMeters}</div>
+          <div className="hint">{dashboard.totalMeters} installed</div>
         </div>
         <div className="panel stat-card">
           <h3>Deferred revenue</h3>
-          <div className="value">{formatMoney(data.totalDeferredRevenue)}</div>
+          <div className="value">{formatMoney(dashboard.totalDeferredRevenue)}</div>
           <div className="hint">Prepaid credit liability</div>
         </div>
         <div className="panel stat-card">
           <h3>Daily burn</h3>
-          <div className="value">{formatKg(data.dailyBurnKg)}</div>
-          <div className="hint">Est. {formatMoney(data.estimatedDailyRevenue)}/day</div>
+          <div className="value">{formatKg(dashboard.dailyBurnKg)}</div>
+          <div className="hint">Est. {formatMoney(dashboard.estimatedDailyRevenue)}/day</div>
         </div>
         <div className="panel stat-card warn">
           <h3>Alerts</h3>
-          <div className="value">{data.lowCreditMeters + data.offlineMeters}</div>
+          <div className="value">{dashboard.lowCreditMeters + dashboard.offlineMeters}</div>
           <div className="hint">
-            {data.lowCreditMeters} low credit · {data.offlineMeters} offline
+            {dashboard.lowCreditMeters} low credit · {dashboard.offlineMeters} offline
           </div>
         </div>
       </div>
 
-      {data.alerts && data.alerts.length > 0 && (
+      {dashboard.alerts && dashboard.alerts.length > 0 && (
         <div className="panel">
           <h3 className="panel-title">Active alerts</h3>
           <ul className="alert-list">
-            {data.alerts.map((a, i) => (
+            {dashboard.alerts.map((a, i) => (
               <li key={i}>
-                <span>
-                  {a.meterSerial} — {a.type.replaceAll('_', ' ')}
-                </span>
+                <span>{a.meterSerial} — {a.type.replaceAll('_', ' ')}</span>
                 <strong>{a.message}</strong>
               </li>
             ))}
@@ -73,31 +167,43 @@ export function PaycPage() {
             <thead>
               <tr>
                 <th>Serial</th>
+                <th>IMEI</th>
                 <th>Customer</th>
                 <th>Location</th>
                 <th>Credit (kg)</th>
                 <th>Deferred MWK</th>
-                <th>Daily burn</th>
                 <th>Status</th>
+                <th />
               </tr>
             </thead>
             <tbody>
-              {data.meters.map((m) => (
+              {(meters ?? []).map((m) => (
                 <tr key={m.id}>
                   <td>{m.meterSerial}</td>
+                  <td className="muted">{m.imei ?? '—'}</td>
                   <td>{m.customer?.fullName ?? '—'}</td>
                   <td>{m.location ?? '—'}</td>
                   <td>{formatKg(Number(m.creditBalanceKg))}</td>
                   <td>{formatMoney(Number(m.deferredRevenue))}</td>
-                  <td>{formatKg(Number(m.dailyBurnKg))}</td>
                   <td>
                     <span className="badge">{m.status.replaceAll('_', ' ')}</span>
+                  </td>
+                  <td>
+                    <Link to={`/payc/${m.id}`} className="btn btn-primary">
+                      Manage
+                    </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {!meters?.length && (
+          <p className="muted" style={{ marginTop: '1rem' }}>
+            No meters yet. Configure Zhongyi credentials on the server, then click{' '}
+            <strong>Import from Zhongyi</strong>.
+          </p>
+        )}
       </div>
     </div>
   );

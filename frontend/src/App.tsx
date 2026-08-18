@@ -13,6 +13,7 @@ import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
 import { MaintenancePage } from './pages/MaintenancePage';
 import { PaycPage } from './pages/PaycPage';
+import { PaycMeterDetailPage } from './pages/PaycMeterDetailPage';
 import { PosPage } from './pages/PosPage';
 import { ProcurementPage } from './pages/ProcurementPage';
 import { ActionCentrePage } from './pages/ActionCentrePage';
@@ -134,6 +135,7 @@ export default function App() {
         <Route path="customers/:id/statement" element={<CustomerStatementPage />} />
         <Route path="customers/:id" element={<CustomerProfilePage />} />
         <Route path="payc" element={<PaycPage />} />
+        <Route path="payc/:id" element={<PaycMeterDetailPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="safety" element={<SafetyPage />} />
         <Route path="projects" element={<ProjectsPage />} />

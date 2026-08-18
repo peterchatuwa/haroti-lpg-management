@@ -12,6 +12,7 @@ import {
   PaycMeterStatus,
   PaymentMethod,
 } from '../common/enums';
+import { Customer } from '../customers/customer.entity';
 import { FinanceService, GL_ACCOUNTS } from '../finance/finance.service';
 import { PaycCreditTransaction } from './payc-credit-transaction.entity';
 import { PaycMeter } from './payc-meter.entity';
@@ -30,6 +31,8 @@ export class PaycService {
     private readonly telemetryRepo: Repository<PaycTelemetry>,
     @InjectRepository(PaycCreditTransaction)
     private readonly creditRepo: Repository<PaycCreditTransaction>,
+    @InjectRepository(Customer)
+    private readonly customersRepo: Repository<Customer>,
     private readonly financeService: FinanceService,
     private readonly zhongyiClient: ZhongyiMeterClient,
   ) {}
@@ -294,5 +297,142 @@ export class PaycService {
       if (m) results.push(m);
     }
     return { processed: results.length };
+  }
+
+  async getVendorStatus() {
+    if (!this.zhongyiClient.enabled) {
+      return {
+        configured: false,
+        connected: false,
+        message: 'Set ZHONGYI_USERNAME and ZHONGYI_PASSWORD on the server',
+      };
+    }
+    const ping = await this.zhongyiClient.ping();
+    if (!ping.ok) {
+      return {
+        configured: true,
+        connected: false,
+        message: 'Could not connect to Zhongyi — check credentials and network',
+      };
+    }
+    const cfg = await this.zhongyiClient.getVendorConfig();
+    return {
+      configured: true,
+      connected: true,
+      areaName: cfg.areaName,
+      areaId: cfg.areaId,
+      equipmentModelId: cfg.equipmentModelId,
+      equipmentModelName: cfg.equipmentModelName,
+      vendorMeterPages: ping.meterCount,
+    };
+  }
+
+  async importFromVendor() {
+    if (!this.zhongyiClient.enabled) {
+      throw new BadRequestException('Zhongyi vendor API is not configured');
+    }
+
+    const archives = await this.zhongyiClient.getAllAreaArchives();
+    let created = 0;
+    let updated = 0;
+    let linked = 0;
+
+    for (const row of archives) {
+      const imei = row.IMEI?.trim();
+      const serial = row.serialnumber?.trim() || imei;
+      if (!serial) continue;
+
+      const balanceMwk = round2(toNumber(row.balance));
+      const creditKg = round3(balanceMwk / PRICE_PER_KG);
+      const valveOpen = row.valveStatus === 1;
+      let status = PaycMeterStatus.ACTIVE;
+      if (!valveOpen) status = PaycMeterStatus.VALVE_CLOSED;
+      else if (creditKg < 0.5) status = PaycMeterStatus.LOW_CREDIT;
+
+      let meter = imei
+        ? await this.metersRepo.findOne({ where: { imei } })
+        : null;
+      if (!meter) {
+        meter = await this.metersRepo.findOne({ where: { meterSerial: serial } });
+      }
+
+      let customerId: string | null | undefined = meter?.customerId;
+      const phone = row.phone?.trim();
+      if (phone && !customerId) {
+        const customer = await this.customersRepo.findOne({
+          where: { phone },
+        });
+        if (customer) {
+          customerId = customer.id;
+          linked++;
+        }
+      }
+
+      const payload: Partial<PaycMeter> = {
+        meterSerial: serial,
+        imei: imei || meter?.imei,
+        customerId: customerId ?? meter?.customerId ?? null,
+        creditBalanceKg: asDecimal(creditKg),
+        deferredRevenue: asDecimal(balanceMwk, 2),
+        status,
+        location: row.areaOrgName ?? meter?.location,
+        lastTelemetryAt: new Date(),
+      };
+
+      if (meter) {
+        Object.assign(meter, payload);
+        await this.metersRepo.save(meter);
+        updated++;
+      } else {
+        meter = this.metersRepo.create(payload);
+        await this.metersRepo.save(meter);
+        created++;
+      }
+    }
+
+    return {
+      imported: archives.length,
+      created,
+      updated,
+      customersLinked: linked,
+    };
+  }
+
+  async updateMeter(
+    meterId: string,
+    patch: {
+      customerId?: string | null;
+      stationId?: string | null;
+      location?: string;
+      cylinderSerial?: string;
+    },
+  ) {
+    const meter = await this.findOne(meterId);
+    if (patch.customerId !== undefined) meter.customerId = patch.customerId;
+    if (patch.stationId !== undefined) meter.stationId = patch.stationId;
+    if (patch.location !== undefined) meter.location = patch.location;
+    if (patch.cylinderSerial !== undefined) {
+      meter.cylinderSerial = patch.cylinderSerial;
+    }
+    return this.metersRepo.save(meter);
+  }
+
+  async controlValve(meterId: string, open: boolean) {
+    const meter = await this.findOne(meterId);
+    if (!meter.imei) {
+      throw new BadRequestException('Meter has no IMEI for valve control');
+    }
+    if (!this.zhongyiClient.enabled) {
+      throw new BadRequestException('Zhongyi vendor API is not configured');
+    }
+
+    await this.zhongyiClient.setValveState(meter.imei, open ? 1 : 0);
+    meter.status = open
+      ? toNumber(meter.creditBalanceKg) < 0.5
+        ? PaycMeterStatus.LOW_CREDIT
+        : PaycMeterStatus.ACTIVE
+      : PaycMeterStatus.VALVE_CLOSED;
+    await this.metersRepo.save(meter);
+    return meter;
   }
 }

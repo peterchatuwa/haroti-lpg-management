@@ -7,11 +7,27 @@ interface ZhongyiResponse<T = unknown> {
   value?: T;
   values?: T[];
   data?: T;
+  valueId?: string;
   pageInfo?: {
     pageTotal: number;
     pageNumber: number;
     pageSize: number;
   };
+}
+
+export interface ZhongyiLoginValue {
+  apiToken: string;
+  username?: string;
+  name?: string;
+  manageArea?: Array<{
+    areaId: number;
+    areaName?: string;
+    areaSerialnumber?: string;
+  }>;
+  equipmentModel?: Array<{
+    sysconfigEquipmentId: number;
+    equipmentModelName?: string;
+  }>;
 }
 
 export interface ZhongyiRealtimeData {
@@ -34,6 +50,15 @@ export interface ZhongyiArchiveRow {
   valveStatus: number;
   balance: number;
   phone?: string;
+  areaOrgName?: string;
+  areaOrgId?: number;
+}
+
+export interface ZhongyiVendorConfig {
+  areaId: string;
+  areaName?: string;
+  equipmentModelId: string;
+  equipmentModelName?: string;
 }
 
 @Injectable()
@@ -42,9 +67,8 @@ export class ZhongyiMeterClient {
   private readonly baseUrl: string;
   private readonly username: string;
   private readonly password: string;
-  private readonly areaId: string;
-  private readonly equipmentModelId: string;
   private apiToken?: string;
+  private vendorConfig?: ZhongyiVendorConfig;
 
   constructor(private readonly config: ConfigService) {
     this.baseUrl =
@@ -52,16 +76,14 @@ export class ZhongyiMeterClient {
       'http://en.energy.zhongyismart.com/api/commonInternal.jsp';
     this.username = config.get('ZHONGYI_USERNAME') || '';
     this.password = config.get('ZHONGYI_PASSWORD') || '';
-    this.areaId = config.get('ZHONGYI_AREA_ID') || '';
-    this.equipmentModelId = config.get('ZHONGYI_EQUIPMENT_MODEL_ID') || '';
   }
 
   get enabled(): boolean {
     return Boolean(this.username && this.password);
   }
 
-  async login(): Promise<string> {
-    const response = await this.call<{ apiToken: string }>(
+  async login(): Promise<ZhongyiLoginValue> {
+    const response = await this.call<ZhongyiLoginValue>(
       'zlMeter',
       'toLogin',
       {
@@ -70,17 +92,57 @@ export class ZhongyiMeterClient {
       },
       false,
     );
-    const token = response.value?.apiToken;
-    if (!token) {
+    const value = response.value;
+    if (!value?.apiToken) {
       throw new Error('Zhongyi login failed: no apiToken returned');
     }
-    this.apiToken = token;
-    return token;
+    this.apiToken = value.apiToken;
+    this.vendorConfig = this.resolveVendorConfig(value);
+    return value;
+  }
+
+  private resolveVendorConfig(login: ZhongyiLoginValue): ZhongyiVendorConfig {
+    const envAreaId = this.config.get('ZHONGYI_AREA_ID')?.trim();
+    const envEquipmentId = this.config.get('ZHONGYI_EQUIPMENT_MODEL_ID')?.trim();
+
+    const area =
+      login.manageArea?.find((a) => String(a.areaId) === envAreaId) ??
+      login.manageArea?.[0];
+    const equipment =
+      login.equipmentModel?.find(
+        (e) => String(e.sysconfigEquipmentId) === envEquipmentId,
+      ) ?? login.equipmentModel?.[0];
+
+    if (!area?.areaId) {
+      throw new Error(
+        'Zhongyi login returned no manageable area — check ZHONGYI_AREA_ID or account permissions',
+      );
+    }
+    if (!equipment?.sysconfigEquipmentId) {
+      throw new Error(
+        'Zhongyi login returned no equipment model — check ZHONGYI_EQUIPMENT_MODEL_ID',
+      );
+    }
+
+    return {
+      areaId: envAreaId || String(area.areaId),
+      areaName: area.areaName,
+      equipmentModelId:
+        envEquipmentId || String(equipment.sysconfigEquipmentId),
+      equipmentModelName: equipment.equipmentModelName,
+    };
+  }
+
+  async getVendorConfig(): Promise<ZhongyiVendorConfig> {
+    if (this.vendorConfig) return this.vendorConfig;
+    await this.login();
+    return this.vendorConfig!;
   }
 
   private async ensureToken(): Promise<string> {
     if (this.apiToken) return this.apiToken;
-    return this.login();
+    const login = await this.login();
+    return login.apiToken;
   }
 
   async queryRealTimeData(imei: string): Promise<ZhongyiRealtimeData> {
@@ -97,7 +159,11 @@ export class ZhongyiMeterClient {
     return response.data;
   }
 
-  async getAreaArchives(pageNumber = 1, pageSize = 100): Promise<ZhongyiArchiveRow[]> {
+  async getAreaArchives(
+    pageNumber = 1,
+    pageSize = 100,
+  ): Promise<{ rows: ZhongyiArchiveRow[]; pageTotal: number }> {
+    const cfg = await this.getVendorConfig();
     const response = await this.call<ZhongyiArchiveRow>(
       'zlMeter',
       'getAreaArchives',
@@ -105,14 +171,28 @@ export class ZhongyiMeterClient {
         energyType: 'GAS',
         pageNumber: String(pageNumber),
         pageSize: String(pageSize),
-        areaId: this.areaId,
+        areaId: cfg.areaId,
         searchContent: '',
-        sysconfigEquipmentId: this.equipmentModelId,
+        sysconfigEquipmentId: cfg.equipmentModelId,
       },
       true,
       'params',
     );
-    return response.values ?? [];
+    return {
+      rows: response.values ?? [],
+      pageTotal: response.pageInfo?.pageTotal ?? 1,
+    };
+  }
+
+  async getAllAreaArchives(): Promise<ZhongyiArchiveRow[]> {
+    const pageSize = 100;
+    const first = await this.getAreaArchives(1, pageSize);
+    const all = [...first.rows];
+    for (let page = 2; page <= first.pageTotal; page++) {
+      const next = await this.getAreaArchives(page, pageSize);
+      all.push(...next.rows);
+    }
+    return all;
   }
 
   async remotelyTopUp(
@@ -133,6 +213,23 @@ export class ZhongyiMeterClient {
     return { orderId: response.value?.orderId, errmsg: response.errmsg };
   }
 
+  async setValveState(
+    imei: string,
+    valveState: 0 | 1,
+  ): Promise<{ valueId?: string; errmsg: string }> {
+    const response = await this.call<unknown>(
+      'zlMeter',
+      'setValveState',
+      {
+        nbonetNetImei: imei,
+        valveState: String(valveState),
+      },
+      true,
+      'param',
+    );
+    return { valueId: response.valueId, errmsg: response.errmsg };
+  }
+
   async queryDailyConsumption(
     imeis: string[],
     date?: string,
@@ -150,6 +247,24 @@ export class ZhongyiMeterClient {
       'param',
     );
     return response.data ?? [];
+  }
+
+  async ping(): Promise<{ ok: boolean; areaName?: string; meterCount?: number }> {
+    if (!this.enabled) return { ok: false };
+    try {
+      const cfg = await this.getVendorConfig();
+      const first = await this.getAreaArchives(1, 1);
+      return {
+        ok: true,
+        areaName: cfg.areaName,
+        meterCount: first.pageTotal,
+      };
+    } catch (err) {
+      this.logger.warn(
+        `Zhongyi ping failed: ${err instanceof Error ? err.message : 'unknown'}`,
+      );
+      return { ok: false };
+    }
   }
 
   private async call<T>(

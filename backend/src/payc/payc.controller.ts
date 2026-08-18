@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -38,6 +39,38 @@ export class PaycController {
   @Get('dashboard')
   dashboard() {
     return this.paycService.dashboard();
+  }
+
+  @Get('vendor/status')
+  vendorStatus() {
+    return this.paycService.getVendorStatus();
+  }
+
+  @Post('import-vendor')
+  importVendor() {
+    return this.paycService.importFromVendor();
+  }
+
+  @Patch('meters/:id')
+  updateMeter(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      customerId?: string | null;
+      stationId?: string | null;
+      location?: string;
+      cylinderSerial?: string;
+    },
+  ) {
+    return this.paycService.updateMeter(id, body);
+  }
+
+  @Post('meters/:id/valve')
+  valve(
+    @Param('id') id: string,
+    @Body() body: { open: boolean },
+  ) {
+    return this.paycService.controlValve(id, body.open);
   }
 
   @Post('meters/:id/topup')

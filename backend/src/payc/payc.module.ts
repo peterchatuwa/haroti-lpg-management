@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Customer } from '../customers/customer.entity';
 import { FinanceModule } from '../finance/finance.module';
 import { PaycController } from './payc.controller';
 import { PaycCreditTransaction } from './payc-credit-transaction.entity';
@@ -14,6 +15,7 @@ import { ZhongyiMeterClient } from './zhongyi-meter.client';
       PaycMeter,
       PaycTelemetry,
       PaycCreditTransaction,
+      Customer,
     ]),
     FinanceModule,
   ],
