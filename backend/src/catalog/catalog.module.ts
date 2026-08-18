@@ -7,9 +7,7 @@ import { Supplier } from '../suppliers/supplier.entity';
 import { CatalogController } from './catalog.controller';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Product, Customer, Supplier, Cylinder]),
-  ],
+  imports: [TypeOrmModule.forFeature([Product, Customer, Supplier, Cylinder])],
   controllers: [CatalogController],
 })
 export class CatalogModule {}

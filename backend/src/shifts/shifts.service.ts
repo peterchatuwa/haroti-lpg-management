@@ -40,10 +40,7 @@ export class ShiftsService {
   ) {}
 
   isShiftLocked(shift: Shift): boolean {
-    return (
-      shift.status !== ShiftStatus.OPEN ||
-      shift.lockedAt != null
-    );
+    return shift.status !== ShiftStatus.OPEN || shift.lockedAt != null;
   }
 
   async requireOpenShiftForSale(
@@ -172,9 +169,7 @@ export class ShiftsService {
         cashDeposited,
     );
     const cashVariance = round2(dto.cashCounted - expectedCash);
-    const expectedLpg = round3(
-      toNumber(shift.openingLpgStockKg) - lpgSoldKg,
-    );
+    const expectedLpg = round3(toNumber(shift.openingLpgStockKg) - lpgSoldKg);
     const stockVariance = round3(dto.physicalLpgStockKg - expectedLpg);
 
     const hasVariance =

@@ -1,6 +1,10 @@
 import { Column, Entity, OneToMany } from 'typeorm';
 import { BaseEntity } from '../common/entities/base.entity';
-import { Currency, JournalEventType, JournalPostingStatus } from '../common/enums';
+import {
+  Currency,
+  JournalEventType,
+  JournalPostingStatus,
+} from '../common/enums';
 import { JournalLine } from './journal-line.entity';
 
 @Entity('journal_entries')

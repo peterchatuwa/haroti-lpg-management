@@ -11,6 +11,19 @@ import {
 import { PaychanguWebhook } from './paychangu-webhook.entity';
 import { PaymentMethod } from '../common/enums';
 
+interface PaychanguApiResponse {
+  payment_reference: string;
+  status: string;
+  message?: string;
+}
+
+interface PaychanguWebhookPayload {
+  event_type: string;
+  transaction_ref: string;
+  reason?: string;
+  [key: string]: unknown;
+}
+
 @Injectable()
 export class PaychanguService {
   private readonly logger = new Logger(PaychanguService.name);
@@ -58,7 +71,7 @@ export class PaychanguService {
       saleId: params.saleId,
       paycMeterId: params.paycMeterId,
       metadata: params.metadata,
-      callbackUrl: this.config.get('PAYCHANGU_CALLBACK_URL'),
+      callbackUrl: this.config.get<string>('PAYCHANGU_CALLBACK_URL'),
     });
 
     const saved = await this.txnRepo.save(txn);
@@ -84,16 +97,18 @@ export class PaychanguService {
 
       this.logger.log(`Payment initiated: ${transactionRef}`);
       return saved;
-    } catch (error) {
+    } catch (error: unknown) {
       saved.status = PaychanguTransactionStatus.FAILED;
-      saved.metadata = { ...saved.metadata, error: error.message };
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      saved.metadata = { ...saved.metadata, error: errorMessage };
       await this.txnRepo.save(saved);
       throw error;
     }
   }
 
   async processWebhook(
-    payload: any,
+    payload: PaychanguWebhookPayload,
     signature: string,
   ): Promise<PaychanguWebhook> {
     if (!this.verifyWebhookSignature(payload, signature)) {
@@ -104,18 +119,20 @@ export class PaychanguService {
       this.webhookRepo.create({
         eventType: payload.event_type,
         transactionRef: payload.transaction_ref,
-        payload,
+        payload: payload as unknown as Record<string, unknown>,
         processed: false,
       }),
     );
 
-    setImmediate(() => this.handleWebhookEvent(webhook.id));
+    void this.handleWebhookEvent(webhook.id);
 
     return webhook;
   }
 
   private async handleWebhookEvent(webhookId: string): Promise<void> {
-    const webhook = await this.webhookRepo.findOne({ where: { id: webhookId } });
+    const webhook = await this.webhookRepo.findOne({
+      where: { id: webhookId },
+    });
     if (!webhook || webhook.processed) return;
 
     try {
@@ -147,16 +164,22 @@ export class PaychanguService {
       webhook.processed = true;
       webhook.processedAt = new Date();
       await this.webhookRepo.save(webhook);
-    } catch (error) {
-      this.logger.error(`Webhook processing error: ${error.message}`, error.stack);
-      webhook.errorMessage = error.message;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Webhook processing error: ${errorMessage}`,
+        errorStack,
+      );
+      webhook.errorMessage = errorMessage;
       await this.webhookRepo.save(webhook);
     }
   }
 
   private async handlePaymentCompleted(
     txn: PaychanguTransaction,
-    payload: any,
+    payload: Record<string, unknown>,
   ): Promise<void> {
     txn.status = PaychanguTransactionStatus.COMPLETED;
     txn.completedAt = new Date();
@@ -168,10 +191,13 @@ export class PaychanguService {
 
   private async handlePaymentFailed(
     txn: PaychanguTransaction,
-    payload: any,
+    payload: Record<string, unknown>,
   ): Promise<void> {
     txn.status = PaychanguTransactionStatus.FAILED;
-    txn.metadata = { ...txn.metadata, failure_reason: payload.reason };
+    txn.metadata = {
+      ...txn.metadata,
+      failure_reason: payload.reason as string | undefined,
+    };
     await this.txnRepo.save(txn);
 
     this.logger.warn(`Payment failed: ${txn.transactionRef}`);
@@ -179,10 +205,13 @@ export class PaychanguService {
 
   private async handlePaymentCancelled(
     txn: PaychanguTransaction,
-    payload: any,
+    payload: Record<string, unknown>,
   ): Promise<void> {
     txn.status = PaychanguTransactionStatus.CANCELLED;
-    txn.metadata = { ...txn.metadata, cancellation_reason: payload.reason };
+    txn.metadata = {
+      ...txn.metadata,
+      cancellation_reason: payload.reason as string | undefined,
+    };
     await this.txnRepo.save(txn);
 
     this.logger.warn(`Payment cancelled: ${txn.transactionRef}`);
@@ -196,12 +225,15 @@ export class PaychanguService {
 
     const response = await this.callPaychanguApi(
       `/payments/${transactionRef}/status`,
-      null,
+      undefined,
       'GET',
     );
 
     txn.status = this.mapStatusFromPaychangu(response.status);
-    if (txn.status === PaychanguTransactionStatus.COMPLETED && !txn.completedAt) {
+    if (
+      txn.status === PaychanguTransactionStatus.COMPLETED &&
+      !txn.completedAt
+    ) {
       txn.completedAt = new Date();
     }
     await this.txnRepo.save(txn);
@@ -211,9 +243,9 @@ export class PaychanguService {
 
   private async callPaychanguApi(
     endpoint: string,
-    body?: any,
+    body?: Record<string, unknown>,
     method: 'POST' | 'GET' = 'POST',
-  ): Promise<any> {
+  ): Promise<PaychanguApiResponse> {
     const url = `${this.baseUrl}${endpoint}`;
     const timestamp = Date.now().toString();
     const signature = this.generateSignature(endpoint, body, timestamp);
@@ -235,25 +267,34 @@ export class PaychanguService {
     const response = await fetch(url, options);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData: unknown = await response
+        .json()
+        .catch(() => ({} as Record<string, unknown>));
+      const errorMessage =
+        typeof (errorData as Record<string, unknown>).message === 'string'
+          ? (errorData as Record<string, unknown>).message
+          : 'Unknown error';
       throw new Error(
-        `PayChangu API error: ${response.status} - ${errorData.message || 'Unknown error'}`,
+        `PayChangu API error: ${response.status} - ${errorMessage as string}`,
       );
     }
 
-    return response.json();
+    return response.json() as Promise<PaychanguApiResponse>;
   }
 
   private generateSignature(
     endpoint: string,
-    body: any,
+    body: Record<string, unknown> | undefined,
     timestamp: string,
   ): string {
     const payload = `${endpoint}${JSON.stringify(body || {})}${timestamp}`;
     return createHmac('sha256', this.secretKey).update(payload).digest('hex');
   }
 
-  private verifyWebhookSignature(payload: any, signature: string): boolean {
+  private verifyWebhookSignature(
+    payload: PaychanguWebhookPayload,
+    signature: string,
+  ): boolean {
     const computed = createHmac('sha256', this.webhookSecret)
       .update(JSON.stringify(payload))
       .digest('hex');

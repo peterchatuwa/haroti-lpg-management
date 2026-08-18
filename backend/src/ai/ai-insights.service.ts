@@ -48,8 +48,10 @@ export class AiInsightsService {
     @InjectRepository(StockMovement)
     private readonly movementsRepo: Repository<StockMovement>,
     @InjectRepository(LossCase) private readonly lossRepo: Repository<LossCase>,
-    @InjectRepository(Delivery) private readonly deliveriesRepo: Repository<Delivery>,
-    @InjectRepository(Station) private readonly stationsRepo: Repository<Station>,
+    @InjectRepository(Delivery)
+    private readonly deliveriesRepo: Repository<Delivery>,
+    @InjectRepository(Station)
+    private readonly stationsRepo: Repository<Station>,
     private readonly tanksService: TanksService,
   ) {}
 
@@ -89,7 +91,9 @@ export class AiInsightsService {
         date.setDate(date.getDate() + d + 1);
         const dow = date.getDay();
         const dowAvg =
-          dowCount[dow] > 0 ? byDow[dow] / Math.max(dowCount[dow], 1) : overallAvg;
+          dowCount[dow] > 0
+            ? byDow[dow] / Math.max(dowCount[dow], 1)
+            : overallAvg;
         const predicted = round3(dowAvg * 0.7 + overallAvg * 0.3);
         const band = round3(predicted * 0.15);
 

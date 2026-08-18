@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRole } from '../common/enums';
@@ -59,7 +64,9 @@ export class PermissionsService implements OnModuleInit {
   }
 
   async listPermissions() {
-    return this.permissionsRepo.find({ order: { category: 'ASC', key: 'ASC' } });
+    return this.permissionsRepo.find({
+      order: { category: 'ASC', key: 'ASC' },
+    });
   }
 
   async getRolePermissions(role: UserRole) {

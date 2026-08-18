@@ -30,7 +30,10 @@ export class UsersController {
 
   @RequirePermissions('staff.view')
   @Get()
-  findAll(@CurrentUser() user: JwtPayload, @Query('stationId') stationId?: string) {
+  findAll(
+    @CurrentUser() user: JwtPayload,
+    @Query('stationId') stationId?: string,
+  ) {
     return this.usersService.findAll(user, stationId);
   }
 

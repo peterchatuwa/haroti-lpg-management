@@ -2,18 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { round2, toNumber } from '../common/decimal';
-import { PaymentMethod, PurchaseOrderStatus, SaleStatus } from '../common/enums';
+import {
+  PaymentMethod,
+  PurchaseOrderStatus,
+  SaleStatus,
+} from '../common/enums';
 import { Customer } from '../customers/customer.entity';
 import { CustomerPayment } from '../customers/customer-payment.entity';
 import { PurchaseOrder } from '../procurement/purchase-order.entity';
 import { Sale } from '../sales/sale.entity';
 
 export type AgeingBucket =
-  | 'current'
-  | 'days1_30'
-  | 'days31_60'
-  | 'days61_90'
-  | 'days90_plus';
+  'current' | 'days1_30' | 'days31_60' | 'days61_90' | 'days90_plus';
 
 @Injectable()
 export class AgeingService {
@@ -146,9 +146,7 @@ export class AgeingService {
       const receivedAt = po.updatedAt;
       const dueDate = new Date(receivedAt);
       dueDate.setDate(dueDate.getDate() + termsDays);
-      const days = Math.floor(
-        (today.getTime() - dueDate.getTime()) / 86400000,
-      );
+      const days = Math.floor((today.getTime() - dueDate.getTime()) / 86400000);
       const amount = toNumber(po.totalAmount);
       const bucket = this.bucketForAge(Math.max(0, days));
       buckets[bucket] += amount;
@@ -174,8 +172,10 @@ export class AgeingService {
   }
 
   snapshot() {
-    return Promise.all([this.arAgeing(), this.apAgeing()]).then(
-      ([ar, ap]) => ({ generatedAt: new Date().toISOString(), ar, ap }),
-    );
+    return Promise.all([this.arAgeing(), this.apAgeing()]).then(([ar, ap]) => ({
+      generatedAt: new Date().toISOString(),
+      ar,
+      ap,
+    }));
   }
 }

@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ExpenseStatus, PurchaseOrderStatus, RequisitionStatus, SaleStatus, ShiftStatus } from '../common/enums';
+import {
+  ExpenseStatus,
+  PurchaseOrderStatus,
+  RequisitionStatus,
+  SaleStatus,
+  ShiftStatus,
+} from '../common/enums';
 import { WorkflowsService } from '../workflows/workflows.service';
 import { Expense } from '../expenses/expense.entity';
 import { PurchaseOrder } from '../procurement/purchase-order.entity';
@@ -17,11 +23,15 @@ export class ActionCentreService {
   constructor(
     @InjectRepository(Sale) private readonly salesRepo: Repository<Sale>,
     @InjectRepository(Shift) private readonly shiftsRepo: Repository<Shift>,
-    @InjectRepository(Expense) private readonly expensesRepo: Repository<Expense>,
-    @InjectRepository(Requisition) private readonly reqRepo: Repository<Requisition>,
-    @InjectRepository(PurchaseOrder) private readonly poRepo: Repository<PurchaseOrder>,
+    @InjectRepository(Expense)
+    private readonly expensesRepo: Repository<Expense>,
+    @InjectRepository(Requisition)
+    private readonly reqRepo: Repository<Requisition>,
+    @InjectRepository(PurchaseOrder)
+    private readonly poRepo: Repository<PurchaseOrder>,
     @InjectRepository(LossCase) private readonly lossRepo: Repository<LossCase>,
-    @InjectRepository(MaintenanceWorkOrder) private readonly woRepo: Repository<MaintenanceWorkOrder>,
+    @InjectRepository(MaintenanceWorkOrder)
+    private readonly woRepo: Repository<MaintenanceWorkOrder>,
     private readonly workflowsService: WorkflowsService,
   ) {}
 
@@ -66,17 +76,40 @@ export class ActionCentreService {
     });
 
     const hydroOrders = await this.woRepo.count({
-      where: { status: WorkOrderStatus.OPEN, type: 'CYLINDER_HYDRO_TEST' as never },
+      where: {
+        status: WorkOrderStatus.OPEN,
+        type: 'CYLINDER_HYDRO_TEST' as never,
+      },
     });
 
     const approvalTasks = await this.workflowsService.pendingCount();
 
     const items = [
-      { type: 'APPROVAL_INBOX', count: approvalTasks, label: 'Workflow approval tasks' },
-      { type: 'DISCOUNT_APPROVAL', count: pendingDiscounts, label: 'Pending discount approvals' },
-      { type: 'SHIFT_APPROVAL', count: pendingShifts, label: 'Shifts awaiting approval' },
-      { type: 'EXPENSE_APPROVAL', count: pendingExpenses, label: 'Expenses to approve' },
-      { type: 'REQUISITION', count: pendingRequisitions, label: 'Requisitions pending GM' },
+      {
+        type: 'APPROVAL_INBOX',
+        count: approvalTasks,
+        label: 'Workflow approval tasks',
+      },
+      {
+        type: 'DISCOUNT_APPROVAL',
+        count: pendingDiscounts,
+        label: 'Pending discount approvals',
+      },
+      {
+        type: 'SHIFT_APPROVAL',
+        count: pendingShifts,
+        label: 'Shifts awaiting approval',
+      },
+      {
+        type: 'EXPENSE_APPROVAL',
+        count: pendingExpenses,
+        label: 'Expenses to approve',
+      },
+      {
+        type: 'REQUISITION',
+        count: pendingRequisitions,
+        label: 'Requisitions pending GM',
+      },
       { type: 'PROCUREMENT', count: pendingPo, label: 'POs pending approval' },
       { type: 'LOSS_CASE', count: openLossCases, label: 'Open gas loss cases' },
       { type: 'HYDRO', count: hydroOrders, label: 'Hydro work orders open' },

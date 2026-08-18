@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PaymentMethod } from '../common/enums';
 import { PaycService } from './payc.service';
@@ -44,16 +37,17 @@ export class PaycController {
   topup(
     @Param('id') id: string,
     @Body()
-    body: { amountMwk: number; paymentMethod: PaymentMethod; reference?: string },
+    body: {
+      amountMwk: number;
+      paymentMethod: PaymentMethod;
+      reference?: string;
+    },
   ) {
     return this.paycService.topUpCredit({ meterId: id, ...body });
   }
 
   @Post('meters/:id/rebind-cylinder')
-  rebind(
-    @Param('id') id: string,
-    @Body() body: { cylinderSerial: string },
-  ) {
+  rebind(@Param('id') id: string, @Body() body: { cylinderSerial: string }) {
     return this.paycService.rebindCylinder(id, body.cylinderSerial);
   }
 

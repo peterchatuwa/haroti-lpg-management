@@ -71,7 +71,9 @@ describe('FinanceService LPG COGS (AC-11)', () => {
   it('posts credit sale to AR and revenue', async () => {
     await service.postCreditSale(5000, 'sale-credit', 5, 1200);
 
-    expect(savedEntries[0].eventType).toBe(JournalEventType.CUSTOMER_CREDIT_SALE);
+    expect(savedEntries[0].eventType).toBe(
+      JournalEventType.CUSTOMER_CREDIT_SALE,
+    );
     expect(savedEntries[0].lines).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -109,7 +111,9 @@ describe('FinanceService LPG COGS (AC-11)', () => {
     await service.postFranchiseConsignmentSettlement(15000, 'fs-1');
 
     expect(savedEntries).toHaveLength(1);
-    expect(savedEntries[0].eventType).toBe(JournalEventType.FRANCHISE_CONSIGNMENT);
+    expect(savedEntries[0].eventType).toBe(
+      JournalEventType.FRANCHISE_CONSIGNMENT,
+    );
     expect(savedEntries[0].lines).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

@@ -56,12 +56,17 @@ export class FranchiseService {
     });
   }
 
-  async generateSettlement(agreementId: string, periodStart: string, periodEnd: string) {
+  async generateSettlement(
+    agreementId: string,
+    periodStart: string,
+    periodEnd: string,
+  ) {
     const agreement = await this.agreementsRepo.findOne({
       where: { id: agreementId },
       relations: { station: true },
     });
-    if (!agreement) throw new NotFoundException('Franchise agreement not found');
+    if (!agreement)
+      throw new NotFoundException('Franchise agreement not found');
 
     const sales = await this.salesRepo.find({
       where: {
@@ -85,8 +90,7 @@ export class FranchiseService {
       consignmentStock
         .filter((s) => s.ownership === StockOwnership.CONSIGNMENT)
         .reduce(
-          (sum, s) =>
-            sum + s.quantity * toNumber(s.product?.unitPrice ?? 0),
+          (sum, s) => sum + s.quantity * toNumber(s.product?.unitPrice ?? 0),
           0,
         ),
     );
@@ -129,7 +133,10 @@ export class FranchiseService {
     );
 
     if (royaltyDue > 0) {
-      await this.financeService.postFranchiseSettlement(royaltyDue, settlement.id);
+      await this.financeService.postFranchiseSettlement(
+        royaltyDue,
+        settlement.id,
+      );
     }
 
     if (consignmentValue > 0) {
@@ -156,13 +163,21 @@ export class FranchiseService {
 
     const invoiceAmount = round2(toNumber(settlement.royaltyDue));
     if (invoiceAmount > 0) {
-      await this.financeService.postFranchiseSettlement(invoiceAmount, settlement.id);
+      await this.financeService.postFranchiseSettlement(
+        invoiceAmount,
+        settlement.id,
+      );
     }
 
     return settlement;
   }
 
-  async accrueAgentCommission(saleId: string, agentId: string, saleAmount: number, percent: number) {
+  async accrueAgentCommission(
+    saleId: string,
+    agentId: string,
+    saleAmount: number,
+    percent: number,
+  ) {
     const commission = round2(saleAmount * (percent / 100));
     return this.commissionsRepo.save(
       this.commissionsRepo.create({
@@ -219,7 +234,9 @@ export class FranchiseService {
     paymentMethod: string;
     clientTxnId?: string;
   }) {
-    const agent = await this.customersRepo.findOne({ where: { id: params.agentId } });
+    const agent = await this.customersRepo.findOne({
+      where: { id: params.agentId },
+    });
     if (!agent) throw new BadRequestException('Invalid agent');
 
     await this.accessoriesService.deductForSale(params.stationId, [

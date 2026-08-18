@@ -1,10 +1,11 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CylinderStatus, WorkOrderStatus, WorkOrderType } from '../common/enums';
+import {
+  CylinderStatus,
+  WorkOrderStatus,
+  WorkOrderType,
+} from '../common/enums';
 import { Cylinder } from '../cylinders/cylinder.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Asset } from './asset.entity';
@@ -172,7 +173,8 @@ export class MaintenanceService {
           woNumber: `WO-PM-${Date.now().toString().slice(-6)}`,
           type: WorkOrderType.STATION_EQUIPMENT,
           title: plan.name,
-          description: plan.description ?? `Preventive maintenance: ${plan.name}`,
+          description:
+            plan.description ?? `Preventive maintenance: ${plan.name}`,
           stationId: plan.stationId,
           dueDate: plan.nextDueDate,
         }),

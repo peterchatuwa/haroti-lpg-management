@@ -108,14 +108,20 @@ export class SeedService implements OnModuleInit {
   private readonly logger = new Logger(SeedService.name);
 
   constructor(
-    @InjectRepository(Station) private readonly stationsRepo: Repository<Station>,
+    @InjectRepository(Station)
+    private readonly stationsRepo: Repository<Station>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
-    @InjectRepository(Supplier) private readonly suppliersRepo: Repository<Supplier>,
-    @InjectRepository(Product) private readonly productsRepo: Repository<Product>,
-    @InjectRepository(Customer) private readonly customersRepo: Repository<Customer>,
-    @InjectRepository(Cylinder) private readonly cylindersRepo: Repository<Cylinder>,
+    @InjectRepository(Supplier)
+    private readonly suppliersRepo: Repository<Supplier>,
+    @InjectRepository(Product)
+    private readonly productsRepo: Repository<Product>,
+    @InjectRepository(Customer)
+    private readonly customersRepo: Repository<Customer>,
+    @InjectRepository(Cylinder)
+    private readonly cylindersRepo: Repository<Cylinder>,
     @InjectRepository(Tank) private readonly tanksRepo: Repository<Tank>,
-    @InjectRepository(PriceList) private readonly pricesRepo: Repository<PriceList>,
+    @InjectRepository(PriceList)
+    private readonly pricesRepo: Repository<PriceList>,
     @InjectRepository(ProductBundle)
     private readonly bundlesRepo: Repository<ProductBundle>,
     @InjectRepository(ProductBundleItem)
@@ -429,7 +435,8 @@ export class SeedService implements OnModuleInit {
               lastInspectionDate: '2025-12-01',
               nextInspectionDate: '2026-12-01',
               ownership: CylinderOwnership.COMPANY,
-              status: i % 2 === 0 ? CylinderStatus.AVAILABLE : CylinderStatus.EMPTY,
+              status:
+                i % 2 === 0 ? CylinderStatus.AVAILABLE : CylinderStatus.EMPTY,
               depositValue: (size * 5000).toFixed(2),
               stationId: station.id,
             }),
@@ -462,7 +469,9 @@ export class SeedService implements OnModuleInit {
           name: `${station.name} Bulk Tank`,
           stationId: station.id,
           capacityKg: asDecimal(toNumber(station.tankCapacityKg)),
-          safeWorkingCapacityKg: asDecimal(toNumber(station.tankCapacityKg) * 0.9),
+          safeWorkingCapacityKg: asDecimal(
+            toNumber(station.tankCapacityKg) * 0.9,
+          ),
           currentStockKg: station.currentStockKg,
         }),
       );
@@ -490,10 +499,27 @@ export class SeedService implements OnModuleInit {
       where: { category: ProductCategory.ACCESSORY },
     });
     const accessoryUpdates: Record<string, Partial<Product>> = {
-      'REG-STD': { barcode: '8901000010001', costPrice: '6200.00', serialTracked: false, batchTracked: true },
-      'HOSE-1.5M': { barcode: '8901000010002', costPrice: '3100.00', batchTracked: true },
-      'BURNER-STD': { barcode: '8901000010003', costPrice: '16500.00', serialTracked: true },
-      'VALVE-STD': { barcode: '8901000010004', costPrice: '8900.00', batchTracked: true },
+      'REG-STD': {
+        barcode: '8901000010001',
+        costPrice: '6200.00',
+        serialTracked: false,
+        batchTracked: true,
+      },
+      'HOSE-1.5M': {
+        barcode: '8901000010002',
+        costPrice: '3100.00',
+        batchTracked: true,
+      },
+      'BURNER-STD': {
+        barcode: '8901000010003',
+        costPrice: '16500.00',
+        serialTracked: true,
+      },
+      'VALVE-STD': {
+        barcode: '8901000010004',
+        costPrice: '8900.00',
+        batchTracked: true,
+      },
     };
     for (const p of accessories) {
       const patch = accessoryUpdates[p.sku];
@@ -501,14 +527,49 @@ export class SeedService implements OnModuleInit {
     }
 
     const extraProducts = [
-      { sku: 'REG-HP', name: 'High-Pressure Regulator', price: 12500, cost: 9200, barcode: '8901000010005' },
-      { sku: 'LEAK-DET', name: 'Gas Leak Detector', price: 18500, cost: 14000, barcode: '8901000010006', serial: true },
-      { sku: 'METER-PAYC', name: 'PAYC Smart Meter', price: 85000, cost: 62000, barcode: '8901000010007', serial: true },
-      { sku: 'BURNER-DBL', name: 'Double Burner Stove', price: 32000, cost: 24000, barcode: '8901000010008' },
-      { sku: 'CLAMP-PR', name: 'Hose Clamps (pair)', price: 1500, cost: 800, barcode: '8901000010009', batch: true },
+      {
+        sku: 'REG-HP',
+        name: 'High-Pressure Regulator',
+        price: 12500,
+        cost: 9200,
+        barcode: '8901000010005',
+      },
+      {
+        sku: 'LEAK-DET',
+        name: 'Gas Leak Detector',
+        price: 18500,
+        cost: 14000,
+        barcode: '8901000010006',
+        serial: true,
+      },
+      {
+        sku: 'METER-PAYC',
+        name: 'PAYC Smart Meter',
+        price: 85000,
+        cost: 62000,
+        barcode: '8901000010007',
+        serial: true,
+      },
+      {
+        sku: 'BURNER-DBL',
+        name: 'Double Burner Stove',
+        price: 32000,
+        cost: 24000,
+        barcode: '8901000010008',
+      },
+      {
+        sku: 'CLAMP-PR',
+        name: 'Hose Clamps (pair)',
+        price: 1500,
+        cost: 800,
+        barcode: '8901000010009',
+        batch: true,
+      },
     ];
     for (const ep of extraProducts) {
-      const exists = await this.productsRepo.findOne({ where: { sku: ep.sku } });
+      const exists = await this.productsRepo.findOne({
+        where: { sku: ep.sku },
+      });
       if (!exists) {
         await this.productsRepo.save(
           this.productsRepo.create({
@@ -545,7 +606,8 @@ export class SeedService implements OnModuleInit {
               productId: product.id,
               channel,
               unitPrice: (Number(product.unitPrice) * factor).toFixed(2),
-              commissionPercent: channel === SalesChannel.AGENT_COMMISSION ? '8.00' : '0',
+              commissionPercent:
+                channel === SalesChannel.AGENT_COMMISSION ? '8.00' : '0',
             }),
           );
         }
@@ -572,26 +634,33 @@ export class SeedService implements OnModuleInit {
 
     const reg = allAccessories.find((p) => p.sku === 'REG-STD');
     const hose = allAccessories.find((p) => p.sku === 'HOSE-1.5M');
-    const burner = allAccessories.find((p) => p.sku === 'BURNER-DBL') ?? allAccessories.find((p) => p.sku === 'BURNER-STD');
+    const burner =
+      allAccessories.find((p) => p.sku === 'BURNER-DBL') ??
+      allAccessories.find((p) => p.sku === 'BURNER-STD');
     const clamp = allAccessories.find((p) => p.sku === 'CLAMP-PR');
 
     if (reg && hose && burner && clamp) {
-      const bundleExists = await this.bundlesRepo.findOne({ where: { sku: 'KIT-HOME-STD' } });
+      const bundleExists = await this.bundlesRepo.findOne({
+        where: { sku: 'KIT-HOME-STD' },
+      });
       if (!bundleExists) {
         const bundle = await this.bundlesRepo.save(
           this.bundlesRepo.create({
             sku: 'KIT-HOME-STD',
             name: 'Standard Home Starter Kit',
-            description: '6kg cylinder refill + regulator + hose + clamps + double burner',
+            description:
+              '6kg cylinder refill + regulator + hose + clamps + double burner',
             bundlePrice: '89500.00',
           }),
         );
-        await this.bundleItemsRepo.save([
-          { bundleId: bundle.id, productId: reg.id, quantity: 1 },
-          { bundleId: bundle.id, productId: hose.id, quantity: 1 },
-          { bundleId: bundle.id, productId: burner.id, quantity: 1 },
-          { bundleId: bundle.id, productId: clamp.id, quantity: 1 },
-        ].map((i) => this.bundleItemsRepo.create(i)));
+        await this.bundleItemsRepo.save(
+          [
+            { bundleId: bundle.id, productId: reg.id, quantity: 1 },
+            { bundleId: bundle.id, productId: hose.id, quantity: 1 },
+            { bundleId: bundle.id, productId: burner.id, quantity: 1 },
+            { bundleId: bundle.id, productId: clamp.id, quantity: 1 },
+          ].map((i) => this.bundleItemsRepo.create(i)),
+        );
       }
     }
 
@@ -636,19 +705,47 @@ export class SeedService implements OnModuleInit {
     if (budgetCount === 0) {
       const year = new Date().getFullYear();
       const month = new Date().getMonth() + 1;
-      await this.budgetRepo.save([
-        { category: 'Retail LPG Sales', commercialStream: CommercialStream.RETAIL_FORECOURT, fiscalYear: year, fiscalMonth: month, budgetAmount: '15000000.00' },
-        { category: 'Accessory Merchandising', commercialStream: CommercialStream.ACCESSORIES, fiscalYear: year, fiscalMonth: month, budgetAmount: '3500000.00' },
-        { category: 'PAYC Revenue', commercialStream: CommercialStream.PAYC, fiscalYear: year, fiscalMonth: month, budgetAmount: '2000000.00' },
-        { category: 'Wholesale Bulk', commercialStream: CommercialStream.BULK_WHOLESALE, fiscalYear: year, fiscalMonth: month, budgetAmount: '8000000.00' },
-      ].map((b) => this.budgetRepo.create(b)));
+      await this.budgetRepo.save(
+        [
+          {
+            category: 'Retail LPG Sales',
+            commercialStream: CommercialStream.RETAIL_FORECOURT,
+            fiscalYear: year,
+            fiscalMonth: month,
+            budgetAmount: '15000000.00',
+          },
+          {
+            category: 'Accessory Merchandising',
+            commercialStream: CommercialStream.ACCESSORIES,
+            fiscalYear: year,
+            fiscalMonth: month,
+            budgetAmount: '3500000.00',
+          },
+          {
+            category: 'PAYC Revenue',
+            commercialStream: CommercialStream.PAYC,
+            fiscalYear: year,
+            fiscalMonth: month,
+            budgetAmount: '2000000.00',
+          },
+          {
+            category: 'Wholesale Bulk',
+            commercialStream: CommercialStream.BULK_WHOLESALE,
+            fiscalYear: year,
+            fiscalMonth: month,
+            budgetAmount: '8000000.00',
+          },
+        ].map((b) => this.budgetRepo.create(b)),
+      );
     }
 
     this.logger.log('Charter ERP extensions seeded');
   }
 
   async seedPhase23Extensions(stations: Station[]) {
-    this.logger.log('Seeding Phase 2/3 (PAYC telemetry, CMMS assets, projects, franchise)...');
+    this.logger.log(
+      'Seeding Phase 2/3 (PAYC telemetry, CMMS assets, projects, franchise)...',
+    );
 
     const central = stations.find((s) => s.code === 'LLW-01')!;
     const franchiseStation = stations.find((s) => s.code === 'BT-02');
@@ -656,33 +753,35 @@ export class SeedService implements OnModuleInit {
 
     const assetCount = await this.assetsRepo.count();
     if (assetCount === 0) {
-      await this.assetsRepo.save([
-        {
-          assetCode: 'TK-LLW-01',
-          name: 'Bulk LPG Storage Tank 15T',
-          category: AssetCategory.STATION_EQUIPMENT,
-          stationId: central.id,
-          acquisitionCost: '45000000.00',
-          commissionedAt: '2022-06-01',
-          nextServiceDate: '2026-12-01',
-        },
-        {
-          assetCode: 'COMP-LLW-01',
-          name: 'LPG Compressor Unit',
-          category: AssetCategory.STATION_EQUIPMENT,
-          stationId: central.id,
-          acquisitionCost: '8200000.00',
-          commissionedAt: '2023-01-15',
-        },
-        {
-          assetCode: 'DISP-BT-02',
-          name: 'Forecourt Dispenser #1',
-          category: AssetCategory.STATION_EQUIPMENT,
-          stationId: franchiseStation?.id,
-          acquisitionCost: '3500000.00',
-          commissionedAt: '2024-03-01',
-        },
-      ].map((a) => this.assetsRepo.create(a)));
+      await this.assetsRepo.save(
+        [
+          {
+            assetCode: 'TK-LLW-01',
+            name: 'Bulk LPG Storage Tank 15T',
+            category: AssetCategory.STATION_EQUIPMENT,
+            stationId: central.id,
+            acquisitionCost: '45000000.00',
+            commissionedAt: '2022-06-01',
+            nextServiceDate: '2026-12-01',
+          },
+          {
+            assetCode: 'COMP-LLW-01',
+            name: 'LPG Compressor Unit',
+            category: AssetCategory.STATION_EQUIPMENT,
+            stationId: central.id,
+            acquisitionCost: '8200000.00',
+            commissionedAt: '2023-01-15',
+          },
+          {
+            assetCode: 'DISP-BT-02',
+            name: 'Forecourt Dispenser #1',
+            category: AssetCategory.STATION_EQUIPMENT,
+            stationId: franchiseStation?.id,
+            acquisitionCost: '3500000.00',
+            commissionedAt: '2024-03-01',
+          },
+        ].map((a) => this.assetsRepo.create(a)),
+      );
     }
 
     const meters = await this.paycRepo.find();
@@ -697,7 +796,10 @@ export class SeedService implements OnModuleInit {
             this.paycTelemetryRepo.create({
               meterId: meter.id,
               recordedAt: ts,
-              creditRemainingKg: (Number(meter.creditBalanceKg) + d * 0.05).toFixed(3),
+              creditRemainingKg: (
+                Number(meter.creditBalanceKg) +
+                d * 0.05
+              ).toFixed(3),
               burnKg: meter.dailyBurnKg,
               valveOpen: true,
             }),
@@ -723,27 +825,29 @@ export class SeedService implements OnModuleInit {
           targetEndDate: '2026-09-30',
         }),
       );
-      await this.milestonesRepo.save([
-        {
-          projectId: project.id,
-          name: 'Civil works & foundation',
-          dueDate: '2026-03-31',
-          budgetAllocation: '6000000.00',
-          isCompleted: true,
-        },
-        {
-          projectId: project.id,
-          name: 'Tank installation & piping',
-          dueDate: '2026-06-30',
-          budgetAllocation: '15000000.00',
-        },
-        {
-          projectId: project.id,
-          name: 'Commissioning & safety sign-off',
-          dueDate: '2026-09-15',
-          budgetAllocation: '7000000.00',
-        },
-      ].map((m) => this.milestonesRepo.create(m)));
+      await this.milestonesRepo.save(
+        [
+          {
+            projectId: project.id,
+            name: 'Civil works & foundation',
+            dueDate: '2026-03-31',
+            budgetAllocation: '6000000.00',
+            isCompleted: true,
+          },
+          {
+            projectId: project.id,
+            name: 'Tank installation & piping',
+            dueDate: '2026-06-30',
+            budgetAllocation: '15000000.00',
+          },
+          {
+            projectId: project.id,
+            name: 'Commissioning & safety sign-off',
+            dueDate: '2026-09-15',
+            budgetAllocation: '7000000.00',
+          },
+        ].map((m) => this.milestonesRepo.create(m)),
+      );
     }
 
     if (franchiseStation) {

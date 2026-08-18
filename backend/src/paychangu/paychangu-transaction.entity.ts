@@ -27,7 +27,11 @@ export class PaychanguTransaction extends BaseEntity {
   @Column({ name: 'internal_ref' })
   internalRef!: string;
 
-  @Column({ type: 'enum', enum: PaychanguPaymentMethod, name: 'payment_method' })
+  @Column({
+    type: 'enum',
+    enum: PaychanguPaymentMethod,
+    name: 'payment_method',
+  })
   paymentMethod!: PaychanguPaymentMethod;
 
   @Column({ type: 'decimal', precision: 14, scale: 2 })

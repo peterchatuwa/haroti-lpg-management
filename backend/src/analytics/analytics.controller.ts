@@ -30,11 +30,7 @@ export class AnalyticsController {
   }
 
   @Get('staff/managers')
-  @Roles(
-    UserRole.OPERATIONS_MANAGER,
-    UserRole.DIRECTOR,
-    UserRole.SYSTEM_ADMIN,
-  )
+  @Roles(UserRole.OPERATIONS_MANAGER, UserRole.DIRECTOR, UserRole.SYSTEM_ADMIN)
   managers(
     @Query('stationId') stationId?: string,
     @Query('periodStart') periodStart?: string,

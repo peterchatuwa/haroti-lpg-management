@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -34,10 +42,15 @@ export class DeliveriesController {
   }
 
   @Post(':id/allocations')
-  @Roles(UserRole.OPERATIONS_MANAGER, UserRole.STOREKEEPER, UserRole.SYSTEM_ADMIN)
+  @Roles(
+    UserRole.OPERATIONS_MANAGER,
+    UserRole.STOREKEEPER,
+    UserRole.SYSTEM_ADMIN,
+  )
   createAllocations(
     @Param('id') id: string,
-    @Body() body: { allocations: Array<{ stationId: string; allocatedKg: number }> },
+    @Body()
+    body: { allocations: Array<{ stationId: string; allocatedKg: number }> },
   ) {
     return this.deliveriesService.createAllocations(id, body.allocations);
   }
@@ -48,7 +61,11 @@ export class DeliveriesController {
   }
 
   @Post(':id/advance')
-  @Roles(UserRole.STATION_MANAGER, UserRole.OPERATIONS_MANAGER, UserRole.STOREKEEPER)
+  @Roles(
+    UserRole.STATION_MANAGER,
+    UserRole.OPERATIONS_MANAGER,
+    UserRole.STOREKEEPER,
+  )
   advance(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.deliveriesService.advanceStatus(id, user.sub);
   }

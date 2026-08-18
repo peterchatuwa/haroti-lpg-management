@@ -13,11 +13,7 @@ const IMMUTABLE_ENTITIES = [Sale, JournalEntry, StockMovement];
 @EventSubscriber()
 export class ImmutableRecordSubscriber implements EntitySubscriberInterface {
   beforeRemove(event: RemoveEvent<object>) {
-    if (
-      IMMUTABLE_ENTITIES.some(
-        (entity) => event.metadata.target === entity,
-      )
-    ) {
+    if (IMMUTABLE_ENTITIES.some((entity) => event.metadata.target === entity)) {
       throw new ForbiddenException(
         'Posted records cannot be deleted; use reversal or void workflow',
       );

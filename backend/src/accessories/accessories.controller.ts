@@ -24,7 +24,11 @@ export class AccessoriesController {
   }
 
   @Get('low-stock')
-  @Roles(UserRole.STATION_MANAGER, UserRole.OPERATIONS_MANAGER, UserRole.STOREKEEPER)
+  @Roles(
+    UserRole.STATION_MANAGER,
+    UserRole.OPERATIONS_MANAGER,
+    UserRole.STOREKEEPER,
+  )
   lowStock() {
     return this.accessoriesService.listLowStock();
   }
@@ -63,7 +67,11 @@ export class AccessoriesController {
   }
 
   @Post('receive')
-  @Roles(UserRole.STOREKEEPER, UserRole.STATION_MANAGER, UserRole.OPERATIONS_MANAGER)
+  @Roles(
+    UserRole.STOREKEEPER,
+    UserRole.STATION_MANAGER,
+    UserRole.OPERATIONS_MANAGER,
+  )
   receive(
     @Body()
     body: {

@@ -39,10 +39,21 @@ export class User extends BaseEntity {
   @Column({ name: 'can_override_price', default: false })
   canOverridePrice!: boolean;
 
-  @Column({ name: 'discount_limit_percent', type: 'decimal', precision: 5, scale: 2, default: 0 })
+  @Column({
+    name: 'discount_limit_percent',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 0,
+  })
   discountLimitPercent!: string;
 
-  @Column({ name: 'invite_token_hash', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'invite_token_hash',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   inviteTokenHash?: string | null;
 
   @Column({ name: 'invite_expires_at', type: 'timestamptz', nullable: true })

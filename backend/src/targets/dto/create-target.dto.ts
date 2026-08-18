@@ -1,8 +1,4 @@
-import {
-  TargetMetric,
-  TargetPeriod,
-  TargetScope,
-} from '../../common/enums';
+import { TargetMetric, TargetPeriod, TargetScope } from '../../common/enums';
 
 export class CreateTargetDto {
   scope!: TargetScope;

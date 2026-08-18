@@ -13,7 +13,11 @@ export class ProcurementDocument extends BaseEntity {
   @JoinColumn({ name: 'purchase_order_id' })
   purchaseOrder!: PurchaseOrder;
 
-  @Column({ name: 'document_type', type: 'enum', enum: ProcurementDocumentType })
+  @Column({
+    name: 'document_type',
+    type: 'enum',
+    enum: ProcurementDocumentType,
+  })
   documentType!: ProcurementDocumentType;
 
   @Column({ name: 'document_number', unique: true, length: 40 })

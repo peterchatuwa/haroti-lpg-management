@@ -26,7 +26,11 @@ import { ThreeWayMatchService } from './three-way-match.service';
     AccessoriesModule,
   ],
   controllers: [ProcurementController, SupplierInvoicesController],
-  providers: [ProcurementService, ProcurementDocumentsService, ThreeWayMatchService],
+  providers: [
+    ProcurementService,
+    ProcurementDocumentsService,
+    ThreeWayMatchService,
+  ],
   exports: [ThreeWayMatchService],
 })
 export class ProcurementModule {}

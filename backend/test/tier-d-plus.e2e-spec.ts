@@ -119,8 +119,9 @@ describe('Tier D+ (e2e)', () => {
       .get('/api/procurement/orders')
       .set('Authorization', `Bearer ${adminToken}`);
 
-    const po = orders.body.find((o: { documents?: Array<{ id: string }> }) =>
-      (o.documents ?? []).length > 0,
+    const po = orders.body.find(
+      (o: { documents?: Array<{ id: string }> }) =>
+        (o.documents ?? []).length > 0,
     );
     const docId = po?.documents?.[0]?.id;
     if (!docId) return;

@@ -60,7 +60,13 @@ export class ProcurementDocumentsService {
   async findOne(id: string) {
     return this.docsRepo.findOne({
       where: { id },
-      relations: { purchaseOrder: { supplier: { customer: true }, destinationStation: true, lines: true } },
+      relations: {
+        purchaseOrder: {
+          supplier: { customer: true },
+          destinationStation: true,
+          lines: true,
+        },
+      },
     });
   }
 
@@ -79,10 +85,9 @@ export class ProcurementDocumentsService {
       pdf.fontSize(18).text(payload.title, { align: 'center' });
       pdf.moveDown(0.5);
       pdf.fontSize(11).text(payload.documentNumber, { align: 'center' });
-      pdf.text(
-        new Date(payload.issuedAt).toLocaleDateString('en-GB'),
-        { align: 'center' },
-      );
+      pdf.text(new Date(payload.issuedAt).toLocaleDateString('en-GB'), {
+        align: 'center',
+      });
       pdf.moveDown();
 
       pdf.fontSize(10).text('Vendor', { underline: true });
@@ -126,9 +131,9 @@ export class ProcurementDocumentsService {
       pdf.text(`Freight: ${payload.freightCost.toFixed(2)}`);
       pdf.text(`Duty: ${payload.customsDuty.toFixed(2)}`);
       pdf.text(`Clearing: ${payload.clearingFees.toFixed(2)}`);
-      pdf.font('Helvetica-Bold').text(
-        `Total: ${payload.totalAmount.toFixed(2)} ${payload.currency}`,
-      );
+      pdf
+        .font('Helvetica-Bold')
+        .text(`Total: ${payload.totalAmount.toFixed(2)} ${payload.currency}`);
       if (payload.notes) {
         pdf.moveDown();
         pdf.font('Helvetica').fontSize(9).text(`Notes: ${payload.notes}`);

@@ -1,12 +1,17 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { RefillRequestStatus, UserRole } from '../common/enums';
-import {
-  CurrentCustomer,
-  CustomerAuthGuard,
-} from './customer-auth.guard';
+import { CurrentCustomer, CustomerAuthGuard } from './customer-auth.guard';
 import type { CustomerJwtPayload } from './customer-jwt-payload';
 import { CustomerPortalService } from './customer-portal.service';
 
@@ -89,14 +94,22 @@ export class CustomerPortalController {
 
   @Get('admin/refill-requests')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.STATION_MANAGER, UserRole.OPERATIONS_MANAGER, UserRole.SYSTEM_ADMIN)
+  @Roles(
+    UserRole.STATION_MANAGER,
+    UserRole.OPERATIONS_MANAGER,
+    UserRole.SYSTEM_ADMIN,
+  )
   adminRequests() {
     return this.portalService.listAllRefillRequests();
   }
 
   @Patch('admin/refill-requests/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.STATION_MANAGER, UserRole.OPERATIONS_MANAGER, UserRole.SYSTEM_ADMIN)
+  @Roles(
+    UserRole.STATION_MANAGER,
+    UserRole.OPERATIONS_MANAGER,
+    UserRole.SYSTEM_ADMIN,
+  )
   updateRequest(
     @Param('id') id: string,
     @Body() body: { status: RefillRequestStatus },

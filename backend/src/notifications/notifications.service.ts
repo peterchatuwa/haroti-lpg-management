@@ -50,7 +50,11 @@ export class NotificationsService {
   }) {
     const channels =
       params.channels ??
-      (await this.resolveChannels(params.userId, params.eventType, params.mandatory));
+      (await this.resolveChannels(
+        params.userId,
+        params.eventType,
+        params.mandatory,
+      ));
 
     const notification = await this.notificationsRepo.save(
       this.notificationsRepo.create({
@@ -67,7 +71,10 @@ export class NotificationsService {
     const deliveries: NotificationDelivery[] = [];
     for (const channel of channels) {
       let recipient: string | undefined;
-      if (channel === NotificationChannel.SMS || channel === NotificationChannel.WHATSAPP) {
+      if (
+        channel === NotificationChannel.SMS ||
+        channel === NotificationChannel.WHATSAPP
+      ) {
         recipient = params.phone;
       } else if (channel === NotificationChannel.EMAIL) {
         recipient = params.email;
@@ -109,7 +116,9 @@ export class NotificationsService {
   }
 
   async markRead(id: string, userId: string) {
-    const note = await this.notificationsRepo.findOne({ where: { id, userId } });
+    const note = await this.notificationsRepo.findOne({
+      where: { id, userId },
+    });
     if (!note) throw new NotFoundException('Notification not found');
     note.readAt = new Date();
     note.status = NotificationStatus.READ;
@@ -241,8 +250,7 @@ export class NotificationsService {
     stationCode?: string;
   }) {
     const msg = `Haroti Ops: Hydro test due for cylinder ${params.serialNumber}${params.stationCode ? ` at ${params.stationCode}` : ''}. Work order created.`;
-    const opsPhone =
-      params.phone ?? this.config.get<string>('SMS_OPS_PHONE');
+    const opsPhone = params.phone ?? this.config.get<string>('SMS_OPS_PHONE');
     return this.sendSms(opsPhone, msg);
   }
 
@@ -256,7 +264,10 @@ export class NotificationsService {
       case NotificationChannel.IN_APP:
         return { ok: true, ref: 'in-app' };
       case NotificationChannel.SMS: {
-        const sms = await this.sendSms(delivery.recipient ?? undefined, note.body);
+        const sms = await this.sendSms(
+          delivery.recipient ?? undefined,
+          note.body,
+        );
         return sms.sent
           ? { ok: true, ref: sms.to }
           : { ok: sms.mode === 'log', ref: 'log', error: sms.error };
@@ -264,7 +275,11 @@ export class NotificationsService {
       case NotificationChannel.WHATSAPP:
         return this.sendWhatsApp(delivery.recipient ?? undefined, note.body);
       case NotificationChannel.EMAIL:
-        return this.sendEmail(delivery.recipient ?? undefined, note.title, note.body);
+        return this.sendEmail(
+          delivery.recipient ?? undefined,
+          note.title,
+          note.body,
+        );
       default:
         return { ok: false, error: 'unsupported_channel' };
     }
@@ -305,7 +320,8 @@ export class NotificationsService {
     subject: string,
     body: string,
   ): Promise<{ ok: boolean; ref?: string; error?: string }> {
-    const enabled = this.config.get<string>('EMAIL_ENABLED', 'false') === 'true';
+    const enabled =
+      this.config.get<string>('EMAIL_ENABLED', 'false') === 'true';
     const host = this.config.get<string>('EMAIL_SMTP_HOST');
     if (!to) {
       return { ok: false, error: 'Missing recipient' };
@@ -367,7 +383,9 @@ export class NotificationsService {
     if (!userId) {
       return [NotificationChannel.IN_APP];
     }
-    const prefs = await this.preferencesRepo.find({ where: { userId, eventType } });
+    const prefs = await this.preferencesRepo.find({
+      where: { userId, eventType },
+    });
     if (!prefs.length) {
       return [NotificationChannel.IN_APP, NotificationChannel.SMS];
     }

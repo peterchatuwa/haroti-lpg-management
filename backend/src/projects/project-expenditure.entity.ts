@@ -7,7 +7,9 @@ export class ProjectExpenditure extends BaseEntity {
   @Column({ name: 'project_id' })
   projectId!: string;
 
-  @ManyToOne(() => CapitalProject, (p) => p.expenditures, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CapitalProject, (p) => p.expenditures, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'project_id' })
   project!: CapitalProject;
 

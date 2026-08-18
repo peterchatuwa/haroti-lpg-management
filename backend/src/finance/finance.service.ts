@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -222,7 +219,12 @@ export class FinanceService {
     }
   }
 
-  async postCreditSale(amount: number, refId: string, cogsKg = 0, costPerKg?: number) {
+  async postCreditSale(
+    amount: number,
+    refId: string,
+    cogsKg = 0,
+    costPerKg?: number,
+  ) {
     await this.postEntry({
       eventType: JournalEventType.CUSTOMER_CREDIT_SALE,
       description: `Credit sale ${refId}`,
@@ -376,7 +378,11 @@ export class FinanceService {
     });
   }
 
-  async postRequisitionPayment(amount: number, category: string, refId: string) {
+  async postRequisitionPayment(
+    amount: number,
+    category: string,
+    refId: string,
+  ) {
     return this.postEntry({
       eventType: JournalEventType.REQUISITION_PAYMENT,
       description: `Requisition payment: ${category}`,
@@ -482,7 +488,8 @@ export class FinanceService {
     const rows = await this.aggregateAccountBalances(undefined, end);
 
     const assets: Array<{ code: string; name: string; amount: number }> = [];
-    const liabilities: Array<{ code: string; name: string; amount: number }> = [];
+    const liabilities: Array<{ code: string; name: string; amount: number }> =
+      [];
 
     for (const row of rows) {
       const cls = classifyAccount(row.code);
@@ -543,12 +550,17 @@ export class FinanceService {
 
       for (const line of entry.lines ?? []) {
         if (!cashCodes.has(line.accountCode)) continue;
-        const change = round2(Number(line.debitAmount) - Number(line.creditAmount));
+        const change = round2(
+          Number(line.debitAmount) - Number(line.creditAmount),
+        );
         if (change === 0) continue;
 
         const bucket = this.cashFlowBucket(entry.eventType);
         const label = entry.eventType.replaceAll('_', ' ');
-        buckets[bucket].set(label, round2((buckets[bucket].get(label) ?? 0) + change));
+        buckets[bucket].set(
+          label,
+          round2((buckets[bucket].get(label) ?? 0) + change),
+        );
       }
     }
 

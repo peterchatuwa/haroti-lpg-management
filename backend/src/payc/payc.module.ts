@@ -9,11 +9,7 @@ import { PaycTelemetry } from './payc-telemetry.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      PaycMeter,
-      PaycTelemetry,
-      PaycCreditTransaction,
-    ]),
+    TypeOrmModule.forFeature([PaycMeter, PaycTelemetry, PaycCreditTransaction]),
     FinanceModule,
   ],
   controllers: [PaycController],

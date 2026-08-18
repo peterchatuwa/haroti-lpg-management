@@ -110,10 +110,7 @@ export class BankingService implements OnModuleInit {
     }
   }
 
-  async importBankCsv(params: {
-    bankAccountId: string;
-    csvText: string;
-  }) {
+  async importBankCsv(params: { bankAccountId: string; csvText: string }) {
     const account = await this.bankAccountsRepo.findOne({
       where: { id: params.bankAccountId },
     });
@@ -206,10 +203,7 @@ export class BankingService implements OnModuleInit {
           lines.reduce((s, l) => s + toNumber(l.feeAmount ?? 0), 0),
         ),
         totalNet: round2(
-          lines.reduce(
-            (s, l) => s + toNumber(l.netAmount ?? l.amount),
-            0,
-          ),
+          lines.reduce((s, l) => s + toNumber(l.netAmount ?? l.amount), 0),
         ),
       }));
   }

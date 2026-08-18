@@ -64,7 +64,10 @@ export class NetworkService implements OnModuleInit {
     });
     const openByStation = new Map<string, number>();
     for (const sh of openShifts) {
-      openByStation.set(sh.stationId, (openByStation.get(sh.stationId) ?? 0) + 1);
+      openByStation.set(
+        sh.stationId,
+        (openByStation.get(sh.stationId) ?? 0) + 1,
+      );
     }
 
     return stations.map((s) => {

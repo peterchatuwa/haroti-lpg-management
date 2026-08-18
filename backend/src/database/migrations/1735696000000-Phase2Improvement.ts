@@ -148,11 +148,23 @@ export class Phase2Improvement1735696000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS safety_incidents`);
     await queryRunner.query(`DROP TABLE IF EXISTS cylinder_stocktake_lines`);
     await queryRunner.query(`DROP TABLE IF EXISTS cylinder_stocktakes`);
-    await queryRunner.query(`ALTER TABLE deliveries DROP COLUMN IF EXISTS expected_arrival_at`);
-    await queryRunner.query(`ALTER TABLE stations DROP COLUMN IF EXISTS safety_stock_kg`);
-    await queryRunner.query(`ALTER TABLE stations DROP COLUMN IF EXISTS reorder_level_kg`);
-    await queryRunner.query(`ALTER TABLE stations DROP COLUMN IF EXISTS min_stock_kg`);
-    await queryRunner.query(`ALTER TABLE stations DROP COLUMN IF EXISTS longitude`);
-    await queryRunner.query(`ALTER TABLE stations DROP COLUMN IF EXISTS latitude`);
+    await queryRunner.query(
+      `ALTER TABLE deliveries DROP COLUMN IF EXISTS expected_arrival_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE stations DROP COLUMN IF EXISTS safety_stock_kg`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE stations DROP COLUMN IF EXISTS reorder_level_kg`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE stations DROP COLUMN IF EXISTS min_stock_kg`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE stations DROP COLUMN IF EXISTS longitude`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE stations DROP COLUMN IF EXISTS latitude`,
+    );
   }
 }

@@ -121,7 +121,9 @@ export class InventoryService {
   }
 
   async stockPosition(stationId: string) {
-    const station = await this.stationsRepo.findOne({ where: { id: stationId } });
+    const station = await this.stationsRepo.findOne({
+      where: { id: stationId },
+    });
     if (!station) {
       throw new NotFoundException('Station not found');
     }

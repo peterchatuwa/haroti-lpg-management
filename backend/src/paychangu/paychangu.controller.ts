@@ -35,10 +35,17 @@ export class PaychanguController {
 
   @Post('webhook')
   async webhook(
-    @Body() payload: any,
+    @Body() payload: Record<string, unknown>,
     @Headers('x-paychangu-signature') signature: string,
   ) {
-    await this.paychanguService.processWebhook(payload, signature);
+    await this.paychanguService.processWebhook(
+      payload as {
+        event_type: string;
+        transaction_ref: string;
+        [key: string]: unknown;
+      },
+      signature,
+    );
     return { success: true };
   }
 

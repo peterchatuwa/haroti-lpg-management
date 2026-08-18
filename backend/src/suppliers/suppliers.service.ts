@@ -41,14 +41,18 @@ export class SuppliersService {
       where: { id: dto.customerId },
     });
     if (!customer) {
-      throw new BadRequestException('Customer not found — vendors must be existing customers');
+      throw new BadRequestException(
+        'Customer not found — vendors must be existing customers',
+      );
     }
 
     const existing = await this.suppliersRepo.findOne({
       where: { customerId: dto.customerId },
     });
     if (existing) {
-      throw new BadRequestException('This customer is already registered as a vendor');
+      throw new BadRequestException(
+        'This customer is already registered as a vendor',
+      );
     }
 
     const code = `VND-${customer.customerCode.replace(/^CUS-/, '')}`;

@@ -143,16 +143,36 @@ export class Phase1Improvement1735695000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE mobile_money_lines DROP COLUMN IF EXISTS settlement_batch`);
-    await queryRunner.query(`ALTER TABLE mobile_money_lines DROP COLUMN IF EXISTS net_amount`);
-    await queryRunner.query(`ALTER TABLE mobile_money_lines DROP COLUMN IF EXISTS fee_amount`);
-    await queryRunner.query(`ALTER TABLE suppliers DROP COLUMN IF EXISTS category`);
-    await queryRunner.query(`ALTER TABLE suppliers DROP COLUMN IF EXISTS is_approved_vendor`);
-    await queryRunner.query(`ALTER TABLE suppliers DROP COLUMN IF EXISTS bank_account_mask`);
-    await queryRunner.query(`ALTER TABLE suppliers DROP COLUMN IF EXISTS payment_terms_days`);
-    await queryRunner.query(`ALTER TABLE suppliers DROP COLUMN IF EXISTS tax_id`);
-    await queryRunner.query(`ALTER TABLE suppliers DROP COLUMN IF EXISTS trading_name`);
-    await queryRunner.query(`ALTER TABLE suppliers DROP COLUMN IF EXISTS legal_name`);
+    await queryRunner.query(
+      `ALTER TABLE mobile_money_lines DROP COLUMN IF EXISTS settlement_batch`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE mobile_money_lines DROP COLUMN IF EXISTS net_amount`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE mobile_money_lines DROP COLUMN IF EXISTS fee_amount`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE suppliers DROP COLUMN IF EXISTS category`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE suppliers DROP COLUMN IF EXISTS is_approved_vendor`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE suppliers DROP COLUMN IF EXISTS bank_account_mask`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE suppliers DROP COLUMN IF EXISTS payment_terms_days`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE suppliers DROP COLUMN IF EXISTS tax_id`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE suppliers DROP COLUMN IF EXISTS trading_name`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE suppliers DROP COLUMN IF EXISTS legal_name`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS attachments`);
     await queryRunner.query(`DROP TABLE IF EXISTS supplier_invoices`);
     await queryRunner.query(`DROP TABLE IF EXISTS bank_statement_lines`);

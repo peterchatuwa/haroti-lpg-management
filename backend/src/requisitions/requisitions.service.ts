@@ -95,7 +95,9 @@ export class RequisitionsService {
       dto.lines.reduce((s, l) => s + l.quantity * l.unitCost, 0),
     );
     if (total <= 0) {
-      throw new BadRequestException('Requisition total must be greater than zero');
+      throw new BadRequestException(
+        'Requisition total must be greater than zero',
+      );
     }
 
     const lines = dto.lines.map((l) =>
@@ -124,7 +126,9 @@ export class RequisitionsService {
 
   async approve(id: string, approverId: string, role: UserRole) {
     if (!GM_ROLES.has(role)) {
-      throw new ForbiddenException('Only GM / operations manager can approve requisitions');
+      throw new ForbiddenException(
+        'Only GM / operations manager can approve requisitions',
+      );
     }
 
     const req = await this.findOne(id);
@@ -141,9 +145,16 @@ export class RequisitionsService {
     return this.reqRepo.save(req);
   }
 
-  async reject(id: string, approverId: string, role: UserRole, reason?: string) {
+  async reject(
+    id: string,
+    approverId: string,
+    role: UserRole,
+    reason?: string,
+  ) {
     if (!GM_ROLES.has(role)) {
-      throw new ForbiddenException('Only GM / operations manager can reject requisitions');
+      throw new ForbiddenException(
+        'Only GM / operations manager can reject requisitions',
+      );
     }
 
     const req = await this.findOne(id);
@@ -164,7 +175,9 @@ export class RequisitionsService {
     paymentReference?: string,
   ) {
     if (!FINANCE_ROLES.has(role)) {
-      throw new ForbiddenException('Only finance can mark requisitions as paid');
+      throw new ForbiddenException(
+        'Only finance can mark requisitions as paid',
+      );
     }
 
     const req = await this.findOne(id);
@@ -184,7 +197,8 @@ export class RequisitionsService {
     req.status = RequisitionStatus.PAID;
     req.paidById = payerId;
     req.paidAt = new Date();
-    req.paymentReference = paymentReference ?? `PAY-${Date.now().toString().slice(-8)}`;
+    req.paymentReference =
+      paymentReference ?? `PAY-${Date.now().toString().slice(-8)}`;
     return this.reqRepo.save(req);
   }
 }

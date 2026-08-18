@@ -51,16 +51,21 @@ export class IoTService {
       this.readingsRepo.create({
         deviceId: device.id,
         levelKg: params.levelKg != null ? String(params.levelKg) : null,
-        pressureBar: params.pressureBar != null ? String(params.pressureBar) : null,
+        pressureBar:
+          params.pressureBar != null ? String(params.pressureBar) : null,
         temperatureC:
           params.temperatureC != null ? String(params.temperatureC) : null,
         rawPayload: params.raw ?? null,
-        recordedAt: params.recordedAt ? new Date(params.recordedAt) : new Date(),
+        recordedAt: params.recordedAt
+          ? new Date(params.recordedAt)
+          : new Date(),
       }),
     );
 
     if (device.tankId && params.levelKg != null) {
-      const tank = await this.tanksRepo.findOne({ where: { id: device.tankId } });
+      const tank = await this.tanksRepo.findOne({
+        where: { id: device.tankId },
+      });
       if (tank) {
         tank.currentStockKg = String(params.levelKg);
         await this.tanksRepo.save(tank);

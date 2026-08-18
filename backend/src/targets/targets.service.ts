@@ -6,7 +6,12 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { asDecimal, round2, round3, toNumber } from '../common/decimal';
-import { SaleStatus, TargetMetric, TargetPeriod, TargetScope } from '../common/enums';
+import {
+  SaleStatus,
+  TargetMetric,
+  TargetPeriod,
+  TargetScope,
+} from '../common/enums';
 import { Sale } from '../sales/sale.entity';
 import { CreateTargetDto } from './dto/create-target.dto';
 import { Target } from './target.entity';
@@ -21,9 +26,7 @@ export class TargetsService {
   ) {}
 
   list(stationId?: string) {
-    const where = stationId
-      ? [{ scope: TargetScope.STATION, stationId }]
-      : {};
+    const where = stationId ? [{ scope: TargetScope.STATION, stationId }] : {};
     return this.targetsRepo.find({
       where,
       relations: { station: true },
@@ -111,8 +114,17 @@ export class TargetsService {
     const now = new Date();
     const targets = await this.targetsRepo.find({
       where: stationId
-        ? { stationId, periodType: TargetPeriod.MONTH, year: now.getFullYear(), period: now.getMonth() + 1 }
-        : { periodType: TargetPeriod.MONTH, year: now.getFullYear(), period: now.getMonth() + 1 },
+        ? {
+            stationId,
+            periodType: TargetPeriod.MONTH,
+            year: now.getFullYear(),
+            period: now.getMonth() + 1,
+          }
+        : {
+            periodType: TargetPeriod.MONTH,
+            year: now.getFullYear(),
+            period: now.getMonth() + 1,
+          },
       relations: { station: true },
     });
 

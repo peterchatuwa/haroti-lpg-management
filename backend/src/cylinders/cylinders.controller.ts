@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtPayload } from '../auth/jwt-payload';
@@ -14,7 +22,10 @@ export class CylindersController {
   ) {}
 
   @Get()
-  list(@CurrentUser() user: JwtPayload, @Query('stationId') stationId?: string) {
+  list(
+    @CurrentUser() user: JwtPayload,
+    @Query('stationId') stationId?: string,
+  ) {
     const scoped = this.stationScope.resolveStationFilter(user, stationId);
     return this.cylindersService.findAll(scoped);
   }
