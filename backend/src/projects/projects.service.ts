@@ -104,7 +104,9 @@ export class ProjectsService {
   }
 
   async completeMilestone(milestoneId: string) {
-    const ms = await this.milestonesRepo.findOne({ where: { id: milestoneId } });
+    const ms = await this.milestonesRepo.findOne({
+      where: { id: milestoneId },
+    });
     if (!ms) throw new NotFoundException('Milestone not found');
     ms.isCompleted = true;
     return this.milestonesRepo.save(ms);
@@ -132,7 +134,9 @@ export class ProjectsService {
         spentToDate: toNumber(p.spentToDate),
         utilizationPercent:
           toNumber(p.approvedBudget) > 0
-            ? round2((toNumber(p.spentToDate) / toNumber(p.approvedBudget)) * 100)
+            ? round2(
+                (toNumber(p.spentToDate) / toNumber(p.approvedBudget)) * 100,
+              )
             : 0,
         grantReference: p.grantReference,
         station: p.station?.code,

@@ -71,10 +71,7 @@ export class FinanceController {
     UserRole.DIRECTOR,
     UserRole.OPERATIONS_MANAGER,
   )
-  budgetVsActual(
-    @Query('year') year?: string,
-    @Query('month') month?: string,
-  ) {
+  budgetVsActual(@Query('year') year?: string, @Query('month') month?: string) {
     const now = new Date();
     return this.financeService.budgetVsActual(
       Number(year ?? now.getFullYear()),

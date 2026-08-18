@@ -79,7 +79,9 @@ export class ThreeWayMatchService {
     });
     if (!invoice) throw new NotFoundException('Invoice not found');
     if (!invoice.purchaseOrderId || !invoice.purchaseOrder) {
-      throw new BadRequestException('Invoice is not linked to a purchase order');
+      throw new BadRequestException(
+        'Invoice is not linked to a purchase order',
+      );
     }
 
     const po = invoice.purchaseOrder;
@@ -87,8 +89,7 @@ export class ThreeWayMatchService {
     const grnReceived = po.lines.every((l) => l.quantityReceived >= l.quantity);
     const invoiceAmount = toNumber(invoice.amount);
     const variance = round2(invoiceAmount - poAmount);
-    const variancePct =
-      poAmount > 0 ? Math.abs(variance / poAmount) * 100 : 0;
+    const variancePct = poAmount > 0 ? Math.abs(variance / poAmount) * 100 : 0;
 
     let matchStatus = ThreeWayMatchStatus.MATCHED;
     if (!grnReceived) {
@@ -108,7 +109,9 @@ export class ThreeWayMatchService {
   }
 
   async approveVariance(invoiceId: string) {
-    const invoice = await this.invoicesRepo.findOne({ where: { id: invoiceId } });
+    const invoice = await this.invoicesRepo.findOne({
+      where: { id: invoiceId },
+    });
     if (!invoice) throw new NotFoundException('Invoice not found');
     if (invoice.matchStatus !== ThreeWayMatchStatus.VARIANCE) {
       throw new BadRequestException('Invoice has no variance to approve');

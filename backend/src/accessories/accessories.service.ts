@@ -6,11 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { asDecimal, round2, toNumber } from '../common/decimal';
-import {
-  ProductCategory,
-  SalesChannel,
-  StockOwnership,
-} from '../common/enums';
+import { ProductCategory, SalesChannel, StockOwnership } from '../common/enums';
 import { Product } from '../products/product.entity';
 import { AccessoryStock } from './accessory-stock.entity';
 import { ChannelPrice } from './channel-price.entity';
@@ -58,7 +54,9 @@ export class AccessoriesService {
       where: { productId, channel, isActive: true },
     });
     if (price) return toNumber(price.unitPrice);
-    const product = await this.productsRepo.findOne({ where: { id: productId } });
+    const product = await this.productsRepo.findOne({
+      where: { id: productId },
+    });
     return toNumber(product?.unitPrice ?? 0);
   }
 

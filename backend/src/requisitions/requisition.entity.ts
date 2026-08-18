@@ -24,7 +24,11 @@ export class Requisition extends BaseEntity {
   @JoinColumn({ name: 'requested_by_id' })
   requestedBy!: User;
 
-  @Column({ type: 'enum', enum: RequisitionStatus, default: RequisitionStatus.SUBMITTED })
+  @Column({
+    type: 'enum',
+    enum: RequisitionStatus,
+    default: RequisitionStatus.SUBMITTED,
+  })
   status!: RequisitionStatus;
 
   @Column({ length: 80 })
@@ -62,7 +66,12 @@ export class Requisition extends BaseEntity {
   @Column({ name: 'paid_at', type: 'timestamptz', nullable: true })
   paidAt?: Date | null;
 
-  @Column({ name: 'payment_reference', type: 'varchar', length: 80, nullable: true })
+  @Column({
+    name: 'payment_reference',
+    type: 'varchar',
+    length: 80,
+    nullable: true,
+  })
   paymentReference?: string | null;
 
   @Column({ name: 'rejection_reason', type: 'text', nullable: true })

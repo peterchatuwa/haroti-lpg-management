@@ -21,6 +21,11 @@ export class WorkflowStep extends BaseEntity {
   @Column({ name: 'escalation_hours', type: 'int', default: 24 })
   escalationHours!: number;
 
-  @Column({ name: 'fallback_role', type: 'varchar', length: 40, nullable: true })
+  @Column({
+    name: 'fallback_role',
+    type: 'varchar',
+    length: 40,
+    nullable: true,
+  })
   fallbackRole?: UserRole | null;
 }

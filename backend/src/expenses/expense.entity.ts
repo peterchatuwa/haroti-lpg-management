@@ -31,7 +31,11 @@ export class Expense extends BaseEntity {
   @Column({ name: 'receipt_reference', length: 120, nullable: true })
   receiptReference?: string;
 
-  @Column({ type: 'enum', enum: ExpenseStatus, default: ExpenseStatus.SUBMITTED })
+  @Column({
+    type: 'enum',
+    enum: ExpenseStatus,
+    default: ExpenseStatus.SUBMITTED,
+  })
   status!: ExpenseStatus;
 
   @Column({ name: 'shift_id', type: 'uuid', nullable: true })

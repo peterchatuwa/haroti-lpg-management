@@ -224,7 +224,10 @@ export class ProcurementService {
 
     await this.threeWayMatch.assertPayable(id);
 
-    await this.financeService.postSupplierPayment(toNumber(po.totalAmount), po.id);
+    await this.financeService.postSupplierPayment(
+      toNumber(po.totalAmount),
+      po.id,
+    );
     await this.threeWayMatch.markPaid(id);
     po.status = PurchaseOrderStatus.PAID;
     po.notes = paymentReference

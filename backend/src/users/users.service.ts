@@ -85,10 +85,14 @@ export class UsersService {
     if (sendInvite) {
       await this.assertPermission(actor, 'staff.invite');
       if (!dto.email?.trim()) {
-        throw new BadRequestException('Email is required when sending an invite');
+        throw new BadRequestException(
+          'Email is required when sending an invite',
+        );
       }
     } else if (!dto.password) {
-      throw new BadRequestException('Password is required unless sending an invite');
+      throw new BadRequestException(
+        'Password is required unless sending an invite',
+      );
     }
 
     const username = dto.username.trim().toLowerCase();
@@ -109,7 +113,9 @@ export class UsersService {
         10,
       ),
       role: dto.role,
-      stationId: STATION_SCOPED_ROLES.has(dto.role) ? dto.stationId ?? null : null,
+      stationId: STATION_SCOPED_ROLES.has(dto.role)
+        ? (dto.stationId ?? null)
+        : null,
       isActive: dto.isActive ?? true,
       canOverridePrice: dto.canOverridePrice ?? false,
       discountLimitPercent: asDecimal(dto.discountLimitPercent ?? 0, 2),
@@ -128,7 +134,9 @@ export class UsersService {
     const user = await this.getUserOrThrow(id);
     this.assertCanViewUser(actor, user);
     if (!user.email) {
-      throw new BadRequestException('Staff member has no email address on file');
+      throw new BadRequestException(
+        'Staff member has no email address on file',
+      );
     }
     await this.sendInvite(user);
     return this.toResponse(await this.getUserOrThrow(id));
@@ -158,9 +166,9 @@ export class UsersService {
         ? dto.stationId
         : dto.role !== undefined
           ? STATION_SCOPED_ROLES.has(nextRole)
-            ? user.stationId ?? null
+            ? (user.stationId ?? null)
             : null
-          : user.stationId ?? null;
+          : (user.stationId ?? null);
 
     await this.validateStationAssignment(nextRole, nextStationId);
 
@@ -229,7 +237,9 @@ export class UsersService {
       permission,
     );
     if (!allowed) {
-      throw new ForbiddenException('You do not have permission to manage staff');
+      throw new ForbiddenException(
+        'You do not have permission to manage staff',
+      );
     }
   }
 
@@ -251,16 +261,23 @@ export class UsersService {
     }
 
     if (ADMIN_ONLY_ROLES.has(role) && actor.role !== UserRole.SYSTEM_ADMIN) {
-      throw new ForbiddenException('Only system admins can assign the system admin role');
+      throw new ForbiddenException(
+        'Only system admins can assign the system admin role',
+      );
     }
   }
 
-  private async validateStationAssignment(role: UserRole, stationId: string | null) {
+  private async validateStationAssignment(
+    role: UserRole,
+    stationId: string | null,
+  ) {
     if (STATION_SCOPED_ROLES.has(role)) {
       if (!stationId) {
         throw new BadRequestException('A station is required for this role');
       }
-      const station = await this.stationsRepo.findOne({ where: { id: stationId } });
+      const station = await this.stationsRepo.findOne({
+        where: { id: stationId },
+      });
       if (!station) {
         throw new BadRequestException('Selected station was not found');
       }
@@ -268,7 +285,9 @@ export class UsersService {
     }
 
     if (stationId) {
-      throw new BadRequestException('Network roles cannot be assigned to a station');
+      throw new BadRequestException(
+        'Network roles cannot be assigned to a station',
+      );
     }
   }
 

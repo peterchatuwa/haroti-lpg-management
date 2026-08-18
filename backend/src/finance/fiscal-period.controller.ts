@@ -1,6 +1,9 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { FiscalPeriodService, PostingRuleService } from './fiscal-period.service';
+import {
+  FiscalPeriodService,
+  PostingRuleService,
+} from './fiscal-period.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('finance')

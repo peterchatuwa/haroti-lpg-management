@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -59,7 +63,11 @@ export class AuthService {
       where: { inviteTokenHash: tokenHash },
       relations: { station: true },
     });
-    if (!user || !user.inviteExpiresAt || user.inviteExpiresAt.getTime() < Date.now()) {
+    if (
+      !user ||
+      !user.inviteExpiresAt ||
+      user.inviteExpiresAt.getTime() < Date.now()
+    ) {
       throw new BadRequestException('Invite link is invalid or has expired');
     }
     if (!user.isActive) {
@@ -98,7 +106,9 @@ export class AuthService {
   }
 
   private async buildUserProfile(user: User) {
-    const permissions = await this.permissionsService.getPermissionsForRole(user.role);
+    const permissions = await this.permissionsService.getPermissionsForRole(
+      user.role,
+    );
     return {
       id: user.id,
       username: user.username,

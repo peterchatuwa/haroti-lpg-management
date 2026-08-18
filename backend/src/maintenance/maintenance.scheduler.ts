@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { MaintenanceService } from './maintenance.service';
 
 /** Runs hydro-test work-order generation once daily at startup and every 24h. */
@@ -11,7 +16,10 @@ export class MaintenanceScheduler implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     void this.runHydroJob();
-    this.timer = setInterval(() => void this.runHydroJob(), 24 * 60 * 60 * 1000);
+    this.timer = setInterval(
+      () => void this.runHydroJob(),
+      24 * 60 * 60 * 1000,
+    );
   }
 
   onModuleDestroy() {

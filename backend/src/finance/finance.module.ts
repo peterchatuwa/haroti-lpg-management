@@ -34,7 +34,17 @@ import { PostingRule } from './posting-rule.entity';
     ]),
   ],
   controllers: [FinanceController, FiscalPeriodController, AgeingController],
-  providers: [FinanceService, FiscalPeriodService, PostingRuleService, AgeingService],
-  exports: [FinanceService, FiscalPeriodService, PostingRuleService, AgeingService],
+  providers: [
+    FinanceService,
+    FiscalPeriodService,
+    PostingRuleService,
+    AgeingService,
+  ],
+  exports: [
+    FinanceService,
+    FiscalPeriodService,
+    PostingRuleService,
+    AgeingService,
+  ],
 })
 export class FinanceModule {}

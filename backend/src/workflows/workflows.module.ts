@@ -11,11 +11,7 @@ import { WorkflowsService } from './workflows.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      WorkflowDefinition,
-      WorkflowStep,
-      ApprovalTask,
-    ]),
+    TypeOrmModule.forFeature([WorkflowDefinition, WorkflowStep, ApprovalTask]),
   ],
   controllers: [WorkflowsController, ApprovalTasksController],
   providers: [WorkflowsService],

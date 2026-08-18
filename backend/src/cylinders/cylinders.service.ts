@@ -5,7 +5,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CylinderMovementType, CylinderStatus, StocktakeStatus, WorkOrderType } from '../common/enums';
+import {
+  CylinderMovementType,
+  CylinderStatus,
+  StocktakeStatus,
+  WorkOrderType,
+} from '../common/enums';
 import { Customer } from '../customers/customer.entity';
 import { MaintenanceWorkOrder } from '../maintenance/work-order.entity';
 import { CylinderMovement } from './cylinder-movement.entity';

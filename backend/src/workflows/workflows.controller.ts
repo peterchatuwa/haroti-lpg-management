@@ -37,16 +37,12 @@ export class ApprovalTasksController {
     @CurrentUser() user: JwtPayload,
     @Query('stationId') stationId?: string,
   ) {
-    return this.workflowsService.inbox(user.role as UserRole, stationId);
+    return this.workflowsService.inbox(user.role, stationId);
   }
 
   @Post(':id/approve')
   approve(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.workflowsService.approve(
-      id,
-      user.sub,
-      user.role as UserRole,
-    );
+    return this.workflowsService.approve(id, user.sub, user.role);
   }
 
   @Post(':id/reject')
@@ -55,6 +51,6 @@ export class ApprovalTasksController {
     @CurrentUser() user: JwtPayload,
     @Body() body: { reason?: string },
   ) {
-    return this.workflowsService.reject(id, user.sub, user.role as UserRole);
+    return this.workflowsService.reject(id, user.sub, user.role);
   }
 }

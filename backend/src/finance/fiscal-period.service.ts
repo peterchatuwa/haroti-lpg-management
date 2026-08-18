@@ -29,7 +29,9 @@ export class FiscalPeriodService implements OnModuleInit {
       .getOne();
 
     if (period?.status === FiscalPeriodStatus.HARD_CLOSED) {
-      throw new BadRequestException('Cannot post to a hard-closed fiscal period');
+      throw new BadRequestException(
+        'Cannot post to a hard-closed fiscal period',
+      );
     }
   }
 
@@ -37,7 +39,9 @@ export class FiscalPeriodService implements OnModuleInit {
     const now = new Date();
     const year = now.getFullYear();
     const period = now.getMonth() + 1;
-    const existing = await this.periodsRepo.findOne({ where: { year, period } });
+    const existing = await this.periodsRepo.findOne({
+      where: { year, period },
+    });
     if (existing) return existing;
 
     const start = new Date(year, period - 1, 1);
@@ -60,17 +64,72 @@ const DEFAULT_RULES: Array<{
   account: (typeof GL_ACCOUNTS)[keyof typeof GL_ACCOUNTS];
   side: 'DEBIT' | 'CREDIT';
 }> = [
-  { eventType: JournalEventType.LPG_REFILL_SALE, lineRole: 'CASH', account: GL_ACCOUNTS.CASH, side: 'DEBIT' },
-  { eventType: JournalEventType.LPG_REFILL_SALE, lineRole: 'REVENUE', account: GL_ACCOUNTS.REVENUE_LPG, side: 'CREDIT' },
-  { eventType: JournalEventType.LPG_COGS, lineRole: 'COGS', account: GL_ACCOUNTS.COGS_LPG, side: 'DEBIT' },
-  { eventType: JournalEventType.LPG_COGS, lineRole: 'INVENTORY', account: GL_ACCOUNTS.INVENTORY_BULK_LPG, side: 'CREDIT' },
-  { eventType: JournalEventType.CUSTOMER_CREDIT_SALE, lineRole: 'AR', account: GL_ACCOUNTS.AR_CUSTOMER, side: 'DEBIT' },
-  { eventType: JournalEventType.CUSTOMER_PAYMENT, lineRole: 'CASH', account: GL_ACCOUNTS.CASH, side: 'DEBIT' },
-  { eventType: JournalEventType.CUSTOMER_PAYMENT, lineRole: 'AR', account: GL_ACCOUNTS.AR_CUSTOMER, side: 'CREDIT' },
-  { eventType: JournalEventType.BUNDLE_SALE, lineRole: 'CASH', account: GL_ACCOUNTS.CASH, side: 'DEBIT' },
-  { eventType: JournalEventType.BUNDLE_SALE, lineRole: 'REVENUE', account: GL_ACCOUNTS.REVENUE_BUNDLE, side: 'CREDIT' },
-  { eventType: JournalEventType.AGENT_COMMISSION, lineRole: 'COMMISSION', account: GL_ACCOUNTS.COMMISSION_PAYABLE, side: 'CREDIT' },
-  { eventType: JournalEventType.AGENT_COMMISSION, lineRole: 'COGS', account: GL_ACCOUNTS.COGS_ACCESSORY, side: 'DEBIT' },
+  {
+    eventType: JournalEventType.LPG_REFILL_SALE,
+    lineRole: 'CASH',
+    account: GL_ACCOUNTS.CASH,
+    side: 'DEBIT',
+  },
+  {
+    eventType: JournalEventType.LPG_REFILL_SALE,
+    lineRole: 'REVENUE',
+    account: GL_ACCOUNTS.REVENUE_LPG,
+    side: 'CREDIT',
+  },
+  {
+    eventType: JournalEventType.LPG_COGS,
+    lineRole: 'COGS',
+    account: GL_ACCOUNTS.COGS_LPG,
+    side: 'DEBIT',
+  },
+  {
+    eventType: JournalEventType.LPG_COGS,
+    lineRole: 'INVENTORY',
+    account: GL_ACCOUNTS.INVENTORY_BULK_LPG,
+    side: 'CREDIT',
+  },
+  {
+    eventType: JournalEventType.CUSTOMER_CREDIT_SALE,
+    lineRole: 'AR',
+    account: GL_ACCOUNTS.AR_CUSTOMER,
+    side: 'DEBIT',
+  },
+  {
+    eventType: JournalEventType.CUSTOMER_PAYMENT,
+    lineRole: 'CASH',
+    account: GL_ACCOUNTS.CASH,
+    side: 'DEBIT',
+  },
+  {
+    eventType: JournalEventType.CUSTOMER_PAYMENT,
+    lineRole: 'AR',
+    account: GL_ACCOUNTS.AR_CUSTOMER,
+    side: 'CREDIT',
+  },
+  {
+    eventType: JournalEventType.BUNDLE_SALE,
+    lineRole: 'CASH',
+    account: GL_ACCOUNTS.CASH,
+    side: 'DEBIT',
+  },
+  {
+    eventType: JournalEventType.BUNDLE_SALE,
+    lineRole: 'REVENUE',
+    account: GL_ACCOUNTS.REVENUE_BUNDLE,
+    side: 'CREDIT',
+  },
+  {
+    eventType: JournalEventType.AGENT_COMMISSION,
+    lineRole: 'COMMISSION',
+    account: GL_ACCOUNTS.COMMISSION_PAYABLE,
+    side: 'CREDIT',
+  },
+  {
+    eventType: JournalEventType.AGENT_COMMISSION,
+    lineRole: 'COGS',
+    account: GL_ACCOUNTS.COGS_ACCESSORY,
+    side: 'DEBIT',
+  },
 ];
 
 @Injectable()

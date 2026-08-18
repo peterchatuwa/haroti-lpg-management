@@ -130,12 +130,19 @@ export class WorkflowsService {
       });
       if (!definition?.steps?.length) continue;
 
-      const steps = [...definition.steps].sort((a, b) => a.stepOrder - b.stepOrder);
+      const steps = [...definition.steps].sort(
+        (a, b) => a.stepOrder - b.stepOrder,
+      );
       const current = steps.find((s) => s.stepOrder === task.currentStep);
       const next =
         steps.find((s) => s.stepOrder > task.currentStep) ??
         (current?.fallbackRole
-          ? { ...current, approverRole: current.fallbackRole, stepOrder: task.currentStep + 1, escalationHours: current.escalationHours }
+          ? {
+              ...current,
+              approverRole: current.fallbackRole,
+              stepOrder: task.currentStep + 1,
+              escalationHours: current.escalationHours,
+            }
           : null);
 
       if (!next) {

@@ -17,30 +17,38 @@ export class BankingController {
   }
 
   @Post('mobile-money/import')
-  @Roles(UserRole.FINANCE_MANAGER, UserRole.STATION_MANAGER, UserRole.SYSTEM_ADMIN)
-  import(
-    @Body() body: { stationId?: string; csvText: string },
-  ) {
+  @Roles(
+    UserRole.FINANCE_MANAGER,
+    UserRole.STATION_MANAGER,
+    UserRole.SYSTEM_ADMIN,
+  )
+  import(@Body() body: { stationId?: string; csvText: string }) {
     return this.bankingService.importCsv(body);
   }
 
   @Get('mobile-money/lines')
-  @Roles(UserRole.FINANCE_MANAGER, UserRole.STATION_MANAGER, UserRole.SYSTEM_ADMIN)
+  @Roles(
+    UserRole.FINANCE_MANAGER,
+    UserRole.STATION_MANAGER,
+    UserRole.SYSTEM_ADMIN,
+  )
   lines(@Query('stationId') stationId?: string) {
     return this.bankingService.reconciliation(stationId);
   }
 
   @Get('mobile-money/summary')
-  @Roles(UserRole.FINANCE_MANAGER, UserRole.STATION_MANAGER, UserRole.SYSTEM_ADMIN)
+  @Roles(
+    UserRole.FINANCE_MANAGER,
+    UserRole.STATION_MANAGER,
+    UserRole.SYSTEM_ADMIN,
+  )
   summary(@Query('stationId') stationId?: string) {
     return this.bankingService.summary(stationId);
   }
 
   @Post('statements/import')
   @Roles(UserRole.FINANCE_MANAGER, UserRole.DIRECTOR, UserRole.SYSTEM_ADMIN)
-  importBank(
-    @Body() body: { bankAccountId: string; csvText: string },
-  ) {
+  importBank(@Body() body: { bankAccountId: string; csvText: string }) {
     return this.bankingService.importBankCsv(body);
   }
 

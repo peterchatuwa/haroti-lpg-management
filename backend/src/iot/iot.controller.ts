@@ -44,7 +44,11 @@ export class IoTController {
 
   @Get('devices')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.OPERATIONS_MANAGER, UserRole.STATION_MANAGER, UserRole.SYSTEM_ADMIN)
+  @Roles(
+    UserRole.OPERATIONS_MANAGER,
+    UserRole.STATION_MANAGER,
+    UserRole.SYSTEM_ADMIN,
+  )
   devices(@Query('stationId') stationId?: string) {
     return this.iotService.listDevices(stationId);
   }

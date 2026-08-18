@@ -38,7 +38,11 @@ export class LoyaltyService {
     });
     if (!account) {
       account = await this.accountsRepo.save(
-        this.accountsRepo.create({ customerId, pointsBalance: 0, lifetimeEarned: 0 }),
+        this.accountsRepo.create({
+          customerId,
+          pointsBalance: 0,
+          lifetimeEarned: 0,
+        }),
       );
       account = (await this.accountsRepo.findOne({
         where: { id: account.id },
@@ -92,7 +96,9 @@ export class LoyaltyService {
     referenceType?: string,
     referenceId?: string,
   ) {
-    const customer = await this.customersRepo.findOne({ where: { id: customerId } });
+    const customer = await this.customersRepo.findOne({
+      where: { id: customerId },
+    });
     if (!customer) throw new NotFoundException('Customer not found');
 
     const account = await this.getOrCreate(customerId);

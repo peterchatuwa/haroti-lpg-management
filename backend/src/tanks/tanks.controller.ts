@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtPayload } from '../auth/jwt-payload';
@@ -17,7 +25,10 @@ export class TanksController {
   ) {}
 
   @Get()
-  list(@CurrentUser() user: JwtPayload, @Query('stationId') stationId?: string) {
+  list(
+    @CurrentUser() user: JwtPayload,
+    @Query('stationId') stationId?: string,
+  ) {
     const scoped = this.stationScope.resolveStationFilter(user, stationId);
     return this.tanksService.listTanks(scoped);
   }
@@ -98,7 +109,8 @@ export class TanksController {
   @Post('loss-cases/:id/actions')
   addLossAction(
     @Param('id') id: string,
-    @Body() body: { description: string; assignedToId?: string; dueDate?: string },
+    @Body()
+    body: { description: string; assignedToId?: string; dueDate?: string },
   ) {
     return this.tanksService.addLossCaseAction(id, body);
   }

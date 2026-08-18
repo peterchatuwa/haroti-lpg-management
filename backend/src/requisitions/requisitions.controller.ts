@@ -60,7 +60,12 @@ export class RequisitionsController {
     @Body() body: { reason?: string },
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.requisitionsService.reject(id, user.sub, user.role, body.reason);
+    return this.requisitionsService.reject(
+      id,
+      user.sub,
+      user.role,
+      body.reason,
+    );
   }
 
   @Post(':id/pay')

@@ -23,7 +23,14 @@ import { SalesService } from './sales.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Sale, SaleItem, SalePayment, PriceList, AuditLog, User]),
+    TypeOrmModule.forFeature([
+      Sale,
+      SaleItem,
+      SalePayment,
+      PriceList,
+      AuditLog,
+      User,
+    ]),
     InventoryModule,
     StationsModule,
     ShiftsModule,

@@ -20,7 +20,8 @@ import { Station } from '../stations/station.entity';
 export class ReportsService {
   constructor(
     @InjectRepository(Sale) private readonly salesRepo: Repository<Sale>,
-    @InjectRepository(Station) private readonly stationsRepo: Repository<Station>,
+    @InjectRepository(Station)
+    private readonly stationsRepo: Repository<Station>,
     @InjectRepository(MaintenanceWorkOrder)
     private readonly woRepo: Repository<MaintenanceWorkOrder>,
     private readonly financeService: FinanceService,
@@ -43,8 +44,10 @@ export class ReportsService {
       relations: { station: true },
     });
 
-    const byStream: Record<string, { revenue: number; kg: number; count: number }> =
-      {};
+    const byStream: Record<
+      string,
+      { revenue: number; kg: number; count: number }
+    > = {};
     for (const stream of Object.values(CommercialStream)) {
       byStream[stream] = { revenue: 0, kg: 0, count: 0 };
     }
@@ -63,8 +66,12 @@ export class ReportsService {
       );
     }
 
-    const totalKg = round3(sales.reduce((s, x) => s + toNumber(x.lpgQuantityKg), 0));
-    const totalRev = round2(sales.reduce((s, x) => s + toNumber(x.totalAmount), 0));
+    const totalKg = round3(
+      sales.reduce((s, x) => s + toNumber(x.lpgQuantityKg), 0),
+    );
+    const totalRev = round2(
+      sales.reduce((s, x) => s + toNumber(x.totalAmount), 0),
+    );
     const grossMarginPerKg =
       totalKg > 0 ? round2((totalRev - totalKg * 1200) / totalKg) : 0;
 
@@ -76,7 +83,10 @@ export class ReportsService {
     );
     const projects = await this.projectsService.portfolioSummary();
     const openWo = await this.woRepo.count({
-      where: [{ status: WorkOrderStatus.OPEN }, { status: WorkOrderStatus.IN_PROGRESS }],
+      where: [
+        { status: WorkOrderStatus.OPEN },
+        { status: WorkOrderStatus.IN_PROGRESS },
+      ],
     });
 
     return {

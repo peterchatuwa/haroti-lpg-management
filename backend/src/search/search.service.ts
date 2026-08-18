@@ -119,11 +119,12 @@ export class SearchService {
     const cylinders = await this.cylindersRepo
       .createQueryBuilder('cyl')
       .leftJoinAndSelect('cyl.station', 'station')
-      .where(
-        '(cyl.serial_number ILIKE :term OR cyl.barcode ILIKE :term)',
-        { term },
-      )
-      .andWhere(stationId ? 'cyl.station_id = :stationId' : '1=1', { stationId })
+      .where('(cyl.serial_number ILIKE :term OR cyl.barcode ILIKE :term)', {
+        term,
+      })
+      .andWhere(stationId ? 'cyl.station_id = :stationId' : '1=1', {
+        stationId,
+      })
       .orderBy('cyl.serial_number', 'ASC')
       .take(perType)
       .getMany();
@@ -143,10 +144,9 @@ export class SearchService {
       .leftJoinAndSelect('po.supplier', 'supplier')
       .leftJoinAndSelect('po.destinationStation', 'station')
       .where('po.po_number ILIKE :term', { term })
-      .andWhere(
-        stationId ? 'po.destination_station_id = :stationId' : '1=1',
-        { stationId },
-      )
+      .andWhere(stationId ? 'po.destination_station_id = :stationId' : '1=1', {
+        stationId,
+      })
       .orderBy('po.created_at', 'DESC')
       .take(perType)
       .getMany();
@@ -163,9 +163,12 @@ export class SearchService {
 
     const suppliers = await this.suppliersRepo
       .createQueryBuilder('sup')
-      .where('(sup.code ILIKE :term OR sup.name ILIKE :term OR sup.phone ILIKE :term)', {
-        term,
-      })
+      .where(
+        '(sup.code ILIKE :term OR sup.name ILIKE :term OR sup.phone ILIKE :term)',
+        {
+          term,
+        },
+      )
       .andWhere('sup.is_active = true')
       .orderBy('sup.name', 'ASC')
       .take(perType)
@@ -181,13 +184,12 @@ export class SearchService {
       });
     }
 
-    if (FINANCE_ROLES.has(user.role as UserRole)) {
+    if (FINANCE_ROLES.has(user.role)) {
       const journals = await this.journalsRepo
         .createQueryBuilder('j')
-        .where(
-          '(j.entry_number ILIKE :term OR j.description ILIKE :term)',
-          { term },
-        )
+        .where('(j.entry_number ILIKE :term OR j.description ILIKE :term)', {
+          term,
+        })
         .orderBy('j.posted_at', 'DESC')
         .take(perType)
         .getMany();

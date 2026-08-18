@@ -75,6 +75,8 @@ import { LoyaltyAccount } from '../loyalty/loyalty-account.entity';
 import { LoyaltyTransaction } from '../loyalty/loyalty-transaction.entity';
 import { CustomerOtpChallenge } from '../customer-portal/customer-otp-challenge.entity';
 import { RefillRequest } from '../customer-portal/refill-request.entity';
+import { PaychanguTransaction } from '../paychangu/paychangu-transaction.entity';
+import { PaychanguWebhook } from '../paychangu/paychangu-webhook.entity';
 
 export const ENTITIES = [
   Station,
@@ -154,4 +156,6 @@ export const ENTITIES = [
   RefillRequest,
   Permission,
   RolePermission,
+  PaychanguTransaction,
+  PaychanguWebhook,
 ];

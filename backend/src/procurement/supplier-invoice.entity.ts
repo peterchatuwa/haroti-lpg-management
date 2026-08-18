@@ -1,9 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../common/entities/base.entity';
-import {
-  SupplierInvoiceStatus,
-  ThreeWayMatchStatus,
-} from '../common/enums';
+import { SupplierInvoiceStatus, ThreeWayMatchStatus } from '../common/enums';
 import { PurchaseOrder } from './purchase-order.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 
@@ -35,7 +32,13 @@ export class SupplierInvoice extends BaseEntity {
   @Column({ type: 'decimal', precision: 14, scale: 2 })
   amount!: string;
 
-  @Column({ name: 'tax_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'tax_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   taxAmount!: string;
 
   @Column({
@@ -53,7 +56,13 @@ export class SupplierInvoice extends BaseEntity {
   })
   matchStatus!: ThreeWayMatchStatus;
 
-  @Column({ name: 'variance_amount', type: 'decimal', precision: 14, scale: 2, nullable: true })
+  @Column({
+    name: 'variance_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
   varianceAmount?: string;
 
   @Column({ type: 'text', nullable: true })

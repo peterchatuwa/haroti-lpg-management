@@ -58,7 +58,8 @@ export class TransfersService {
           description: item.description,
           quantityDispatched: asDecimal(item.quantityDispatched),
           cylinderSerial: item.cylinderSerial,
-          unit: item.unit ?? (item.itemType === TransferItemType.LPG ? 'kg' : 'ea'),
+          unit:
+            item.unit ?? (item.itemType === TransferItemType.LPG ? 'kg' : 'ea'),
         }),
       ),
     });
@@ -96,13 +97,17 @@ export class TransfersService {
         transfer.status,
       )
     ) {
-      throw new BadRequestException('Transfer cannot be received in current status');
+      throw new BadRequestException(
+        'Transfer cannot be received in current status',
+      );
     }
 
     for (const received of dto.items) {
       const item = transfer.items.find((i) => i.id === received.itemId);
       if (!item) {
-        throw new BadRequestException(`Unknown transfer item ${received.itemId}`);
+        throw new BadRequestException(
+          `Unknown transfer item ${received.itemId}`,
+        );
       }
       item.quantityReceived = asDecimal(received.quantityReceived);
       if (item.itemType === TransferItemType.LPG) {

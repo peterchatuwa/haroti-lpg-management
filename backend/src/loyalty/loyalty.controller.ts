@@ -11,7 +11,11 @@ export class LoyaltyController {
   constructor(private readonly loyaltyService: LoyaltyService) {}
 
   @Get('accounts')
-  @Roles(UserRole.STATION_MANAGER, UserRole.FINANCE_MANAGER, UserRole.SYSTEM_ADMIN)
+  @Roles(
+    UserRole.STATION_MANAGER,
+    UserRole.FINANCE_MANAGER,
+    UserRole.SYSTEM_ADMIN,
+  )
   accounts() {
     return this.loyaltyService.listAccounts();
   }
@@ -32,6 +36,10 @@ export class LoyaltyController {
     @Param('customerId') customerId: string,
     @Body() body: { points: number; description?: string },
   ) {
-    return this.loyaltyService.redeem(customerId, body.points, body.description);
+    return this.loyaltyService.redeem(
+      customerId,
+      body.points,
+      body.description,
+    );
   }
 }

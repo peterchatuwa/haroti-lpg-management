@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -29,7 +37,11 @@ export class FranchiseController {
   )
   generate(
     @Body()
-    body: { agreementId: string; periodStart: string; periodEnd: string },
+    body: {
+      agreementId: string;
+      periodStart: string;
+      periodEnd: string;
+    },
   ) {
     return this.franchiseService.generateSettlement(
       body.agreementId,

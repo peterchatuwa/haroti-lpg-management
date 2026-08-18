@@ -85,7 +85,10 @@ export class SalesService {
   }
 
   private receiptNumber(stationCode: string) {
-    const stamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
+    const stamp = new Date()
+      .toISOString()
+      .replace(/[-:TZ.]/g, '')
+      .slice(0, 14);
     const rand = Math.floor(Math.random() * 900 + 100);
     return `R-${stationCode}-${stamp}-${rand}`;
   }
@@ -130,7 +133,9 @@ export class SalesService {
     }
 
     if (dto.bundleId) {
-      const components = await this.accessoriesService.explodeBundle(dto.bundleId);
+      const components = await this.accessoriesService.explodeBundle(
+        dto.bundleId,
+      );
       const bundles = await this.accessoriesService.listBundles();
       const bundle = bundles.find((b) => b.id === dto.bundleId);
       saleItems = [
@@ -142,7 +147,10 @@ export class SalesService {
       ];
       await this.accessoriesService.deductForSale(
         dto.stationId,
-        components.map((c) => ({ productId: c.productId, quantity: c.quantity })),
+        components.map((c) => ({
+          productId: c.productId,
+          quantity: c.quantity,
+        })),
       );
     }
 
@@ -235,7 +243,9 @@ export class SalesService {
       paymentMethod = dto.payments[0].method;
     }
 
-    const attendant = await this.usersRepo.findOne({ where: { id: attendantId } });
+    const attendant = await this.usersRepo.findOne({
+      where: { id: attendantId },
+    });
     if (!attendant) {
       throw new BadRequestException('Attendant not found');
     }
@@ -302,15 +312,34 @@ export class SalesService {
       });
     }
 
-    await this.finalizeSale(saved, dto, attendantId, activePrice, items, salesChannel, lpgQuantityKg, total);
+    await this.finalizeSale(
+      saved,
+      dto,
+      attendantId,
+      activePrice,
+      items,
+      salesChannel,
+      lpgQuantityKg,
+      total,
+    );
 
     return this.salesRepo.findOne({
       where: { id: saved.id },
-      relations: { items: true, payments: true, station: true, attendant: true, customer: true },
+      relations: {
+        items: true,
+        payments: true,
+        station: true,
+        attendant: true,
+        customer: true,
+      },
     });
   }
 
-  async approveDiscount(id: string, approverId: string, approverRole: UserRole) {
+  async approveDiscount(
+    id: string,
+    approverId: string,
+    approverRole: UserRole,
+  ) {
     if (!DISCOUNT_APPROVER_ROLES.has(approverRole)) {
       throw new ForbiddenException('Insufficient role to approve discounts');
     }
@@ -377,7 +406,12 @@ export class SalesService {
         ...(stationId ? { stationId } : {}),
       },
       order: { soldAt: 'DESC' },
-      relations: { items: true, payments: true, station: true, attendant: true },
+      relations: {
+        items: true,
+        payments: true,
+        station: true,
+        attendant: true,
+      },
       take: 50,
     });
   }
@@ -412,9 +446,7 @@ export class SalesService {
         referenceType: 'Sale',
         referenceId: saved.id,
         userId: attendantId,
-        clientTxnId: dto.clientTxnId
-          ? `stock-${dto.clientTxnId}`
-          : undefined,
+        clientTxnId: dto.clientTxnId ? `stock-${dto.clientTxnId}` : undefined,
       });
       const station = await this.stationsService.findOne(dto.stationId);
       const costPerKg = toNumber(station.weightedAvgCostPerKg ?? 1200);
@@ -437,7 +469,10 @@ export class SalesService {
     }
 
     const accessoryLines = items.filter(
-      (i) => i.productId && toNumber(i.lpgQuantityKg) === 0 && toNumber(i.lineTotal) > 0,
+      (i) =>
+        i.productId &&
+        toNumber(i.lpgQuantityKg) === 0 &&
+        toNumber(i.lineTotal) > 0,
     );
     if (accessoryLines.length) {
       const cogs = await this.accessoriesService.deductForSale(
@@ -473,10 +508,7 @@ export class SalesService {
       void this.loyaltyService.earnFromSale(dto.customerId, total, saved.id);
     }
 
-    if (
-      salesChannel === SalesChannel.AGENT_COMMISSION &&
-      dto.customerId
-    ) {
+    if (salesChannel === SalesChannel.AGENT_COMMISSION && dto.customerId) {
       const commission = await this.franchiseService.accrueAgentCommission(
         saved.id,
         dto.customerId,
@@ -509,14 +541,25 @@ export class SalesService {
       where: stationId ? { stationId } : {},
       order: { soldAt: 'DESC' },
       take: 100,
-      relations: { items: true, payments: true, station: true, attendant: true },
+      relations: {
+        items: true,
+        payments: true,
+        station: true,
+        attendant: true,
+      },
     });
   }
 
   async findOne(id: string) {
     const sale = await this.salesRepo.findOne({
       where: { id },
-      relations: { items: true, payments: true, station: true, attendant: true, customer: true },
+      relations: {
+        items: true,
+        payments: true,
+        station: true,
+        attendant: true,
+        customer: true,
+      },
     });
     if (!sale) {
       throw new NotFoundException('Sale not found');

@@ -33,7 +33,10 @@ export class StaffAnalyticsService {
     periodStart?: string;
     periodEnd?: string;
   }) {
-    const { start, end } = this.periodRange(params.periodStart, params.periodEnd);
+    const { start, end } = this.periodRange(
+      params.periodStart,
+      params.periodEnd,
+    );
     const sales = await this.salesRepo.find({
       where: {
         soldAt: Between(start, end),
@@ -111,8 +114,7 @@ export class StaffAnalyticsService {
         revenue: round2(a.revenue),
         kg: round3(a.kg),
         avgTicket: a.txnCount > 0 ? round2(a.revenue / a.txnCount) : 0,
-        salesPerHour:
-          a.shiftHours > 0 ? round2(a.revenue / a.shiftHours) : 0,
+        salesPerHour: a.shiftHours > 0 ? round2(a.revenue / a.shiftHours) : 0,
         discountRate:
           a.revenue > 0 ? round2((a.discounts / a.revenue) * 100) : 0,
       }))
@@ -124,7 +126,10 @@ export class StaffAnalyticsService {
     periodStart?: string;
     periodEnd?: string;
   }) {
-    const { start, end } = this.periodRange(params.periodStart, params.periodEnd);
+    const { start, end } = this.periodRange(
+      params.periodStart,
+      params.periodEnd,
+    );
     const managers = await this.usersRepo.find({
       where: params.stationId ? { stationId: params.stationId } : {},
     });
@@ -179,7 +184,10 @@ export class StaffAnalyticsService {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     const sales = await this.salesRepo.find({
-      where: { soldAt: Between(start, new Date()), status: SaleStatus.COMPLETED },
+      where: {
+        soldAt: Between(start, new Date()),
+        status: SaleStatus.COMPLETED,
+      },
       relations: { station: true },
     });
 

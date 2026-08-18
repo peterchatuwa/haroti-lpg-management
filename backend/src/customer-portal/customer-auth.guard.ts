@@ -14,7 +14,9 @@ export class CustomerAuthGuard extends AuthGuard('jwt') {
     user: CustomerJwtPayload,
   ): TUser {
     if (err || !user || user.kind !== 'customer') {
-      throw err || new UnauthorizedException('Customer authentication required');
+      throw (
+        err || new UnauthorizedException('Customer authentication required')
+      );
     }
     return user as TUser;
   }
@@ -22,7 +24,9 @@ export class CustomerAuthGuard extends AuthGuard('jwt') {
 
 export const CurrentCustomer = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): CustomerJwtPayload => {
-    const request = ctx.switchToHttp().getRequest<{ user: CustomerJwtPayload }>();
+    const request = ctx
+      .switchToHttp()
+      .getRequest<{ user: CustomerJwtPayload }>();
     return request.user;
   },
 );

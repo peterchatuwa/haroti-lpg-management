@@ -32,9 +32,9 @@ describe('StationScopeService', () => {
   });
 
   it('denies cross-station access for attendants (AC-09)', () => {
-    expect(() =>
-      service.resolveStationFilter(attendant, 'station-b'),
-    ).toThrow(ForbiddenException);
+    expect(() => service.resolveStationFilter(attendant, 'station-b')).toThrow(
+      ForbiddenException,
+    );
     expect(() => service.assertStationAccess(attendant, 'station-b')).toThrow(
       ForbiddenException,
     );

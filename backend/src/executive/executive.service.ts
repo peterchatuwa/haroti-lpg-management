@@ -15,7 +15,8 @@ import { TargetsService } from '../targets/targets.service';
 export class ExecutiveService {
   constructor(
     @InjectRepository(Sale) private readonly salesRepo: Repository<Sale>,
-    @InjectRepository(Station) private readonly stationsRepo: Repository<Station>,
+    @InjectRepository(Station)
+    private readonly stationsRepo: Repository<Station>,
     private readonly reportsService: ReportsService,
     private readonly actionCentre: ActionCentreService,
     private readonly tanksService: TanksService,
@@ -44,13 +45,23 @@ export class ExecutiveService {
     start.setDate(1);
     start.setHours(0, 0, 0, 0);
     const sales = await this.salesRepo.find({
-      where: { soldAt: Between(start, new Date()), status: SaleStatus.COMPLETED },
+      where: {
+        soldAt: Between(start, new Date()),
+        status: SaleStatus.COMPLETED,
+      },
       relations: { station: true },
     });
 
     const byStation: Record<
       string,
-      { stationId: string; code: string; name: string; revenue: number; kg: number; count: number }
+      {
+        stationId: string;
+        code: string;
+        name: string;
+        revenue: number;
+        kg: number;
+        count: number;
+      }
     > = {};
 
     for (const sale of sales) {
@@ -80,7 +91,11 @@ export class ExecutiveService {
 
     const sortKey =
       metric === 'kg' ? 'kg' : metric === 'margin' ? 'marginPerKg' : 'revenue';
-    rows.sort((a, b) => (b[sortKey as keyof typeof b] as number) - (a[sortKey as keyof typeof a] as number));
+    rows.sort(
+      (a, b) =>
+        (b[sortKey as keyof typeof b] as number) -
+        (a[sortKey as keyof typeof a] as number),
+    );
 
     return { metric, rankings: rows };
   }

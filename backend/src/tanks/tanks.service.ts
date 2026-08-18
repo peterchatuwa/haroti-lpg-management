@@ -85,7 +85,11 @@ export class TanksService {
   }
 
   /** LPG-005/006: expected closing = opening + receipts - sales - transfers out - losses */
-  async gasReconciliation(stationId: string, periodStart: string, periodEnd: string) {
+  async gasReconciliation(
+    stationId: string,
+    periodStart: string,
+    periodEnd: string,
+  ) {
     const tanks = await this.listTanks(stationId);
     const start = new Date(periodStart);
     const end = new Date(periodEnd);
@@ -156,7 +160,9 @@ export class TanksService {
 
     let lossCase: LossCase | null = null;
     if (breach) {
-      const station = await this.stationsRepo.findOne({ where: { id: stationId } });
+      const station = await this.stationsRepo.findOne({
+        where: { id: stationId },
+      });
       const wac = toNumber(station?.weightedAvgCostPerKg ?? 1200);
       const wacValue = round2(Math.abs(varianceKg) * wac);
       lossCase = await this.lossRepo.save(
@@ -224,7 +230,9 @@ export class TanksService {
         name: `${station.name} Bulk Tank`,
         stationId: station.id,
         capacityKg: station.tankCapacityKg,
-        safeWorkingCapacityKg: asDecimal(toNumber(station.tankCapacityKg) * 0.9),
+        safeWorkingCapacityKg: asDecimal(
+          toNumber(station.tankCapacityKg) * 0.9,
+        ),
         currentStockKg: station.currentStockKg,
       }),
     );
@@ -254,8 +262,7 @@ export class TanksService {
       );
       const dailyAvg = soldKg / Math.max(windowDays, 1);
       const stockKg = toNumber(station.currentStockKg);
-      const daysToRunout =
-        dailyAvg > 0 ? round2(stockKg / dailyAvg) : 999;
+      const daysToRunout = dailyAvg > 0 ? round2(stockKg / dailyAvg) : 999;
 
       results.push({
         stationId: station.id,
@@ -310,13 +317,20 @@ export class TanksService {
         daysToRunout: forecast?.daysToRunout ?? null,
         suggestedReplenishmentKg: suggestedQty,
         priority:
-          stockKg <= minStock ? 'URGENT' : stockKg <= safetyStock ? 'HIGH' : 'NORMAL',
+          stockKg <= minStock
+            ? 'URGENT'
+            : stockKg <= safetyStock
+              ? 'HIGH'
+              : 'NORMAL',
       });
     }
 
     return suggestions.sort((a, b) => {
       const order = { URGENT: 0, HIGH: 1, NORMAL: 2 };
-      return order[a.priority as keyof typeof order] - order[b.priority as keyof typeof order];
+      return (
+        order[a.priority as keyof typeof order] -
+        order[b.priority as keyof typeof order]
+      );
     });
   }
 
@@ -342,7 +356,11 @@ export class TanksService {
       }
     }
 
-    return { checkedAt: new Date().toISOString(), issueCount: issues.length, issues };
+    return {
+      checkedAt: new Date().toISOString(),
+      issueCount: issues.length,
+      issues,
+    };
   }
 
   async updateLossCase(

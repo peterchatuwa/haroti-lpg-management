@@ -1,9 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../common/entities/base.entity';
-import {
-  ComplianceItemStatus,
-  ComplianceItemType,
-} from '../common/enums';
+import { ComplianceItemStatus, ComplianceItemType } from '../common/enums';
 import { Station } from '../stations/station.entity';
 
 @Entity('compliance_items')

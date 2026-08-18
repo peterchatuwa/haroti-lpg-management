@@ -1,4 +1,5 @@
-export type AccountClass = 'ASSET' | 'LIABILITY' | 'REVENUE' | 'COGS' | 'EXPENSE';
+export type AccountClass =
+  'ASSET' | 'LIABILITY' | 'REVENUE' | 'COGS' | 'EXPENSE';
 
 /** Classify GL account code for financial statements. */
 export function classifyAccount(code: string): AccountClass {
@@ -24,9 +25,15 @@ export function accountBalance(
 
 /** GL account codes aligned to Charter §4 accounting matrix. */
 export const GL_ACCOUNTS = {
-  INVENTORY_CENTRAL: { code: '1200', name: 'Inventory: Accessories (Central Hub)' },
+  INVENTORY_CENTRAL: {
+    code: '1200',
+    name: 'Inventory: Accessories (Central Hub)',
+  },
   INVENTORY_STATION: { code: '1210', name: 'Inventory: Station Accessories' },
-  INVENTORY_CONSIGNMENT: { code: '1220', name: 'Inventory: Franchise Consignment' },
+  INVENTORY_CONSIGNMENT: {
+    code: '1220',
+    name: 'Inventory: Franchise Consignment',
+  },
   INVENTORY_BULK_LPG: { code: '1250', name: 'Inventory: Bulk LPG' },
   ACCOUNTS_PAYABLE: { code: '2100', name: 'Accounts Payable' },
   CASH: { code: '1100', name: 'Cash-in-Hand / Mobile Money Clearing' },

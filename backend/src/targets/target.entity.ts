@@ -1,10 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../common/entities/base.entity';
-import {
-  TargetMetric,
-  TargetPeriod,
-  TargetScope,
-} from '../common/enums';
+import { TargetMetric, TargetPeriod, TargetScope } from '../common/enums';
 import { Station } from '../stations/station.entity';
 
 @Entity('targets')

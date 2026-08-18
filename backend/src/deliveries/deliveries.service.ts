@@ -142,7 +142,9 @@ export class DeliveriesService {
     const delivery = await this.deliveriesRepo.findOne({ where: { id } });
     if (!delivery) throw new NotFoundException('Delivery not found');
     if (delivery.status !== DeliveryStatus.MANAGER_APPROVAL) {
-      throw new BadRequestException('Delivery is not awaiting manager approval');
+      throw new BadRequestException(
+        'Delivery is not awaiting manager approval',
+      );
     }
     return this.advanceStatus(id, userId);
   }
