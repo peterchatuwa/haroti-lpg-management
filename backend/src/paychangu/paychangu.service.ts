@@ -119,18 +119,18 @@ export class PaychanguService {
     if (!webhook || webhook.processed) return;
 
     try {
-      const { event_type, transaction_ref, payload } = webhook;
+      const { eventType, transactionRef, payload } = webhook;
 
       const txn = await this.txnRepo.findOne({
-        where: { transactionRef: transaction_ref },
-        relations: ['sale', 'paycMeter'],
+        where: { transactionRef },
+        relations: { sale: true, paycMeter: true },
       });
 
       if (!txn) {
-        throw new Error(`Transaction not found: ${transaction_ref}`);
+        throw new Error(`Transaction not found: ${transactionRef}`);
       }
 
-      switch (event_type) {
+      switch (eventType) {
         case 'payment.completed':
           await this.handlePaymentCompleted(txn, payload);
           break;
@@ -141,7 +141,7 @@ export class PaychanguService {
           await this.handlePaymentCancelled(txn, payload);
           break;
         default:
-          this.logger.warn(`Unknown event type: ${event_type}`);
+          this.logger.warn(`Unknown event type: ${eventType}`);
       }
 
       webhook.processed = true;
