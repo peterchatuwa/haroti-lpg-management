@@ -12,23 +12,43 @@ import { PaychanguWebhook } from './paychangu-webhook.entity';
 import { PaymentMethod } from '../common/enums';
 import { PaycService } from '../payc/payc.service';
 
-interface PaychanguApiResponse {
-  payment_reference: string;
+interface PaychanguEnvelope<T = unknown> {
   status: string;
   message?: string;
+  data?: T;
+}
+
+interface PaychanguChargeData {
+  charge_id?: string;
+  ref_id?: string;
+  trans_id?: string;
+  status?: string;
+  amount?: number;
+  mobile?: string;
 }
 
 interface PaychanguWebhookPayload {
   event_type: string;
-  transaction_ref: string;
-  reason?: string;
+  charge_id?: string;
+  status?: string;
+  amount?: number;
+  reference?: string;
   [key: string]: unknown;
 }
+
+const MOMO_OPERATOR_REF: Record<PaychanguPaymentMethod, string> = {
+  [PaychanguPaymentMethod.AIRTEL_MONEY]:
+    '20be6c20-adeb-4b5b-a7ba-0769820df4fb',
+  [PaychanguPaymentMethod.TNM_MPAMBA]:
+    '27494cb5-ba9e-437f-a114-4e7a7686bcca',
+  [PaychanguPaymentMethod.CARD]: '',
+  [PaychanguPaymentMethod.BANK_TRANSFER]: '',
+};
 
 @Injectable()
 export class PaychanguService {
   private readonly logger = new Logger(PaychanguService.name);
-  private readonly apiKey: string;
+  private readonly clientId: string;
   private readonly secretKey: string;
   private readonly baseUrl: string;
   private readonly webhookSecret: string;
@@ -41,8 +61,11 @@ export class PaychanguService {
     private readonly webhookRepo: Repository<PaychanguWebhook>,
     private readonly paycService: PaycService,
   ) {
-    this.apiKey = config.get('PAYCHANGU_API_KEY') || '';
-    this.secretKey = config.get('PAYCHANGU_SECRET_KEY') || '';
+    this.clientId = config.get('PAYCHANGU_CLIENT_ID') || '';
+    this.secretKey =
+      config.get('PAYCHANGU_SECRET_KEY') ||
+      config.get('PAYCHANGU_API_KEY') ||
+      '';
     this.baseUrl =
       config.get('PAYCHANGU_BASE_URL') || 'https://api.paychangu.com';
     this.webhookSecret = config.get('PAYCHANGU_WEBHOOK_SECRET') || '';
@@ -56,14 +79,17 @@ export class PaychanguService {
     internalRef: string;
     saleId?: string;
     paycMeterId?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<PaychanguTransaction> {
-    const transactionRef = this.generateTransactionRef();
+    if (!this.secretKey) {
+      throw new BadRequestException('PayChangu is not configured');
+    }
 
     const paychanguMethod = this.mapPaymentMethod(params.paymentMethod);
+    const chargeId = this.generateChargeId();
 
     const txn = this.txnRepo.create({
-      transactionRef,
+      transactionRef: chargeId,
       internalRef: params.internalRef,
       paymentMethod: paychanguMethod,
       amount: params.amount.toString(),
@@ -72,32 +98,44 @@ export class PaychanguService {
       customerEmail: params.customerEmail,
       saleId: params.saleId,
       paycMeterId: params.paycMeterId,
-      metadata: params.metadata,
+      metadata: { ...params.metadata, client_id: this.clientId || undefined },
       callbackUrl: this.config.get<string>('PAYCHANGU_CALLBACK_URL'),
     });
 
     const saved = await this.txnRepo.save(txn);
 
     try {
-      const response = await this.callPaychanguApi('/payments/initiate', {
-        transaction_ref: transactionRef,
-        amount: params.amount,
-        payment_method: paychanguMethod,
-        customer_phone: params.customerPhone,
-        customer_email: params.customerEmail,
-        callback_url: saved.callbackUrl,
-        metadata: {
-          internal_ref: params.internalRef,
-          sale_id: params.saleId,
-          payc_meter_id: params.paycMeterId,
-        },
+      const operatorRef = MOMO_OPERATOR_REF[paychanguMethod];
+      if (!operatorRef) {
+        throw new BadRequestException(
+          `PayChangu direct charge not implemented for ${paychanguMethod}`,
+        );
+      }
+      if (!params.customerPhone) {
+        throw new BadRequestException(
+          'Customer phone is required for mobile money payments',
+        );
+      }
+
+      const response = await this.callPaychanguApi<
+        PaychanguEnvelope<PaychanguChargeData>
+      >('/mobile-money/payments/initialize', {
+        mobile: params.customerPhone,
+        mobile_money_operator_ref_id: operatorRef,
+        amount: String(params.amount),
+        charge_id: chargeId,
+        email: params.customerEmail,
       });
 
-      saved.paychanguReference = response.payment_reference;
-      saved.status = PaychanguTransactionStatus.PROCESSING;
+      const data = response.data;
+      saved.paychanguReference = data?.ref_id ?? data?.trans_id ?? chargeId;
+      saved.status =
+        data?.status === 'success'
+          ? PaychanguTransactionStatus.COMPLETED
+          : PaychanguTransactionStatus.PROCESSING;
       await this.txnRepo.save(saved);
 
-      this.logger.log(`Payment initiated: ${transactionRef}`);
+      this.logger.log(`Payment initiated: ${chargeId}`);
       return saved;
     } catch (error: unknown) {
       saved.status = PaychanguTransactionStatus.FAILED;
@@ -112,19 +150,27 @@ export class PaychanguService {
   async processWebhook(
     payload: PaychanguWebhookPayload,
     signature?: string,
+    rawBody?: string,
   ): Promise<PaychanguWebhook> {
-    if (this.webhookSecret) {
-      if (!signature || !this.verifyWebhookSignature(payload, signature)) {
+    const secret = this.webhookSecret || this.secretKey;
+    if (secret) {
+      const bodyForSig = rawBody ?? JSON.stringify(payload);
+      if (!signature || !this.verifyWebhookSignature(bodyForSig, signature, secret)) {
         throw new BadRequestException('Invalid webhook signature');
       }
     } else {
-      this.logger.warn('PAYCHANGU_WEBHOOK_SECRET not set — skipping signature check');
+      this.logger.warn('PayChangu webhook secret not set — skipping signature check');
+    }
+
+    const chargeId = payload.charge_id;
+    if (!chargeId) {
+      throw new BadRequestException('Missing charge_id in webhook payload');
     }
 
     const webhook = await this.webhookRepo.save(
       this.webhookRepo.create({
         eventType: payload.event_type,
-        transactionRef: payload.transaction_ref,
+        transactionRef: chargeId,
         payload: payload as unknown as Record<string, unknown>,
         processed: false,
       }),
@@ -153,18 +199,19 @@ export class PaychanguService {
         throw new Error(`Transaction not found: ${transactionRef}`);
       }
 
-      switch (eventType) {
-        case 'payment.completed':
-          await this.handlePaymentCompleted(txn, payload);
-          break;
-        case 'payment.failed':
-          await this.handlePaymentFailed(txn, payload);
-          break;
-        case 'payment.cancelled':
-          await this.handlePaymentCancelled(txn, payload);
-          break;
-        default:
-          this.logger.warn(`Unknown event type: ${eventType}`);
+      // Re-query PayChangu before fulfilling (recommended by their docs).
+      const verified = await this.verifyChargeOnPaychangu(transactionRef);
+      const verifiedStatus = verified.data?.status ?? payload.status;
+
+      if (
+        eventType === 'api.charge.payment' &&
+        verifiedStatus === 'success'
+      ) {
+        await this.handlePaymentCompleted(txn, payload);
+      } else if (verifiedStatus === 'failed') {
+        await this.handlePaymentFailed(txn, payload);
+      } else {
+        this.logger.warn(`Unhandled PayChangu event: ${eventType} / ${verifiedStatus}`);
       }
 
       webhook.processed = true;
@@ -187,6 +234,8 @@ export class PaychanguService {
     txn: PaychanguTransaction,
     payload: Record<string, unknown>,
   ): Promise<void> {
+    if (txn.status === PaychanguTransactionStatus.COMPLETED) return;
+
     txn.status = PaychanguTransactionStatus.COMPLETED;
     txn.completedAt = new Date();
     txn.metadata = { ...txn.metadata, completion_data: payload };
@@ -211,25 +260,11 @@ export class PaychanguService {
     txn.status = PaychanguTransactionStatus.FAILED;
     txn.metadata = {
       ...txn.metadata,
-      failure_reason: payload.reason as string | undefined,
+      failure_reason: payload.status as string | undefined,
     };
     await this.txnRepo.save(txn);
 
     this.logger.warn(`Payment failed: ${txn.transactionRef}`);
-  }
-
-  private async handlePaymentCancelled(
-    txn: PaychanguTransaction,
-    payload: Record<string, unknown>,
-  ): Promise<void> {
-    txn.status = PaychanguTransactionStatus.CANCELLED;
-    txn.metadata = {
-      ...txn.metadata,
-      cancellation_reason: payload.reason as string | undefined,
-    };
-    await this.txnRepo.save(txn);
-
-    this.logger.warn(`Payment cancelled: ${txn.transactionRef}`);
   }
 
   async queryPayment(transactionRef: string): Promise<PaychanguTransaction> {
@@ -238,13 +273,8 @@ export class PaychanguService {
       throw new BadRequestException('Transaction not found');
     }
 
-    const response = await this.callPaychanguApi(
-      `/payments/${transactionRef}/status`,
-      undefined,
-      'GET',
-    );
-
-    txn.status = this.mapStatusFromPaychangu(response.status);
+    const response = await this.verifyChargeOnPaychangu(transactionRef);
+    txn.status = this.mapStatusFromPaychangu(response.data?.status ?? '');
     if (
       txn.status === PaychanguTransactionStatus.COMPLETED &&
       !txn.completedAt
@@ -256,68 +286,65 @@ export class PaychanguService {
     return txn;
   }
 
-  private async callPaychanguApi(
+  private verifyChargeOnPaychangu(chargeId: string) {
+    return this.callPaychanguApi<PaychanguEnvelope<PaychanguChargeData>>(
+      `/mobile-money/payments/${encodeURIComponent(chargeId)}/verify`,
+      undefined,
+      'GET',
+    );
+  }
+
+  private async callPaychanguApi<T>(
     endpoint: string,
     body?: Record<string, unknown>,
     method: 'POST' | 'GET' = 'POST',
-  ): Promise<PaychanguApiResponse> {
+  ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const timestamp = Date.now().toString();
-    const signature = this.generateSignature(endpoint, body, timestamp);
 
     const options: RequestInit = {
       method,
       headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': this.apiKey,
-        'X-Timestamp': timestamp,
-        'X-Signature': signature,
+        Accept: 'application/json',
+        Authorization: `Bearer ${this.secretKey}`,
       },
     };
 
     if (body && method === 'POST') {
+      options.headers = {
+        ...options.headers,
+        'Content-Type': 'application/json',
+      };
       options.body = JSON.stringify(body);
     }
 
     const response = await fetch(url, options);
+    const json = (await response.json().catch(() => ({}))) as PaychanguEnvelope &
+      Record<string, unknown>;
 
-    if (!response.ok) {
-      const errorData: unknown = await response
-        .json()
-        .catch(() => ({} as Record<string, unknown>));
+    if (!response.ok || json.status === 'failed') {
       const errorMessage =
-        typeof (errorData as Record<string, unknown>).message === 'string'
-          ? (errorData as Record<string, unknown>).message
-          : 'Unknown error';
+        typeof json.message === 'string' ? json.message : 'Unknown error';
       throw new Error(
-        `PayChangu API error: ${response.status} - ${errorMessage as string}`,
+        `PayChangu API error: ${response.status} - ${errorMessage}`,
       );
     }
 
-    return response.json() as Promise<PaychanguApiResponse>;
-  }
-
-  private generateSignature(
-    endpoint: string,
-    body: Record<string, unknown> | undefined,
-    timestamp: string,
-  ): string {
-    const payload = `${endpoint}${JSON.stringify(body || {})}${timestamp}`;
-    return createHmac('sha256', this.secretKey).update(payload).digest('hex');
+    return json as T;
   }
 
   private verifyWebhookSignature(
-    payload: PaychanguWebhookPayload,
+    rawPayload: string,
     signature: string,
+    secret: string,
   ): boolean {
-    const computed = createHmac('sha256', this.webhookSecret)
-      .update(JSON.stringify(payload))
+    const computed = createHmac('sha256', secret)
+      .update(rawPayload)
       .digest('hex');
     return computed === signature;
   }
 
-  private generateTransactionRef(): string {
-    return `PYC-${Date.now()}-${randomBytes(4).toString('hex').toUpperCase()}`;
+  private generateChargeId(): string {
+    return `HAR-${Date.now()}-${randomBytes(3).toString('hex').toUpperCase()}`;
   }
 
   private mapPaymentMethod(method: PaymentMethod): PaychanguPaymentMethod {
@@ -337,15 +364,18 @@ export class PaychanguService {
   }
 
   private mapStatusFromPaychangu(status: string): PaychanguTransactionStatus {
+    const normalized = status.toLowerCase();
     const mapping: Record<string, PaychanguTransactionStatus> = {
       pending: PaychanguTransactionStatus.PENDING,
       processing: PaychanguTransactionStatus.PROCESSING,
+      success: PaychanguTransactionStatus.COMPLETED,
+      successful: PaychanguTransactionStatus.COMPLETED,
       completed: PaychanguTransactionStatus.COMPLETED,
       failed: PaychanguTransactionStatus.FAILED,
       cancelled: PaychanguTransactionStatus.CANCELLED,
       expired: PaychanguTransactionStatus.EXPIRED,
     };
 
-    return mapping[status.toLowerCase()] || PaychanguTransactionStatus.PENDING;
+    return mapping[normalized] || PaychanguTransactionStatus.PENDING;
   }
 }

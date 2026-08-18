@@ -5,8 +5,11 @@ import {
   Headers,
   Param,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PaychanguService } from './paychangu.service';
 import { PaymentMethod } from '../common/enums';
@@ -35,16 +38,18 @@ export class PaychanguController {
 
   @Post('webhook')
   async webhook(
+    @Req() req: RawBodyRequest<Request>,
     @Body() payload: Record<string, unknown>,
-    @Headers('x-paychangu-signature') signature?: string,
+    @Headers('signature') signature?: string,
   ) {
     await this.paychanguService.processWebhook(
       payload as {
         event_type: string;
-        transaction_ref: string;
+        charge_id?: string;
         [key: string]: unknown;
       },
       signature,
+      req.rawBody?.toString('utf8'),
     );
     return { success: true };
   }
