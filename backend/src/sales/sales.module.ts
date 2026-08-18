@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccessoriesModule } from '../accessories/accessories.module';
 import { AuditLog } from '../audit/audit-log.entity';
@@ -11,6 +11,7 @@ import { FranchiseModule } from '../franchise/franchise.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { InventoryModule } from '../inventory/inventory.module';
+import { PaychanguModule } from '../paychangu/paychangu.module';
 import { PriceList } from '../pricing/price-list.entity';
 import { ShiftsModule } from '../shifts/shifts.module';
 import { StationsModule } from '../stations/stations.module';
@@ -34,6 +35,7 @@ import { SalesService } from './sales.service';
     FranchiseModule,
     NotificationsModule,
     LoyaltyModule,
+    forwardRef(() => PaychanguModule),
   ],
   controllers: [SalesController],
   providers: [SalesService, AuditService],

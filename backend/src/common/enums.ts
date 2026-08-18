@@ -56,6 +56,7 @@ export enum SaleStatus {
   VOIDED = 'VOIDED',
   REFUNDED = 'REFUNDED',
   PENDING_APPROVAL = 'PENDING_APPROVAL',
+  PENDING_PAYMENT = 'PENDING_PAYMENT',
 }
 
 export enum CylinderOwnership {

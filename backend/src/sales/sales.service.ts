@@ -2,8 +2,10 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, IsNull, Repository } from 'typeorm';
@@ -25,6 +27,7 @@ import { FranchiseService } from '../franchise/franchise.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PaychanguService } from '../paychangu/paychangu.service';
 import { PriceList } from '../pricing/price-list.entity';
 import { ShiftsService } from '../shifts/shifts.service';
 import { StationsService } from '../stations/stations.service';
@@ -60,6 +63,8 @@ export class SalesService {
     private readonly notificationsService: NotificationsService,
     private readonly cylindersService: CylindersService,
     private readonly loyaltyService: LoyaltyService,
+    @Inject(forwardRef(() => PaychanguService))
+    private readonly paychanguService: PaychanguService,
   ) {}
 
   async getActivePrice(stationId: string) {
@@ -230,6 +235,22 @@ export class SalesService {
       await this.customersService.checkCredit(dto.customerId, total);
     }
 
+    const hasPaychangu = dto.payments.some(
+      (p) => p.method === PaymentMethod.PAYCHANGU,
+    );
+    if (hasPaychangu) {
+      if (dto.payments.length > 1) {
+        throw new BadRequestException(
+          'PayChangu cannot be combined with other payment methods',
+        );
+      }
+      if (!dto.customerPhone?.trim()) {
+        throw new BadRequestException(
+          'Customer phone is required for PayChangu payments',
+        );
+      }
+    }
+
     let paymentMethod = PaymentMethod.MIXED;
     if (dto.payments.length === 1) {
       paymentMethod = dto.payments[0].method;
@@ -259,7 +280,9 @@ export class SalesService {
       paymentMethod,
       status: needsDiscountApproval
         ? SaleStatus.PENDING_APPROVAL
-        : SaleStatus.COMPLETED,
+        : hasPaychangu
+          ? SaleStatus.PENDING_PAYMENT
+          : SaleStatus.COMPLETED,
       salesChannel,
       commercialStream,
       notes: dto.notes,
@@ -290,6 +313,42 @@ export class SalesService {
         },
         stationId: dto.stationId,
       });
+      return this.salesRepo.findOne({
+        where: { id: saved.id },
+        relations: {
+          items: true,
+          payments: true,
+          station: true,
+          attendant: true,
+          customer: true,
+        },
+      });
+    }
+
+    if (hasPaychangu) {
+      const operator =
+        dto.paychanguOperator === PaymentMethod.TNM_MPAMBA
+          ? PaymentMethod.TNM_MPAMBA
+          : PaymentMethod.AIRTEL_MONEY;
+      try {
+        await this.paychanguService.initiatePayment({
+          amount: total,
+          paymentMethod: operator,
+          customerPhone: dto.customerPhone!.trim(),
+          internalRef: saved.receiptNumber,
+          saleId: saved.id,
+        });
+      } catch (err) {
+        saved.status = SaleStatus.VOIDED;
+        saved.notes = [
+          saved.notes,
+          `PayChangu initiation failed: ${err instanceof Error ? err.message : 'unknown error'}`,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+        await this.salesRepo.save(saved);
+        throw err;
+      }
       return this.salesRepo.findOne({
         where: { id: saved.id },
         relations: {
@@ -368,6 +427,71 @@ export class SalesService {
     });
 
     return this.findOne(id);
+  }
+
+  async completePaychanguSale(saleId: string): Promise<Sale> {
+    const sale = await this.salesRepo.findOne({
+      where: { id: saleId },
+      relations: { items: true, payments: true },
+    });
+    if (!sale) throw new NotFoundException('Sale not found');
+    if (sale.status === SaleStatus.COMPLETED) return this.findOne(saleId);
+    if (sale.status !== SaleStatus.PENDING_PAYMENT) {
+      throw new BadRequestException('Sale is not awaiting PayChangu payment');
+    }
+
+    const activePrice = await this.getActivePrice(sale.stationId);
+    const lpgQuantityKg = toNumber(sale.lpgQuantityKg);
+    const total = toNumber(sale.totalAmount);
+
+    sale.status = SaleStatus.COMPLETED;
+    await this.salesRepo.save(sale);
+
+    const dtoLike: CreateSaleDto = {
+      stationId: sale.stationId,
+      shiftId: sale.shiftId!,
+      customerId: sale.customerId ?? undefined,
+      clientTxnId: sale.clientTxnId ?? undefined,
+      salesChannel: sale.salesChannel,
+      payments: (sale.payments ?? []).map((p) => ({
+        method: p.method,
+        amount: toNumber(p.amount),
+        reference: p.reference,
+      })),
+      items: [],
+    };
+
+    await this.finalizeSale(
+      sale,
+      dtoLike,
+      sale.attendantId,
+      activePrice,
+      sale.items ?? [],
+      sale.salesChannel,
+      lpgQuantityKg,
+      total,
+    );
+
+    await this.auditService.log({
+      userId: sale.attendantId,
+      action: 'SALE_PAYCHANGU_COMPLETED',
+      entityType: 'Sale',
+      entityId: sale.id,
+      stationId: sale.stationId,
+    });
+
+    return this.findOne(saleId);
+  }
+
+  async failPaychanguSale(saleId: string, reason?: string): Promise<void> {
+    const sale = await this.salesRepo.findOne({ where: { id: saleId } });
+    if (!sale || sale.status !== SaleStatus.PENDING_PAYMENT) return;
+
+    sale.status = SaleStatus.VOIDED;
+    sale.notes = [sale.notes, reason ? `PayChangu failed: ${reason}` : 'PayChangu payment failed']
+      .filter(Boolean)
+      .join(' · ');
+    await this.salesRepo.save(sale);
   }
 
   listPendingDiscounts(stationId?: string) {

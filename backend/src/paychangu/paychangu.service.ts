@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,6 +11,7 @@ import {
 import { PaychanguWebhook } from './paychangu-webhook.entity';
 import { PaymentMethod } from '../common/enums';
 import { PaycService } from '../payc/payc.service';
+import { SalesService } from '../sales/sales.service';
 
 interface PaychanguEnvelope<T = unknown> {
   status: string;
@@ -60,6 +61,8 @@ export class PaychanguService {
     @InjectRepository(PaychanguWebhook)
     private readonly webhookRepo: Repository<PaychanguWebhook>,
     private readonly paycService: PaycService,
+    @Inject(forwardRef(() => SalesService))
+    private readonly salesService: SalesService,
   ) {
     this.clientId =
       config.get('PAYCHANGU_API_KEY') ||
@@ -123,7 +126,7 @@ export class PaychanguService {
       const response = await this.callPaychanguApi<
         PaychanguEnvelope<PaychanguChargeData>
       >('/mobile-money/payments/initialize', {
-        mobile: params.customerPhone,
+        mobile: this.normalizePhone(params.customerPhone),
         mobile_money_operator_ref_id: operatorRef,
         amount: String(params.amount),
         charge_id: chargeId,
@@ -132,10 +135,7 @@ export class PaychanguService {
 
       const data = response.data;
       saved.paychanguReference = data?.ref_id ?? data?.trans_id ?? chargeId;
-      saved.status =
-        data?.status === 'success'
-          ? PaychanguTransactionStatus.COMPLETED
-          : PaychanguTransactionStatus.PROCESSING;
+      saved.status = PaychanguTransactionStatus.PROCESSING;
       await this.txnRepo.save(saved);
 
       this.logger.log(`Payment initiated: ${chargeId}`);
@@ -253,6 +253,10 @@ export class PaychanguService {
       });
     }
 
+    if (txn.saleId) {
+      await this.salesService.completePaychanguSale(txn.saleId);
+    }
+
     this.logger.log(`Payment completed: ${txn.transactionRef}`);
   }
 
@@ -266,6 +270,13 @@ export class PaychanguService {
       failure_reason: payload.status as string | undefined,
     };
     await this.txnRepo.save(txn);
+
+    if (txn.saleId) {
+      await this.salesService.failPaychanguSale(
+        txn.saleId,
+        payload.status as string | undefined,
+      );
+    }
 
     this.logger.warn(`Payment failed: ${txn.transactionRef}`);
   }

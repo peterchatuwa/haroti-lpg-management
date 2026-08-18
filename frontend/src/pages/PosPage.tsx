@@ -31,6 +31,10 @@ export function PosPage() {
   const [emptyWeight, setEmptyWeight] = useState(14.2);
   const [filledWeight, setFilledWeight] = useState(26.2);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [paychanguOperator, setPaychanguOperator] = useState<'AIRTEL_MONEY' | 'TNM_MPAMBA'>(
+    'AIRTEL_MONEY',
+  );
   const [discount, setDiscount] = useState(0);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -151,6 +155,9 @@ export function PosPage() {
       if (!shift?.id) {
         throw new Error('Open a shift before recording sales (Shifts page).');
       }
+      if (paymentMethod === 'PAYCHANGU' && !customerPhone.trim()) {
+        throw new Error('Enter the customer mobile number for PayChangu.');
+      }
       const clientTxnId = crypto.randomUUID();
       let payload: Record<string, unknown>;
 
@@ -162,6 +169,9 @@ export function PosPage() {
           clientTxnId,
           items: [],
           payments: [{ method: paymentMethod, amount: total }],
+          ...(paymentMethod === 'PAYCHANGU'
+            ? { customerPhone: customerPhone.trim(), paychanguOperator }
+            : {}),
         };
       } else if (posMode === 'accessory' && selectedProduct) {
         payload = {
@@ -178,6 +188,9 @@ export function PosPage() {
             },
           ],
           payments: [{ method: paymentMethod, amount: total }],
+          ...(paymentMethod === 'PAYCHANGU'
+            ? { customerPhone: customerPhone.trim(), paychanguOperator }
+            : {}),
         };
       } else {
         payload = {
@@ -197,6 +210,9 @@ export function PosPage() {
             },
           ],
           payments: [{ method: paymentMethod, amount: total }],
+          ...(paymentMethod === 'PAYCHANGU'
+            ? { customerPhone: customerPhone.trim(), paychanguOperator }
+            : {}),
         };
       }
 
@@ -211,16 +227,34 @@ export function PosPage() {
       }
 
       const { data } = await api.post('/sales', payload);
+
+      if (data.status === 'PENDING_PAYMENT' && data.id) {
+        const deadline = Date.now() + 120_000;
+        while (Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, 3000));
+          const poll = await api.get(`/sales/${data.id}`);
+          if (poll.data.status === 'COMPLETED') return poll.data;
+          if (poll.data.status === 'VOIDED') {
+            throw new Error('PayChangu payment failed or was cancelled.');
+          }
+        }
+        return { ...data, paymentPending: true };
+      }
+
       return data;
     },
     onSuccess: (data) => {
       setLastReceipt(data.receiptNumber);
       setMessage(
-        data.status === 'PENDING_APPROVAL'
-          ? `Awaiting manager approval · ${data.receiptNumber}`
-          : data.offline
-            ? `Saved offline · ${data.receiptNumber}`
-            : `Sale complete · ${data.receiptNumber}`,
+        data.paymentPending
+          ? `PayChangu prompt sent · ${data.receiptNumber} — approve on phone, then refresh`
+          : data.status === 'PENDING_APPROVAL'
+            ? `Awaiting manager approval · ${data.receiptNumber}`
+            : data.status === 'PENDING_PAYMENT'
+              ? `PayChangu prompt sent to ${customerPhone} · ${data.receiptNumber}`
+              : data.offline
+                ? `Saved offline · ${data.receiptNumber}`
+                : `Sale complete · ${data.receiptNumber}`,
       );
       setError('');
       setBurst(true);
@@ -480,6 +514,40 @@ export function PosPage() {
                 </button>
               ))}
             </div>
+            {paymentMethod === 'PAYCHANGU' && (
+              <div className="stack" style={{ marginTop: '0.75rem' }}>
+                <label>
+                  Customer mobile (Airtel / Mpamba)
+                  <input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="e.g. 990000000 or +265990000000"
+                    required
+                  />
+                </label>
+                <div className="pay-chips">
+                  {(
+                    [
+                      { value: 'AIRTEL_MONEY', label: 'Airtel Money' },
+                      { value: 'TNM_MPAMBA', label: 'TNM Mpamba' },
+                    ] as const
+                  ).map((op) => (
+                    <button
+                      type="button"
+                      key={op.value}
+                      className={paychanguOperator === op.value ? 'active' : ''}
+                      onClick={() => setPaychanguOperator(op.value)}
+                    >
+                      {op.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                  Customer will receive a mobile money prompt. Sale completes only after PayChangu confirms payment.
+                </p>
+              </div>
+            )}
           </div>
 
           <button

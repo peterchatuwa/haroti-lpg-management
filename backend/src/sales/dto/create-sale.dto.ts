@@ -102,4 +102,14 @@ export class CreateSaleDto {
   @IsOptional()
   @IsEnum(SalesChannel)
   salesChannel?: SalesChannel;
+
+  /** Required when payment method is PAYCHANGU — customer mobile money number */
+  @IsOptional()
+  @IsString()
+  customerPhone?: string;
+
+  /** Airtel or Mpamba operator when using PayChangu (defaults to Airtel) */
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paychanguOperator?: PaymentMethod;
 }
