@@ -235,18 +235,34 @@ export class SalesService {
       await this.customersService.checkCredit(dto.customerId, total);
     }
 
-    const hasPaychangu = dto.payments.some(
+    const hasPaychanguMomo = dto.payments.some(
       (p) => p.method === PaymentMethod.PAYCHANGU,
     );
-    if (hasPaychangu) {
+    const hasPaychanguCard = dto.payments.some(
+      (p) => p.method === PaymentMethod.CARD,
+    );
+    const usesPaychanguGateway = hasPaychanguMomo || hasPaychanguCard;
+
+    if (usesPaychanguGateway) {
       if (dto.payments.length > 1) {
         throw new BadRequestException(
           'PayChangu cannot be combined with other payment methods',
         );
       }
-      if (!dto.customerPhone?.trim()) {
+      if (hasPaychanguCard) {
+        if (!dto.cardNumber?.trim() || !dto.cardExpiry?.trim()) {
+          throw new BadRequestException(
+            'Card number and expiry are required for card payments',
+          );
+        }
+        if (!dto.cardCvv?.trim() || !dto.cardholderName?.trim()) {
+          throw new BadRequestException(
+            'Card CVV and cardholder name are required for card payments',
+          );
+        }
+      } else if (!dto.customerPhone?.trim()) {
         throw new BadRequestException(
-          'Customer phone is required for PayChangu payments',
+          'Customer phone is required for PayChangu mobile money payments',
         );
       }
     }
@@ -280,7 +296,7 @@ export class SalesService {
       paymentMethod,
       status: needsDiscountApproval
         ? SaleStatus.PENDING_APPROVAL
-        : hasPaychangu
+        : usesPaychanguGateway
           ? SaleStatus.PENDING_PAYMENT
           : SaleStatus.COMPLETED,
       salesChannel,
@@ -325,19 +341,49 @@ export class SalesService {
       });
     }
 
-    if (hasPaychangu) {
-      const operator =
-        dto.paychanguOperator === PaymentMethod.TNM_MPAMBA
-          ? PaymentMethod.TNM_MPAMBA
-          : PaymentMethod.AIRTEL_MONEY;
+    if (usesPaychanguGateway) {
+      const isCard =
+        hasPaychanguCard || dto.paychanguOperator === PaymentMethod.CARD;
       try {
-        await this.paychanguService.initiatePayment({
+        const paychanguTxn = await this.paychanguService.initiatePayment({
           amount: total,
-          paymentMethod: operator,
-          customerPhone: dto.customerPhone!.trim(),
+          paymentMethod: isCard
+            ? PaymentMethod.CARD
+            : dto.paychanguOperator === PaymentMethod.TNM_MPAMBA
+              ? PaymentMethod.TNM_MPAMBA
+              : PaymentMethod.AIRTEL_MONEY,
+          customerPhone: dto.customerPhone?.trim(),
+          customerEmail: dto.customerEmail?.trim(),
           internalRef: saved.receiptNumber,
           saleId: saved.id,
+          card: isCard
+            ? {
+                number: dto.cardNumber!.replace(/\s/g, ''),
+                expiry: dto.cardExpiry!.trim(),
+                cvv: dto.cardCvv!.trim(),
+                cardholderName: dto.cardholderName!.trim(),
+                currency: dto.cardCurrency?.trim() || 'MWK',
+              }
+            : undefined,
         });
+        const sale = await this.salesRepo.findOne({
+          where: { id: saved.id },
+          relations: {
+            items: true,
+            payments: true,
+            station: true,
+            attendant: true,
+            customer: true,
+          },
+        });
+        return {
+          ...sale,
+          paychanguChargeId: paychanguTxn.transactionRef,
+          paychanguRequires3ds: Boolean(paychanguTxn.metadata?.requires3dsAuth),
+          paychanguAuthLink: paychanguTxn.metadata?.threeDsAuthLink as
+            | string
+            | undefined,
+        };
       } catch (err) {
         saved.status = SaleStatus.VOIDED;
         saved.notes = [
@@ -349,16 +395,6 @@ export class SalesService {
         await this.salesRepo.save(saved);
         throw err;
       }
-      return this.salesRepo.findOne({
-        where: { id: saved.id },
-        relations: {
-          items: true,
-          payments: true,
-          station: true,
-          attendant: true,
-          customer: true,
-        },
-      });
     }
 
     await this.finalizeSale(saved, dto, attendantId, activePrice, items, salesChannel, lpgQuantityKg, total);

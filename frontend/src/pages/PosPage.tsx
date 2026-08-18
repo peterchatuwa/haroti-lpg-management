@@ -35,6 +35,11 @@ export function PosPage() {
   const [paychanguOperator, setPaychanguOperator] = useState<'AIRTEL_MONEY' | 'TNM_MPAMBA'>(
     'AIRTEL_MONEY',
   );
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [cardholderName, setCardholderName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
   const [discount, setDiscount] = useState(0);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -150,6 +155,23 @@ export function PosPage() {
     !user?.canOverridePrice &&
     discountPercent > (user?.discountLimitPercent ?? 0);
 
+  function paymentExtras(): Record<string, unknown> {
+    if (paymentMethod === 'PAYCHANGU') {
+      return { customerPhone: customerPhone.trim(), paychanguOperator };
+    }
+    if (paymentMethod === 'CARD') {
+      return {
+        cardNumber: cardNumber.replace(/\s/g, ''),
+        cardExpiry: cardExpiry.trim(),
+        cardCvv: cardCvv.trim(),
+        cardholderName: cardholderName.trim(),
+        customerEmail: customerEmail.trim() || undefined,
+        cardCurrency: 'MWK',
+      };
+    }
+    return {};
+  }
+
   const saleMutation = useMutation({
     mutationFn: async () => {
       if (!shift?.id) {
@@ -157,6 +179,14 @@ export function PosPage() {
       }
       if (paymentMethod === 'PAYCHANGU' && !customerPhone.trim()) {
         throw new Error('Enter the customer mobile number for PayChangu.');
+      }
+      if (paymentMethod === 'CARD') {
+        if (!cardNumber.trim() || !cardExpiry.trim()) {
+          throw new Error('Enter card number and expiry for card payment.');
+        }
+        if (!cardCvv.trim() || !cardholderName.trim()) {
+          throw new Error('Enter card CVV and cardholder name for card payment.');
+        }
       }
       const clientTxnId = crypto.randomUUID();
       let payload: Record<string, unknown>;
@@ -169,9 +199,7 @@ export function PosPage() {
           clientTxnId,
           items: [],
           payments: [{ method: paymentMethod, amount: total }],
-          ...(paymentMethod === 'PAYCHANGU'
-            ? { customerPhone: customerPhone.trim(), paychanguOperator }
-            : {}),
+          ...paymentExtras(),
         };
       } else if (posMode === 'accessory' && selectedProduct) {
         payload = {
@@ -188,9 +216,7 @@ export function PosPage() {
             },
           ],
           payments: [{ method: paymentMethod, amount: total }],
-          ...(paymentMethod === 'PAYCHANGU'
-            ? { customerPhone: customerPhone.trim(), paychanguOperator }
-            : {}),
+          ...paymentExtras(),
         };
       } else {
         payload = {
@@ -210,9 +236,7 @@ export function PosPage() {
             },
           ],
           payments: [{ method: paymentMethod, amount: total }],
-          ...(paymentMethod === 'PAYCHANGU'
-            ? { customerPhone: customerPhone.trim(), paychanguOperator }
-            : {}),
+          ...paymentExtras(),
         };
       }
 
@@ -229,7 +253,11 @@ export function PosPage() {
       const { data } = await api.post('/sales', payload);
 
       if (data.status === 'PENDING_PAYMENT' && data.id) {
-        const deadline = Date.now() + 120_000;
+        if (data.paychanguAuthLink) {
+          window.open(data.paychanguAuthLink, '_blank', 'noopener,noreferrer');
+        }
+        const pollMs = paymentMethod === 'CARD' ? 180_000 : 120_000;
+        const deadline = Date.now() + pollMs;
         while (Date.now() < deadline) {
           await new Promise((r) => setTimeout(r, 3000));
           const poll = await api.get(`/sales/${data.id}`);
@@ -238,7 +266,11 @@ export function PosPage() {
             throw new Error('PayChangu payment failed or was cancelled.');
           }
         }
-        return { ...data, paymentPending: true };
+        return {
+          ...data,
+          paymentPending: true,
+          card3ds: Boolean(data.paychanguAuthLink),
+        };
       }
 
       return data;
@@ -247,11 +279,17 @@ export function PosPage() {
       setLastReceipt(data.receiptNumber);
       setMessage(
         data.paymentPending
-          ? `PayChangu prompt sent · ${data.receiptNumber} — approve on phone, then refresh`
+          ? data.card3ds
+            ? `Complete 3D Secure in the opened tab · ${data.receiptNumber} — sale finishes after PayChangu confirms`
+            : paymentMethod === 'CARD'
+              ? `Card payment processing · ${data.receiptNumber} — waiting for PayChangu confirmation`
+              : `PayChangu prompt sent · ${data.receiptNumber} — approve on phone, then refresh`
           : data.status === 'PENDING_APPROVAL'
             ? `Awaiting manager approval · ${data.receiptNumber}`
             : data.status === 'PENDING_PAYMENT'
-              ? `PayChangu prompt sent to ${customerPhone} · ${data.receiptNumber}`
+              ? paymentMethod === 'CARD'
+                ? `Card charge initiated · ${data.receiptNumber}`
+                : `PayChangu prompt sent to ${customerPhone} · ${data.receiptNumber}`
               : data.offline
                 ? `Saved offline · ${data.receiptNumber}`
                 : `Sale complete · ${data.receiptNumber}`,
@@ -259,6 +297,11 @@ export function PosPage() {
       setError('');
       setBurst(true);
       window.setTimeout(() => setBurst(false), 600);
+      if (paymentMethod === 'CARD') {
+        setCardNumber('');
+        setCardExpiry('');
+        setCardCvv('');
+      }
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       if (data.status === 'PENDING_APPROVAL') {
@@ -545,6 +588,70 @@ export function PosPage() {
                 </div>
                 <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
                   Customer will receive a mobile money prompt. Sale completes only after PayChangu confirms payment.
+                </p>
+              </div>
+            )}
+            {paymentMethod === 'CARD' && (
+              <div className="stack" style={{ marginTop: '0.75rem' }}>
+                <label>
+                  Card number
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="cc-number"
+                    value={cardNumber}
+                    onChange={(e) => setCardNumber(e.target.value)}
+                    placeholder="4242 4242 4242 4242"
+                    required
+                  />
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <label>
+                    Expiry (MM/YY)
+                    <input
+                      type="text"
+                      autoComplete="cc-exp"
+                      value={cardExpiry}
+                      onChange={(e) => setCardExpiry(e.target.value)}
+                      placeholder="12/30"
+                      required
+                    />
+                  </label>
+                  <label>
+                    CVV
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="cc-csc"
+                      value={cardCvv}
+                      onChange={(e) => setCardCvv(e.target.value)}
+                      placeholder="123"
+                      required
+                    />
+                  </label>
+                </div>
+                <label>
+                  Cardholder name
+                  <input
+                    type="text"
+                    autoComplete="cc-name"
+                    value={cardholderName}
+                    onChange={(e) => setCardholderName(e.target.value)}
+                    placeholder="Name on card"
+                    required
+                  />
+                </label>
+                <label>
+                  Email (optional)
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    placeholder="customer@example.com"
+                  />
+                </label>
+                <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                  Card payments go through PayChangu. If 3D Secure is required, complete verification in the popup tab. Test card: 4242…4242, OTP 1234.
                 </p>
               </div>
             )}

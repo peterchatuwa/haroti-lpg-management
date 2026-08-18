@@ -75,6 +75,7 @@ services:
       PAYCHANGU_BASE_URL: ${PAYCHANGU_BASE_URL:-https://api.paychangu.com}
       PAYCHANGU_WEBHOOK_SECRET: ${PAYCHANGU_WEBHOOK_SECRET:-}
       PAYCHANGU_CALLBACK_URL: ${PAYCHANGU_CALLBACK_URL:-https://harotiholdingslimited.com/api/paychangu/webhook}
+      PAYCHANGU_CARD_REDIRECT_URL: ${PAYCHANGU_CARD_REDIRECT_URL:-https://harotiholdingslimited.com/erp/pos}
       ZHONGYI_API_URL: ${ZHONGYI_API_URL:-http://en.energy.zhongyismart.com/api/commonInternal.jsp}
       ZHONGYI_USERNAME: ${ZHONGYI_USERNAME:-}
       ZHONGYI_PASSWORD: ${ZHONGYI_PASSWORD:-}

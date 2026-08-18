@@ -28,6 +28,14 @@ interface PaychanguChargeData {
   mobile?: string;
 }
 
+interface PaychanguCardChargeResponse {
+  success?: boolean;
+  requires_3ds_auth?: boolean;
+  orderReference?: string;
+  '3ds_auth_link'?: string;
+  message?: string;
+}
+
 interface PaychanguWebhookPayload {
   event_type: string;
   charge_id?: string;
@@ -86,6 +94,13 @@ export class PaychanguService {
     saleId?: string;
     paycMeterId?: string;
     metadata?: Record<string, unknown>;
+    card?: {
+      number: string;
+      expiry: string;
+      cvv: string;
+      cardholderName: string;
+      currency?: string;
+    };
   }): Promise<PaychanguTransaction> {
     if (!this.secretKey) {
       throw new BadRequestException('PayChangu is not configured');
@@ -111,6 +126,17 @@ export class PaychanguService {
     const saved = await this.txnRepo.save(txn);
 
     try {
+      if (paychanguMethod === PaychanguPaymentMethod.CARD) {
+        if (!params.card) {
+          throw new BadRequestException('Card details are required');
+        }
+        return await this.initiateCardCharge(saved, {
+          amount: params.amount,
+          customerEmail: params.customerEmail,
+          card: params.card,
+        });
+      }
+
       const operatorRef = MOMO_OPERATOR_REF[paychanguMethod];
       if (!operatorRef) {
         throw new BadRequestException(
@@ -138,7 +164,7 @@ export class PaychanguService {
       saved.status = PaychanguTransactionStatus.PROCESSING;
       await this.txnRepo.save(saved);
 
-      this.logger.log(`Payment initiated: ${chargeId}`);
+      this.logger.log(`MoMo payment initiated: ${chargeId}`);
       return saved;
     } catch (error: unknown) {
       saved.status = PaychanguTransactionStatus.FAILED;
@@ -148,6 +174,54 @@ export class PaychanguService {
       await this.txnRepo.save(saved);
       throw error;
     }
+  }
+
+  private async initiateCardCharge(
+    saved: PaychanguTransaction,
+    params: {
+      amount: number;
+      customerEmail?: string;
+      card: {
+        number: string;
+        expiry: string;
+        cvv: string;
+        cardholderName: string;
+        currency?: string;
+      };
+    },
+  ): Promise<PaychanguTransaction> {
+    const chargeId = saved.transactionRef;
+    const redirectUrl =
+      this.config.get<string>('PAYCHANGU_CARD_REDIRECT_URL') ||
+      'https://harotiholdingslimited.com/erp/pos';
+
+    const response = await this.callPaychanguCardApi<PaychanguCardChargeResponse>(
+      '/charge-card/payments',
+      {
+        card_number: params.card.number,
+        expiry: params.card.expiry,
+        cvv: params.card.cvv,
+        cardholder_name: params.card.cardholderName,
+        amount: String(params.amount),
+        currency: params.card.currency || 'MWK',
+        email: params.customerEmail || 'customer@harotiholdingslimited.com',
+        charge_id: chargeId,
+        redirect_url: redirectUrl,
+      },
+    );
+
+    saved.paychanguReference = response.orderReference ?? chargeId;
+    saved.status = PaychanguTransactionStatus.PROCESSING;
+    saved.metadata = {
+      ...saved.metadata,
+      requires3dsAuth: Boolean(response.requires_3ds_auth),
+      threeDsAuthLink: response['3ds_auth_link'],
+      orderReference: response.orderReference,
+    };
+    await this.txnRepo.save(saved);
+
+    this.logger.log(`Card payment initiated: ${chargeId}`);
+    return saved;
   }
 
   async processWebhook(
@@ -203,12 +277,18 @@ export class PaychanguService {
       }
 
       // Re-query PayChangu before fulfilling (recommended by their docs).
-      const verified = await this.verifyChargeOnPaychangu(transactionRef);
-      const verifiedStatus = verified.data?.status ?? payload.status;
+      const verified = await this.verifyChargeOnPaychangu(
+        transactionRef,
+        txn.paymentMethod,
+      );
+      const verifiedStatus =
+        verified.data?.status ??
+        (verified as PaychanguEnvelope).status ??
+        payload.status;
 
       if (
-        eventType === 'api.charge.payment' &&
-        verifiedStatus === 'success'
+        (eventType === 'api.charge.payment' || eventType === 'payment.completed') &&
+        (verifiedStatus === 'success' || verifiedStatus === 'successful')
       ) {
         await this.handlePaymentCompleted(txn, payload);
       } else if (verifiedStatus === 'failed') {
@@ -287,8 +367,13 @@ export class PaychanguService {
       throw new BadRequestException('Transaction not found');
     }
 
-    const response = await this.verifyChargeOnPaychangu(transactionRef);
-    txn.status = this.mapStatusFromPaychangu(response.data?.status ?? '');
+    const response = await this.verifyChargeOnPaychangu(
+      transactionRef,
+      txn.paymentMethod,
+    );
+    txn.status = this.mapStatusFromPaychangu(
+      response.data?.status ?? (response as PaychanguEnvelope).status ?? '',
+    );
     if (
       txn.status === PaychanguTransactionStatus.COMPLETED &&
       !txn.completedAt
@@ -300,12 +385,51 @@ export class PaychanguService {
     return txn;
   }
 
-  private verifyChargeOnPaychangu(chargeId: string) {
+  private verifyChargeOnPaychangu(
+    chargeId: string,
+    method: PaychanguPaymentMethod,
+  ) {
+    if (method === PaychanguPaymentMethod.CARD) {
+      return this.callPaychanguApi<PaychanguEnvelope<PaychanguChargeData>>(
+        `/charge-card/verify/${encodeURIComponent(chargeId)}`,
+        undefined,
+        'GET',
+      );
+    }
     return this.callPaychanguApi<PaychanguEnvelope<PaychanguChargeData>>(
       `/mobile-money/payments/${encodeURIComponent(chargeId)}/verify`,
       undefined,
       'GET',
     );
+  }
+
+  private async callPaychanguCardApi<T>(
+    endpoint: string,
+    body: Record<string, unknown>,
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.secretKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const json = (await response.json().catch(() => ({}))) as T &
+      Record<string, unknown>;
+
+    if (!response.ok || json.success === false) {
+      const errorMessage =
+        typeof json.message === 'string' ? json.message : 'Unknown error';
+      throw new Error(
+        `PayChangu card API error: ${response.status} - ${errorMessage}`,
+      );
+    }
+
+    return json as T;
   }
 
   private async callPaychanguApi<T>(

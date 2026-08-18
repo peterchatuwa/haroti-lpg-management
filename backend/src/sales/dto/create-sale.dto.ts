@@ -108,8 +108,33 @@ export class CreateSaleDto {
   @IsString()
   customerPhone?: string;
 
-  /** Airtel or Mpamba operator when using PayChangu (defaults to Airtel) */
+  /** Airtel, Mpamba, or Card when using PayChangu gateway */
   @IsOptional()
   @IsEnum(PaymentMethod)
   paychanguOperator?: PaymentMethod;
+
+  /** PayChangu card charge — required when payment method is CARD */
+  @IsOptional()
+  @IsString()
+  cardNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  cardExpiry?: string;
+
+  @IsOptional()
+  @IsString()
+  cardCvv?: string;
+
+  @IsOptional()
+  @IsString()
+  cardholderName?: string;
+
+  @IsOptional()
+  @IsString()
+  customerEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  cardCurrency?: string;
 }
