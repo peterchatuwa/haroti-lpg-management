@@ -366,7 +366,7 @@ export class SalesService {
               }
             : undefined,
         });
-        const sale = await this.salesRepo.findOne({
+        const saleWithRelations = await this.salesRepo.findOne({
           where: { id: saved.id },
           relations: {
             items: true,
@@ -376,8 +376,11 @@ export class SalesService {
             customer: true,
           },
         });
+        if (!saleWithRelations) {
+          throw new BadRequestException('Sale saved but could not be loaded');
+        }
         return {
-          ...sale,
+          ...saleWithRelations,
           paychanguChargeId: paychanguTxn.transactionRef,
           paychanguRequires3ds: Boolean(paychanguTxn.metadata?.requires3dsAuth),
           paychanguAuthLink: paychanguTxn.metadata?.threeDsAuthLink as
@@ -393,7 +396,10 @@ export class SalesService {
           .filter(Boolean)
           .join(' · ');
         await this.salesRepo.save(saved);
-        throw err;
+        if (err instanceof BadRequestException) throw err;
+        throw new BadRequestException(
+          err instanceof Error ? err.message : 'PayChangu payment failed',
+        );
       }
     }
 

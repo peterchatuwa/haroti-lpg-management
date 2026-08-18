@@ -72,17 +72,17 @@ export class PaychanguService {
     @Inject(forwardRef(() => SalesService))
     private readonly salesService: SalesService,
   ) {
-    this.clientId =
-      config.get('PAYCHANGU_API_KEY') ||
-      config.get('PAYCHANGU_CLIENT_ID') ||
-      '';
-    this.secretKey =
-      config.get('PAYCHANGU_SECRET_KEY') ||
-      config.get('PAYCHANGU_API_KEY') ||
-      '';
+    this.clientId = this.resolveClientId();
+    this.secretKey = this.resolveSecretKey();
     this.baseUrl =
       config.get('PAYCHANGU_BASE_URL') || 'https://api.paychangu.com';
     this.webhookSecret = config.get('PAYCHANGU_WEBHOOK_SECRET') || '';
+
+    if (!this.secretKey) {
+      this.logger.warn(
+        'PayChangu secret key not configured — set PAYCHANGU_SECRET_KEY (sec-test-… or sec-live-…)',
+      );
+    }
   }
 
   async initiatePayment(params: {
@@ -103,7 +103,9 @@ export class PaychanguService {
     };
   }): Promise<PaychanguTransaction> {
     if (!this.secretKey) {
-      throw new BadRequestException('PayChangu is not configured');
+      throw new BadRequestException(
+        'PayChangu is not configured. Set PAYCHANGU_SECRET_KEY to your sec-test- or sec-live- key on the server.',
+      );
     }
 
     const paychanguMethod = this.mapPaymentMethod(params.paymentMethod);
@@ -172,7 +174,8 @@ export class PaychanguService {
         error instanceof Error ? error.message : 'Unknown error';
       saved.metadata = { ...saved.metadata, error: errorMessage };
       await this.txnRepo.save(saved);
-      throw error;
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException(errorMessage);
     }
   }
 
@@ -424,8 +427,8 @@ export class PaychanguService {
     if (!response.ok || json.success === false) {
       const errorMessage =
         typeof json.message === 'string' ? json.message : 'Unknown error';
-      throw new Error(
-        `PayChangu card API error: ${response.status} - ${errorMessage}`,
+      throw new BadRequestException(
+        `PayChangu card API error (${response.status}): ${errorMessage}`,
       );
     }
 
@@ -462,8 +465,8 @@ export class PaychanguService {
     if (!response.ok || json.status === 'failed') {
       const errorMessage =
         typeof json.message === 'string' ? json.message : 'Unknown error';
-      throw new Error(
-        `PayChangu API error: ${response.status} - ${errorMessage}`,
+      throw new BadRequestException(
+        `PayChangu API error (${response.status}): ${errorMessage}`,
       );
     }
 
@@ -486,10 +489,37 @@ export class PaychanguService {
   }
 
   private normalizePhone(phone: string): string {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.startsWith('265')) return `+${digits}`;
-    if (digits.startsWith('0')) return `+265${digits.slice(1)}`;
-    return `+265${digits}`;
+    let digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('265')) digits = digits.slice(3);
+    if (digits.startsWith('0')) digits = digits.slice(1);
+    if (digits.length !== 9) {
+      throw new BadRequestException(
+        'Enter a valid Malawi mobile number (e.g. 0990000000 or 990000000)',
+      );
+    }
+    return `0${digits}`;
+  }
+
+  private resolveSecretKey(): string {
+    const secret = this.config.get<string>('PAYCHANGU_SECRET_KEY')?.trim();
+    if (secret) return secret;
+
+    const apiKey = this.config.get<string>('PAYCHANGU_API_KEY')?.trim();
+    if (apiKey?.startsWith('sec-') || apiKey?.startsWith('sk_')) {
+      return apiKey;
+    }
+    return '';
+  }
+
+  private resolveClientId(): string {
+    const clientId = this.config.get<string>('PAYCHANGU_CLIENT_ID')?.trim();
+    if (clientId) return clientId;
+
+    const apiKey = this.config.get<string>('PAYCHANGU_API_KEY')?.trim();
+    if (apiKey?.startsWith('pub-') || apiKey?.startsWith('pk_')) {
+      return apiKey;
+    }
+    return '';
   }
 
   private mapPaymentMethod(method: PaymentMethod): PaychanguPaymentMethod {
