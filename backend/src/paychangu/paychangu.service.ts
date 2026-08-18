@@ -361,6 +361,13 @@ export class PaychanguService {
     return `HAR-${Date.now()}-${randomBytes(3).toString('hex').toUpperCase()}`;
   }
 
+  private normalizePhone(phone: string): string {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('265')) return `+${digits}`;
+    if (digits.startsWith('0')) return `+265${digits.slice(1)}`;
+    return `+265${digits}`;
+  }
+
   private mapPaymentMethod(method: PaymentMethod): PaychanguPaymentMethod {
     const mapping: Record<string, PaychanguPaymentMethod> = {
       [PaymentMethod.AIRTEL_MONEY]: PaychanguPaymentMethod.AIRTEL_MONEY,
