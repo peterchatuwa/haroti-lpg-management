@@ -57,6 +57,16 @@ export class PaycController {
     return this.paycService.rebindCylinder(id, body.cylinderSerial);
   }
 
+  @Post('meters/:id/sync-vendor')
+  syncVendor(@Param('id') id: string) {
+    return this.paycService.syncMeterFromVendor(id);
+  }
+
+  @Post('sync-vendor')
+  syncAllVendor() {
+    return this.paycService.syncAllMetersFromVendor();
+  }
+
   @Post('telemetry')
   telemetryIngest(
     @Body()

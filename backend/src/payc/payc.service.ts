@@ -16,6 +16,7 @@ import { FinanceService, GL_ACCOUNTS } from '../finance/finance.service';
 import { PaycCreditTransaction } from './payc-credit-transaction.entity';
 import { PaycMeter } from './payc-meter.entity';
 import { PaycTelemetry } from './payc-telemetry.entity';
+import { ZhongyiMeterClient } from './zhongyi-meter.client';
 
 const OFFLINE_HOURS = 24;
 const PRICE_PER_KG = 1850;
@@ -30,6 +31,7 @@ export class PaycService {
     @InjectRepository(PaycCreditTransaction)
     private readonly creditRepo: Repository<PaycCreditTransaction>,
     private readonly financeService: FinanceService,
+    private readonly zhongyiClient: ZhongyiMeterClient,
   ) {}
 
   findAll() {
@@ -125,6 +127,7 @@ export class PaycService {
     amountMwk: number;
     paymentMethod: PaymentMethod;
     reference?: string;
+    pushToVendor?: boolean;
   }) {
     const meter = await this.findOne(params.meterId);
     const creditKg = round3(params.amountMwk / PRICE_PER_KG);
@@ -162,7 +165,51 @@ export class PaycService {
       ],
     });
 
+    if (params.pushToVendor !== false && meter.imei && this.zhongyiClient.enabled) {
+      await this.zhongyiClient.remotelyTopUp(meter.imei, params.amountMwk);
+    }
+
     return meter;
+  }
+
+  async syncMeterFromVendor(meterId: string) {
+    const meter = await this.findOne(meterId);
+    if (!meter.imei) {
+      throw new BadRequestException('Meter has no IMEI linked for vendor sync');
+    }
+    if (!this.zhongyiClient.enabled) {
+      throw new BadRequestException('Zhongyi vendor API is not configured');
+    }
+
+    const data = await this.zhongyiClient.queryRealTimeData(meter.imei);
+    const creditKg = round3(toNumber(data.balance) / PRICE_PER_KG);
+    const valveOpen = data.valve === 1;
+
+    return this.ingestTelemetry({
+      meterSerial: meter.meterSerial,
+      burnKg: toNumber(meter.dailyBurnKg),
+      creditRemainingKg: creditKg,
+      valveOpen,
+    });
+  }
+
+  async syncAllMetersFromVendor() {
+    if (!this.zhongyiClient.enabled) {
+      throw new BadRequestException('Zhongyi vendor API is not configured');
+    }
+
+    const meters = await this.metersRepo.find({ where: {} });
+    const synced: string[] = [];
+    for (const meter of meters) {
+      if (!meter.imei) continue;
+      try {
+        await this.syncMeterFromVendor(meter.id);
+        synced.push(meter.meterSerial);
+      } catch {
+        // Continue syncing remaining meters.
+      }
+    }
+    return { synced: synced.length, meterSerials: synced };
   }
 
   async rebindCylinder(meterId: string, cylinderSerial: string) {

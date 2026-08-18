@@ -85,6 +85,7 @@ import { AiModule } from './ai/ai.module';
 import { SearchModule } from './search/search.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { UsersModule } from './users/users.module';
+import { PaychanguModule } from './paychangu/paychangu.module';
 
 @Module({
   imports: [
@@ -151,6 +152,7 @@ import { UsersModule } from './users/users.module';
     AiModule,
     SearchModule,
     UsersModule,
+    PaychanguModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

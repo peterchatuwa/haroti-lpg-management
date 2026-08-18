@@ -6,6 +6,7 @@ import { PaycCreditTransaction } from './payc-credit-transaction.entity';
 import { PaycMeter } from './payc-meter.entity';
 import { PaycService } from './payc.service';
 import { PaycTelemetry } from './payc-telemetry.entity';
+import { ZhongyiMeterClient } from './zhongyi-meter.client';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { PaycTelemetry } from './payc-telemetry.entity';
     FinanceModule,
   ],
   controllers: [PaycController],
-  providers: [PaycService],
+  providers: [PaycService, ZhongyiMeterClient],
   exports: [PaycService],
 })
 export class PaycModule {}
