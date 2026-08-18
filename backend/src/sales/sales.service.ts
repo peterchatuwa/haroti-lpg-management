@@ -536,6 +536,51 @@ export class SalesService {
     await this.salesRepo.save(sale);
   }
 
+  async refreshPaychanguPayment(saleId: string) {
+    const sale = await this.findOne(saleId);
+    if (
+      sale.status === SaleStatus.COMPLETED ||
+      sale.status === SaleStatus.VOIDED
+    ) {
+      return sale;
+    }
+    if (sale.status !== SaleStatus.PENDING_PAYMENT) {
+      throw new BadRequestException('Sale is not awaiting PayChangu payment');
+    }
+
+    const txn = await this.paychanguService.findBySaleId(saleId);
+    if (txn) {
+      await this.paychanguService.queryPayment(txn.transactionRef);
+    }
+
+    return this.findOne(saleId);
+  }
+
+  async cancelPendingPayment(saleId: string) {
+    const sale = await this.findOne(saleId);
+    if (
+      sale.status === SaleStatus.COMPLETED ||
+      sale.status === SaleStatus.VOIDED
+    ) {
+      return sale;
+    }
+    if (sale.status !== SaleStatus.PENDING_PAYMENT) {
+      throw new BadRequestException('Sale is not awaiting PayChangu payment');
+    }
+
+    const txn = await this.paychanguService.findBySaleId(saleId);
+    if (txn) {
+      await this.paychanguService.queryPayment(txn.transactionRef);
+      const refreshed = await this.findOne(saleId);
+      if (refreshed.status !== SaleStatus.PENDING_PAYMENT) {
+        return refreshed;
+      }
+    }
+
+    await this.failPaychanguSale(saleId, 'Cancelled by cashier');
+    return this.findOne(saleId);
+  }
+
   listPendingDiscounts(stationId?: string) {
     return this.salesRepo.find({
       where: {

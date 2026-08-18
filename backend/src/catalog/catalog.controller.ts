@@ -4,15 +4,12 @@ import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Customer } from '../customers/customer.entity';
 import { Cylinder } from '../cylinders/cylinder.entity';
-import { Product } from '../products/product.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class CatalogController {
   constructor(
-    @InjectRepository(Product)
-    private readonly productsRepo: Repository<Product>,
     @InjectRepository(Customer)
     private readonly customersRepo: Repository<Customer>,
     @InjectRepository(Supplier)
@@ -20,14 +17,6 @@ export class CatalogController {
     @InjectRepository(Cylinder)
     private readonly cylindersRepo: Repository<Cylinder>,
   ) {}
-
-  @Get('products')
-  products() {
-    return this.productsRepo.find({
-      where: { isActive: true },
-      order: { name: 'ASC' },
-    });
-  }
 
   @Get('customers')
   customers(@Query('stationId') stationId?: string) {

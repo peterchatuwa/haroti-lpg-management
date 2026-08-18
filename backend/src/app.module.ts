@@ -57,7 +57,7 @@ import { PriceList } from './pricing/price-list.entity';
 import { ProcurementModule } from './procurement/procurement.module';
 import { PurchaseOrderLine } from './procurement/purchase-order-line.entity';
 import { PurchaseOrder } from './procurement/purchase-order.entity';
-import { Product } from './products/product.entity';
+import { ProductsModule } from './products/products.module';
 import { RequisitionsModule } from './requisitions/requisitions.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { ReportsModule } from './reports/reports.module';
@@ -120,6 +120,7 @@ import { PaychanguModule } from './paychangu/paychangu.module';
     TransfersModule,
     ExpensesModule,
     CatalogModule,
+    ProductsModule,
     DashboardModule,
     SeedModule,
     AccessoriesModule,

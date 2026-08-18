@@ -54,6 +54,41 @@ export interface ZhongyiArchiveRow {
   areaOrgId?: number;
 }
 
+export interface ZhongyiValveRecord {
+  id: number;
+  imei?: string;
+  dateTime?: string;
+  resultInfo?: string;
+  status?: string;
+  valueId?: number;
+}
+
+export interface ZhongyiCommandInfo {
+  state?: number;
+  errmsg?: string;
+  baseObject?: Record<string, unknown>;
+  jsonParse?: Record<string, unknown>;
+}
+
+export interface ZhongyiHistoryReading {
+  readTime?: string;
+  consumption?: number;
+  reading?: string;
+  deveui?: string;
+}
+
+export interface ZhongyiArchiveDetail {
+  id?: number;
+  customerName?: string;
+  serialnumber?: string;
+  IMEI?: string;
+  readings?: string;
+  valveStatus?: number;
+  balance?: number;
+  phone?: string;
+  areaOrgName?: string;
+}
+
 export interface ZhongyiVendorConfig {
   areaId: string;
   areaName?: string;
@@ -162,13 +197,14 @@ export class ZhongyiMeterClient {
   async getAreaArchives(
     pageNumber = 1,
     pageSize = 100,
+    energyType = 'LIQUEFIEDGAS',
   ): Promise<{ rows: ZhongyiArchiveRow[]; pageTotal: number }> {
     const cfg = await this.getVendorConfig();
     const response = await this.call<ZhongyiArchiveRow>(
       'zlMeter',
       'getAreaArchives',
       {
-        energyType: 'GAS',
+        energyType,
         pageNumber: String(pageNumber),
         pageSize: String(pageSize),
         areaId: cfg.areaId,
@@ -186,13 +222,24 @@ export class ZhongyiMeterClient {
 
   async getAllAreaArchives(): Promise<ZhongyiArchiveRow[]> {
     const pageSize = 100;
-    const first = await this.getAreaArchives(1, pageSize);
-    const all = [...first.rows];
-    for (let page = 2; page <= first.pageTotal; page++) {
-      const next = await this.getAreaArchives(page, pageSize);
-      all.push(...next.rows);
+    const byImei = new Map<string, ZhongyiArchiveRow>();
+
+    for (const energyType of ['LIQUEFIEDGAS', 'GAS'] as const) {
+      const first = await this.getAreaArchives(1, pageSize, energyType);
+      for (const row of first.rows) {
+        const key = row.IMEI?.trim() || row.serialnumber?.trim();
+        if (key) byImei.set(key, row);
+      }
+      for (let page = 2; page <= first.pageTotal; page++) {
+        const next = await this.getAreaArchives(page, pageSize, energyType);
+        for (const row of next.rows) {
+          const key = row.IMEI?.trim() || row.serialnumber?.trim();
+          if (key) byImei.set(key, row);
+        }
+      }
     }
-    return all;
+
+    return [...byImei.values()];
   }
 
   async remotelyTopUp(
@@ -230,6 +277,136 @@ export class ZhongyiMeterClient {
     return { valueId: response.valueId, errmsg: response.errmsg };
   }
 
+  async readValveStatus(
+    imei: string,
+  ): Promise<{ valveStatus?: string; nbonetNetImei?: string }> {
+    const response = await this.call<{ valveStatus?: string; nbonetNetImei?: string }>(
+      'zlMeter',
+      'readValveStatus',
+      { nbonetNetImei: imei },
+      true,
+      'param',
+    );
+    return response.data ?? {};
+  }
+
+  async getAreaArchiveInfo(imei: string): Promise<ZhongyiArchiveDetail> {
+    const response = await this.call<ZhongyiArchiveDetail>(
+      'zlMeter',
+      'getAreaArchiveInfo',
+      { nbonetNetImei: imei },
+      true,
+      'param',
+    );
+    if (!response.value) {
+      throw new Error(`Zhongyi archive info missing for IMEI ${imei}`);
+    }
+    return response.value;
+  }
+
+  async getValveRecords(
+    imei: string,
+    pageNumber = 1,
+    pageSize = 20,
+  ): Promise<{ rows: ZhongyiValveRecord[]; pageTotal: number }> {
+    const response = await this.call<ZhongyiValveRecord>(
+      'zlMeter',
+      'getValverecord',
+      {
+        pageNumber: String(pageNumber),
+        pageSize: String(pageSize),
+        nbonetNetImei: imei,
+        startDate: '',
+        endDate: '',
+      },
+      true,
+      'param',
+    );
+    return {
+      rows: response.values ?? [],
+      pageTotal: response.pageInfo?.pageTotal ?? 1,
+    };
+  }
+
+  async sendCommand(
+    imei: string,
+    commandStr: 'queryFlowAndStatus' | 'queryBattery',
+  ): Promise<{ valueId?: string; errmsg: string }> {
+    const response = await this.call<unknown>(
+      'zlMeter',
+      'sendCommand',
+      {
+        nbonetNetImei: imei,
+        commandStr,
+        commandParams: {},
+      },
+      true,
+      'param',
+    );
+    return { valueId: response.valueId, errmsg: response.errmsg };
+  }
+
+  async queryCommandInfo(valueId: string): Promise<ZhongyiCommandInfo> {
+    const response = (await this.call<unknown>(
+      'zlMeter',
+      'queryCommandInfo',
+      { valueId },
+      true,
+      'param',
+    )) as ZhongyiResponse<unknown> & ZhongyiCommandInfo;
+    return {
+      state: response.state,
+      errmsg: response.errmsg,
+      baseObject: response.baseObject,
+      jsonParse: response.jsonParse,
+    };
+  }
+
+  async queryHistoryMeterReading(
+    imei: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<ZhongyiHistoryReading[]> {
+    const response = await this.call<ZhongyiHistoryReading[]>(
+      'zlMeter',
+      'queryHistoryMeterReading',
+      {
+        nbonetNetImei: imei,
+        startDate: startDate ?? '',
+        endDate: endDate ?? '',
+      },
+      true,
+      'param',
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  }
+
+  async queryAllMeterCurrentReading(imeis: string[]): Promise<
+    Array<{
+      imei?: string;
+      customerName?: string;
+      reading?: string;
+      valveState?: number;
+    }>
+  > {
+    if (!imeis.length) return [];
+    const response = await this.call<
+      Array<{
+        imei?: string;
+        customerName?: string;
+        reading?: string;
+        valveState?: number;
+      }>
+    >(
+      'zlMeter',
+      'queryAllMeterCurrentReading',
+      { nbonetNetImeis: imeis.join(',') },
+      true,
+      'param',
+    );
+    return response.data ?? [];
+  }
+
   async queryDailyConsumption(
     imeis: string[],
     date?: string,
@@ -253,11 +430,11 @@ export class ZhongyiMeterClient {
     if (!this.enabled) return { ok: false };
     try {
       const cfg = await this.getVendorConfig();
-      const first = await this.getAreaArchives(1, 1);
+      const archives = await this.getAllAreaArchives();
       return {
         ok: true,
         areaName: cfg.areaName,
-        meterCount: first.pageTotal,
+        meterCount: archives.length,
       };
     } catch (err) {
       this.logger.warn(
@@ -270,7 +447,7 @@ export class ZhongyiMeterClient {
   private async call<T>(
     action: string,
     method: string,
-    payload: Record<string, string | number>,
+    payload: Record<string, unknown>,
     withToken: boolean,
     bodyKey: 'param' | 'params' = 'params',
   ): Promise<ZhongyiResponse<T>> {

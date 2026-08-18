@@ -122,6 +122,7 @@ export const navSections: NavSection[] = [
           { to: '/pos', label: 'Refill POS', icon: ShoppingCart, roles: vis(FLOOR, NET) },
           { to: '/shifts', label: 'Shifts', icon: Gauge, roles: vis(FLOOR, STOCK, NET) },
           { to: '/accessories', label: 'Accessories', icon: Tag, roles: vis(FLOOR, NET) },
+          { to: '/products', label: 'Products', icon: Package, roles: vis(STOCK, FLOOR, NET) },
           { to: '/sync-centre', label: 'Sync centre', icon: RefreshCw, roles: vis(FLOOR, NET) },
         ],
       },

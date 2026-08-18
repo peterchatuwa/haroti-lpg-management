@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FinanceModule } from '../finance/finance.module';
 import { MaintenanceModule } from '../maintenance/maintenance.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PaycModule } from '../payc/payc.module';
 import { SafetyModule } from '../safety/safety.module';
 import { TanksModule } from '../tanks/tanks.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
@@ -21,6 +22,7 @@ import { JobsService } from './jobs.service';
     SafetyModule,
     WorkflowsModule,
     NotificationsModule,
+    PaycModule,
   ],
   controllers: [JobsController],
   providers: [JobsService],

@@ -26,6 +26,7 @@ interface PaycMeterRow {
   dailyBurnKg: string;
   status: string;
   location?: string;
+  valveOpen?: boolean | null;
   customer?: { fullName: string };
 }
 
@@ -104,7 +105,7 @@ export function PaycPage() {
             {!vendor?.configured && (vendor?.message ?? 'Not configured')}
             {vendor?.configured && !vendor.connected && (vendor.message ?? 'Not connected')}
             {vendor?.connected &&
-              `Connected · ${vendor.areaName ?? 'Area'} · ${vendor.vendorMeterPages ?? '?'} meter page(s) on vendor`}
+              `Connected · ${vendor.areaName ?? 'Area'} · ${vendor.vendorMeterPages ?? '?'} meter(s) on Zhongyi`}
           </p>
         </div>
         <span className={`badge ${vendor?.connected ? '' : 'warn'}`}>
@@ -139,9 +140,13 @@ export function PaycPage() {
         </div>
         <div className="panel stat-card warn">
           <h3>Alerts</h3>
-          <div className="value">{dashboard.lowCreditMeters + dashboard.offlineMeters}</div>
+          <div className="value">
+            {dashboard.lowCreditMeters + dashboard.offlineMeters + (dashboard.valveClosedMeters ?? 0)}
+          </div>
           <div className="hint">
             {dashboard.lowCreditMeters} low credit · {dashboard.offlineMeters} offline
+            {(dashboard.valveClosedMeters ?? 0) > 0 &&
+              ` · ${dashboard.valveClosedMeters} valve closed`}
           </div>
         </div>
       </div>
@@ -171,6 +176,7 @@ export function PaycPage() {
                 <th>Customer</th>
                 <th>Location</th>
                 <th>Credit (kg)</th>
+                <th>Valve</th>
                 <th>Deferred MWK</th>
                 <th>Status</th>
                 <th />
@@ -184,6 +190,13 @@ export function PaycPage() {
                   <td>{m.customer?.fullName ?? '—'}</td>
                   <td>{m.location ?? '—'}</td>
                   <td>{formatKg(Number(m.creditBalanceKg))}</td>
+                  <td>
+                    {m.valveOpen === true
+                      ? 'Open'
+                      : m.valveOpen === false
+                        ? 'Closed'
+                        : '—'}
+                  </td>
                   <td>{formatMoney(Number(m.deferredRevenue))}</td>
                   <td>
                     <span className="badge">{m.status.replaceAll('_', ' ')}</span>

@@ -97,6 +97,7 @@ export interface PaycDashboard {
   activeMeters: number;
   offlineMeters: number;
   lowCreditMeters: number;
+  valveClosedMeters?: number;
   totalDeferredRevenue: number;
   totalCreditKg: number;
   estimatedDailyRevenue: number;

@@ -320,7 +320,7 @@ export class PaychanguService {
     txn: PaychanguTransaction,
     payload: Record<string, unknown>,
   ): Promise<void> {
-    if (txn.status === PaychanguTransactionStatus.COMPLETED) return;
+    if (txn.completedAt) return;
 
     txn.status = PaychanguTransactionStatus.COMPLETED;
     txn.completedAt = new Date();
@@ -347,18 +347,19 @@ export class PaychanguService {
     txn: PaychanguTransaction,
     payload: Record<string, unknown>,
   ): Promise<void> {
-    txn.status = PaychanguTransactionStatus.FAILED;
-    txn.metadata = {
-      ...txn.metadata,
-      failure_reason: payload.status as string | undefined,
-    };
-    await this.txnRepo.save(txn);
+    const reason = payload.status as string | undefined;
+    if (
+      txn.status !== PaychanguTransactionStatus.FAILED &&
+      txn.status !== PaychanguTransactionStatus.CANCELLED &&
+      txn.status !== PaychanguTransactionStatus.EXPIRED
+    ) {
+      txn.status = PaychanguTransactionStatus.FAILED;
+      txn.metadata = { ...txn.metadata, failure_reason: reason };
+      await this.txnRepo.save(txn);
+    }
 
     if (txn.saleId) {
-      await this.salesService.failPaychanguSale(
-        txn.saleId,
-        payload.status as string | undefined,
-      );
+      await this.salesService.failPaychanguSale(txn.saleId, reason);
     }
 
     this.logger.warn(`Payment failed: ${txn.transactionRef}`);
@@ -374,18 +375,51 @@ export class PaychanguService {
       transactionRef,
       txn.paymentMethod,
     );
-    txn.status = this.mapStatusFromPaychangu(
-      response.data?.status ?? (response as PaychanguEnvelope).status ?? '',
-    );
+    const remoteStatus =
+      response.data?.status ?? (response as PaychanguEnvelope).status ?? '';
+    txn.status = this.mapStatusFromPaychangu(remoteStatus);
     if (
-      txn.status === PaychanguTransactionStatus.COMPLETED &&
-      !txn.completedAt
+      txn.status === PaychanguTransactionStatus.FAILED ||
+      txn.status === PaychanguTransactionStatus.CANCELLED ||
+      txn.status === PaychanguTransactionStatus.EXPIRED
     ) {
-      txn.completedAt = new Date();
+      txn.metadata = {
+        ...txn.metadata,
+        failure_reason: remoteStatus || txn.metadata?.failure_reason,
+      };
     }
     await this.txnRepo.save(txn);
 
+    await this.applyTransactionOutcome(txn, remoteStatus);
+
     return txn;
+  }
+
+  findBySaleId(saleId: string) {
+    return this.txnRepo.findOne({
+      where: { saleId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  private async applyTransactionOutcome(
+    txn: PaychanguTransaction,
+    remoteStatus?: string,
+  ): Promise<void> {
+    if (txn.status === PaychanguTransactionStatus.COMPLETED) {
+      await this.handlePaymentCompleted(txn, {});
+      return;
+    }
+
+    if (
+      txn.status === PaychanguTransactionStatus.FAILED ||
+      txn.status === PaychanguTransactionStatus.CANCELLED ||
+      txn.status === PaychanguTransactionStatus.EXPIRED
+    ) {
+      await this.handlePaymentFailed(txn, {
+        status: remoteStatus ?? txn.metadata?.failure_reason,
+      });
+    }
   }
 
   private verifyChargeOnPaychangu(

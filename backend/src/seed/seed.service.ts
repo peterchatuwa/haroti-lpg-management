@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Repository } from 'typeorm';
@@ -146,28 +147,37 @@ export class SeedService implements OnModuleInit {
     private readonly workflowStepsRepo: Repository<WorkflowStep>,
     @InjectRepository(IoTDevice)
     private readonly iotDevicesRepo: Repository<IoTDevice>,
+    private readonly config: ConfigService,
   ) {}
+
+  private demoEnabled(): boolean {
+    return this.config.get('SEED_DEMO_DATA') === 'true';
+  }
 
   async onModuleInit() {
     const count = await this.stationsRepo.count();
     if (count === 0) {
-      await this.seed();
+      await this.seedBootstrap();
+      return;
+    }
+    const stations = await this.stationsRepo.find();
+    this.logger.log('Database bootstrap present');
+    await this.ensureTierBTanks(stations);
+    await this.seedSystemDefaults();
+    if (!this.demoEnabled()) {
+      this.logger.log('Demo seed disabled (set SEED_DEMO_DATA=true to enable)');
       return;
     }
     const bundleCount = await this.bundlesRepo.count();
-    const stations = await this.stationsRepo.find();
     if (bundleCount === 0) {
       await this.seedCharterExtensions(stations);
-    } else {
-      this.logger.log('Database already seeded');
     }
     await this.seedPhase23Extensions(stations);
     await this.seedPhase3Automation(stations);
-    await this.ensureTierBTanks(stations);
   }
 
-  async seed() {
-    this.logger.log('Seeding Haroti Holdings demo data...');
+  async seedBootstrap() {
+    this.logger.log('Seeding Haroti bootstrap data (stations, admin, catalog)...');
 
     const stations = await this.stationsRepo.save(
       STATIONS.map((s) =>
@@ -189,134 +199,20 @@ export class SeedService implements OnModuleInit {
 
     const passwordHash = await bcrypt.hash('Password123!', 10);
 
-    const users = [
-      {
+    await this.usersRepo.save(
+      this.usersRepo.create({
         username: 'admin',
         fullName: 'System Administrator',
         role: UserRole.SYSTEM_ADMIN,
-        stationId: null as string | null,
+        stationId: null,
         canOverridePrice: true,
         discountLimitPercent: '100',
-      },
-      {
-        username: 'director',
-        fullName: 'Haroti Director',
-        role: UserRole.DIRECTOR,
-        stationId: null,
-        canOverridePrice: true,
-        discountLimitPercent: '50',
-      },
-      {
-        username: 'ops.manager',
-        fullName: 'Operations Manager',
-        role: UserRole.OPERATIONS_MANAGER,
-        stationId: null,
-        canOverridePrice: true,
-        discountLimitPercent: '20',
-      },
-      {
-        username: 'finance',
-        fullName: 'Finance Manager',
-        role: UserRole.FINANCE_MANAGER,
-        stationId: null,
-        canOverridePrice: false,
-        discountLimitPercent: '0',
-      },
-      {
-        username: 'llw01.manager',
-        fullName: 'LLW-01 Station Manager',
-        role: UserRole.STATION_MANAGER,
-        stationId: stations.find((s) => s.code === 'LLW-01')!.id,
-        canOverridePrice: false,
-        discountLimitPercent: '5',
-      },
-      {
-        username: 'llw01.attendant',
-        fullName: 'LLW-01 Attendant',
-        role: UserRole.ATTENDANT,
-        stationId: stations.find((s) => s.code === 'LLW-01')!.id,
-        canOverridePrice: false,
-        discountLimitPercent: '0',
-      },
-      {
-        username: 'bt01.manager',
-        fullName: 'BT-01 Station Manager',
-        role: UserRole.STATION_MANAGER,
-        stationId: stations.find((s) => s.code === 'BT-01')!.id,
-        canOverridePrice: false,
-        discountLimitPercent: '5',
-      },
-      {
-        username: 'bt01.attendant',
-        fullName: 'BT-01 Attendant',
-        role: UserRole.ATTENDANT,
-        stationId: stations.find((s) => s.code === 'BT-01')!.id,
-        canOverridePrice: false,
-        discountLimitPercent: '0',
-      },
-      {
-        username: 'sal01.attendant',
-        fullName: 'SAL-01 Attendant',
-        role: UserRole.ATTENDANT,
-        stationId: stations.find((s) => s.code === 'SAL-01')!.id,
-        canOverridePrice: false,
-        discountLimitPercent: '0',
-      },
-      {
-        username: 'storekeeper',
-        fullName: 'Central Storekeeper',
-        role: UserRole.STOREKEEPER,
-        stationId: stations.find((s) => s.code === 'LLW-01')!.id,
-        canOverridePrice: false,
-        discountLimitPercent: '0',
-      },
-      {
-        username: 'safety',
-        fullName: 'Safety Officer',
-        role: UserRole.SAFETY_OFFICER,
-        stationId: null,
-        canOverridePrice: false,
-        discountLimitPercent: '0',
-      },
-      {
-        username: 'auditor',
-        fullName: 'Internal Auditor',
-        role: UserRole.AUDITOR,
-        stationId: null,
-        canOverridePrice: false,
-        discountLimitPercent: '0',
-      },
-    ];
-
-    await this.usersRepo.save(
-      users.map((u) =>
-        this.usersRepo.create({
-          ...u,
-          username: u.username.toLowerCase(),
-          email: `${u.username}@haroti.mw`,
-          phone: '+265999000000',
-          passwordHash,
-          isActive: true,
-        }),
-      ),
+        email: 'admin@haroti.mw',
+        phone: '+265999000000',
+        passwordHash,
+        isActive: true,
+      }),
     );
-
-    await this.suppliersRepo.save([
-      this.suppliersRepo.create({
-        code: 'SUP-001',
-        name: 'National Petroleum LPG',
-        phone: '+265991111111',
-        depotName: 'Lilongwe Depot',
-        address: 'Kanengo Industrial Area',
-      }),
-      this.suppliersRepo.create({
-        code: 'SUP-002',
-        name: 'Southern Gas Distributors',
-        phone: '+265992222222',
-        depotName: 'Blantyre Depot',
-        address: 'Makata Industrial Area',
-      }),
-    ]);
 
     const cylinderSizes = [3, 5, 6, 9, 12, 14, 19, 45];
     await this.productsRepo.save([
@@ -382,107 +278,28 @@ export class SeedService implements OnModuleInit {
       }),
     );
 
-    await this.customersRepo.save([
-      this.customersRepo.create({
-        customerCode: 'COM-001',
-        fullName: 'Capital Hotel Restaurant',
-        type: CustomerType.COMMERCIAL,
-        phone: '+265993333333',
-        location: 'Lilongwe City Centre',
-        creditLimit: '500000.00',
-        paymentTermsDays: 30,
-        contractPricePerKg: '1750.00',
-        stationId: stations.find((s) => s.code === 'LLW-01')!.id,
-      }),
-      this.customersRepo.create({
-        customerCode: 'COM-002',
-        fullName: 'Queen Elizabeth Hospital',
-        type: CustomerType.INSTITUTIONAL,
-        phone: '+265994444444',
-        location: 'Blantyre',
-        creditLimit: '1000000.00',
-        paymentTermsDays: 45,
-        contractPricePerKg: '1700.00',
-        stationId: stations.find((s) => s.code === 'BT-01')!.id,
-      }),
-      this.customersRepo.create({
-        customerCode: 'HH-001',
-        fullName: 'Grace Phiri',
-        type: CustomerType.HOUSEHOLD,
-        phone: '+265995555555',
-        location: 'Area 25, Lilongwe',
-        stationId: stations.find((s) => s.code === 'LLW-01')!.id,
-      }),
-    ]);
-
-    let cylIndex = 1;
-    for (const station of stations) {
-      for (const size of [6, 9, 12, 19]) {
-        for (let i = 0; i < 3; i++) {
-          await this.cylindersRepo.save(
-            this.cylindersRepo.create({
-              serialNumber: `HH-${station.code}-${String(cylIndex).padStart(4, '0')}`,
-              barcode: `QR${String(cylIndex).padStart(8, '0')}`,
-              sizeKg: size.toFixed(3),
-              manufacturer: 'Haroti Cylinders',
-              manufacturingDate: '2023-06-01',
-              lastInspectionDate: '2025-12-01',
-              nextInspectionDate: '2026-12-01',
-              ownership: CylinderOwnership.COMPANY,
-              status: i % 2 === 0 ? CylinderStatus.AVAILABLE : CylinderStatus.EMPTY,
-              depositValue: (size * 5000).toFixed(2),
-              stationId: station.id,
-            }),
-          );
-          cylIndex += 1;
-        }
-      }
-    }
-
     this.logger.log(
-      `Seed complete: ${stations.length} stations, walk-in customer ${walkIn.customerCode}`,
+      `Bootstrap complete: ${stations.length} stations, walk-in customer ${walkIn.customerCode}`,
     );
-    this.logger.log('Default password for all users: Password123!');
-    await this.seedCharterExtensions(stations);
-    await this.seedPhase23Extensions(stations);
-    await this.seedPhase3Automation(stations);
+    this.logger.log('Default admin password: Password123!');
+    await this.ensureCatalogExtensions(stations);
     await this.ensureTierBTanks(stations);
-  }
-
-  async ensureTierBTanks(stations: Station[]) {
-    for (const station of stations) {
-      const exists = await this.tanksRepo.findOne({
-        where: { stationId: station.id },
-      });
-      if (exists) continue;
-
-      await this.tanksRepo.save(
-        this.tanksRepo.create({
-          tankCode: `${station.code}-TK1`,
-          name: `${station.name} Bulk Tank`,
-          stationId: station.id,
-          capacityKg: asDecimal(toNumber(station.tankCapacityKg)),
-          safeWorkingCapacityKg: asDecimal(toNumber(station.tankCapacityKg) * 0.9),
-          currentStockKg: station.currentStockKg,
-        }),
-      );
+    await this.seedSystemDefaults();
+    if (this.demoEnabled()) {
+      await this.seedCharterExtensions(stations);
+      await this.seedPhase23Extensions(stations);
+      await this.seedPhase3Automation(stations);
     }
   }
 
-  async seedCharterExtensions(stations: Station[]) {
-    this.logger.log('Seeding Haroti Gas ERP charter extensions...');
+  async ensureCatalogExtensions(stations: Station[]) {
+    this.logger.log('Ensuring product catalog extensions...');
 
-    const central = stations.find((s) => s.code === 'LLW-01')!;
-    await this.stationsRepo.update(central.id, {
-      warehouseType: WarehouseType.CENTRAL_DEPOT,
-      commercialStream: CommercialStream.ACCESSORIES,
-    });
-    const franchise = stations.find((s) => s.code === 'BT-02');
-    if (franchise) {
-      await this.stationsRepo.update(franchise.id, {
-        isFranchise: true,
-        warehouseType: WarehouseType.FRANCHISE_OUTLET,
-        commercialStream: CommercialStream.FRANCHISE,
+    const central = stations.find((s) => s.code === 'LLW-01');
+    if (central) {
+      await this.stationsRepo.update(central.id, {
+        warehouseType: WarehouseType.CENTRAL_DEPOT,
+        commercialStream: CommercialStream.ACCESSORIES,
       });
     }
 
@@ -551,6 +368,78 @@ export class SeedService implements OnModuleInit {
         }
       }
     }
+  }
+
+  async seedSystemDefaults() {
+    const wfCount = await this.workflowDefsRepo.count();
+    if (wfCount === 0) {
+      this.logger.log('Seeding default workflow definitions...');
+      const expenseWf = await this.workflowDefsRepo.save(
+        this.workflowDefsRepo.create({
+          name: 'Expense approval chain',
+          entityType: WorkflowEntityType.EXPENSE,
+          minAmount: '50000',
+          isActive: true,
+        }),
+      );
+      await this.workflowStepsRepo.save([
+        this.workflowStepsRepo.create({
+          definitionId: expenseWf.id,
+          stepOrder: 1,
+          approverRole: UserRole.STATION_MANAGER,
+          escalationHours: 24,
+          fallbackRole: UserRole.FINANCE_MANAGER,
+        }),
+        this.workflowStepsRepo.create({
+          definitionId: expenseWf.id,
+          stepOrder: 2,
+          approverRole: UserRole.FINANCE_MANAGER,
+          escalationHours: 48,
+          fallbackRole: UserRole.DIRECTOR,
+        }),
+      ]);
+    }
+  }
+
+  async ensureTierBTanks(stations: Station[]) {
+    for (const station of stations) {
+      const exists = await this.tanksRepo.findOne({
+        where: { stationId: station.id },
+      });
+      if (exists) continue;
+
+      await this.tanksRepo.save(
+        this.tanksRepo.create({
+          tankCode: `${station.code}-TK1`,
+          name: `${station.name} Bulk Tank`,
+          stationId: station.id,
+          capacityKg: asDecimal(toNumber(station.tankCapacityKg)),
+          safeWorkingCapacityKg: asDecimal(toNumber(station.tankCapacityKg) * 0.9),
+          currentStockKg: station.currentStockKg,
+        }),
+      );
+    }
+  }
+
+  async seedCharterExtensions(stations: Station[]) {
+    if (!this.demoEnabled()) return;
+    this.logger.log('Seeding demo charter extensions...');
+
+    const central = stations.find((s) => s.code === 'LLW-01')!;
+    const franchise = stations.find((s) => s.code === 'BT-02');
+    if (franchise) {
+      await this.stationsRepo.update(franchise.id, {
+        isFranchise: true,
+        warehouseType: WarehouseType.FRANCHISE_OUTLET,
+        commercialStream: CommercialStream.FRANCHISE,
+      });
+    }
+
+    await this.ensureCatalogExtensions(stations);
+
+    const allAccessories = await this.productsRepo.find({
+      where: { category: ProductCategory.ACCESSORY },
+    });
 
     for (const station of stations.slice(0, 4)) {
       for (const product of allAccessories.slice(0, 6)) {
@@ -648,7 +537,8 @@ export class SeedService implements OnModuleInit {
   }
 
   async seedPhase23Extensions(stations: Station[]) {
-    this.logger.log('Seeding Phase 2/3 (PAYC telemetry, CMMS assets, projects, franchise)...');
+    if (!this.demoEnabled()) return;
+    this.logger.log('Seeding Phase 2/3 demo data...');
 
     const central = stations.find((s) => s.code === 'LLW-01')!;
     const franchiseStation = stations.find((s) => s.code === 'BT-02');
@@ -787,34 +677,8 @@ export class SeedService implements OnModuleInit {
   }
 
   async seedPhase3Automation(stations: Station[]) {
-    const wfCount = await this.workflowDefsRepo.count();
-    if (wfCount === 0) {
-      this.logger.log('Seeding Phase 3 automation (workflows, IoT devices)...');
-      const expenseWf = await this.workflowDefsRepo.save(
-        this.workflowDefsRepo.create({
-          name: 'Expense approval chain',
-          entityType: WorkflowEntityType.EXPENSE,
-          minAmount: '50000',
-          isActive: true,
-        }),
-      );
-      await this.workflowStepsRepo.save([
-        this.workflowStepsRepo.create({
-          definitionId: expenseWf.id,
-          stepOrder: 1,
-          approverRole: UserRole.STATION_MANAGER,
-          escalationHours: 24,
-          fallbackRole: UserRole.FINANCE_MANAGER,
-        }),
-        this.workflowStepsRepo.create({
-          definitionId: expenseWf.id,
-          stepOrder: 2,
-          approverRole: UserRole.FINANCE_MANAGER,
-          escalationHours: 48,
-          fallbackRole: UserRole.DIRECTOR,
-        }),
-      ]);
-    }
+    if (!this.demoEnabled()) return;
+    await this.seedSystemDefaults();
 
     const iotCount = await this.iotDevicesRepo.count();
     if (iotCount === 0 && stations.length) {

@@ -68,4 +68,28 @@ export class PaycMeter extends BaseEntity {
 
   @Column({ length: 160, nullable: true })
   location?: string;
+
+  @Column({ name: 'valve_open', type: 'boolean', nullable: true })
+  valveOpen?: boolean | null;
+
+  @Column({
+    name: 'battery_voltage',
+    type: 'decimal',
+    precision: 6,
+    scale: 2,
+    nullable: true,
+  })
+  batteryVoltage?: string | null;
+
+  @Column({
+    name: 'cumulative_flow',
+    type: 'decimal',
+    precision: 12,
+    scale: 3,
+    nullable: true,
+  })
+  cumulativeFlow?: string | null;
+
+  @Column({ name: 'vendor_read_time', type: 'timestamptz', nullable: true })
+  vendorReadTime?: Date | null;
 }

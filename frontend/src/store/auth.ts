@@ -9,9 +9,24 @@ interface AuthState {
   hydrate: () => void;
 }
 
+function readStoredSession(): Pick<AuthState, 'token' | 'user'> {
+  try {
+    const token = localStorage.getItem('haroti_token');
+    const raw = localStorage.getItem('haroti_user');
+    return {
+      token,
+      user: raw ? (JSON.parse(raw) as AuthUser) : null,
+    };
+  } catch {
+    return { token: null, user: null };
+  }
+}
+
+const storedSession = readStoredSession();
+
 export const useAuthStore = create<AuthState>((set) => ({
-  token: null,
-  user: null,
+  token: storedSession.token,
+  user: storedSession.user,
   setSession: (token, user) => {
     localStorage.setItem('haroti_token', token);
     localStorage.setItem('haroti_user', JSON.stringify(user));
@@ -23,11 +38,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ token: null, user: null });
   },
   hydrate: () => {
-    const token = localStorage.getItem('haroti_token');
-    const raw = localStorage.getItem('haroti_user');
-    set({
-      token,
-      user: raw ? (JSON.parse(raw) as AuthUser) : null,
-    });
+    set(readStoredSession());
   },
 }));

@@ -81,6 +81,7 @@ services:
       ZHONGYI_PASSWORD: ${ZHONGYI_PASSWORD:-}
       ZHONGYI_AREA_ID: ${ZHONGYI_AREA_ID:-}
       ZHONGYI_EQUIPMENT_MODEL_ID: ${ZHONGYI_EQUIPMENT_MODEL_ID:-}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
     networks:
       - haroti_net
     # API is only reachable via the ERP web container proxy (no host port)

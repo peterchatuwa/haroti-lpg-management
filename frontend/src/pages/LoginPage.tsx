@@ -1,24 +1,23 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { FlameMark } from '../components/FlameMark';
 import api from '../lib/api';
 import { landingRouteForRole } from '../lib/landing-route';
 import { useAuthStore } from '../store/auth';
 
-const DEMOS = [
-  { label: 'Admin', username: 'admin' },
-  { label: 'Director', username: 'director' },
-  { label: 'LLW Attendant', username: 'llw01.attendant' },
-  { label: 'BT Attendant', username: 'bt01.attendant' },
-];
-
 export function LoginPage() {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('Password123!');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const setSession = useAuthStore((s) => s.setSession);
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+
+  if (token && user) {
+    return <Navigate to={landingRouteForRole(user.role)} replace />;
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -99,20 +98,6 @@ export function LoginPage() {
             <button className="btn btn-accent" disabled={loading}>
               {loading ? 'Signing in…' : 'Enter operations'}
             </button>
-          </div>
-          <div className="demo-row">
-            {DEMOS.map((d) => (
-              <button
-                key={d.username}
-                type="button"
-                onClick={() => {
-                  setUsername(d.username);
-                  setPassword('Password123!');
-                }}
-              >
-                {d.label}
-              </button>
-            ))}
           </div>
           <p className="login-portal-link">
             Customer?{' '}

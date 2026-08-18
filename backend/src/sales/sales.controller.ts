@@ -60,6 +60,22 @@ export class SalesController {
     return this.salesService.approveDiscount(id, user.sub, user.role);
   }
 
+  @Post(':id/refresh-payment')
+  refreshPayment(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.salesService.refreshPaychanguPayment(id).then((sale) => {
+      this.stationScope.assertStationAccess(user, sale.stationId);
+      return sale;
+    });
+  }
+
+  @Post(':id/cancel-payment')
+  cancelPayment(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.salesService.cancelPendingPayment(id).then((sale) => {
+      this.stationScope.assertStationAccess(user, sale.stationId);
+      return sale;
+    });
+  }
+
   @Post(':id/void')
   @UseGuards(RolesGuard)
   @Roles(

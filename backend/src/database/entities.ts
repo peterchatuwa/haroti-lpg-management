@@ -19,6 +19,7 @@ import { JournalLine } from '../finance/journal-line.entity';
 import { StockMovement } from '../inventory/stock-movement.entity';
 import { Asset } from '../maintenance/asset.entity';
 import { MaintenanceWorkOrder } from '../maintenance/work-order.entity';
+import { PaycCommand } from '../payc/payc-command.entity';
 import { PaycCreditTransaction } from '../payc/payc-credit-transaction.entity';
 import { PaycMeter } from '../payc/payc-meter.entity';
 import { PaycTelemetry } from '../payc/payc-telemetry.entity';
@@ -111,6 +112,7 @@ export const ENTITIES = [
   FiscalPeriod,
   PostingRule,
   PaycMeter,
+  PaycCommand,
   PaycTelemetry,
   PaycCreditTransaction,
   MaintenanceWorkOrder,

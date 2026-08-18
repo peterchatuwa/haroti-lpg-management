@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import api from '../lib/api';
@@ -49,6 +49,13 @@ export function PosPage() {
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedBundle, setSelectedBundle] = useState('');
   const [accessoryQty, setAccessoryQty] = useState(1);
+  const [awaitingPayment, setAwaitingPayment] = useState<{
+    saleId: string;
+    receiptNumber: string;
+    authLink?: string;
+    method: string;
+  } | null>(null);
+  const paymentPollRef = useRef(false);
   const [scaleBusy, setScaleBusy] = useState(false);
   const [scaleTarget, setScaleTarget] = useState<'empty' | 'filled' | null>(null);
 
@@ -251,48 +258,38 @@ export function PosPage() {
       }
 
       const { data } = await api.post('/sales', payload);
-
+      return data;
+    },
+    onSuccess: (data) => {
       if (data.status === 'PENDING_PAYMENT' && data.id) {
         if (data.paychanguAuthLink) {
           window.open(data.paychanguAuthLink, '_blank', 'noopener,noreferrer');
         }
-        const pollMs = paymentMethod === 'CARD' ? 180_000 : 120_000;
-        const deadline = Date.now() + pollMs;
-        while (Date.now() < deadline) {
-          await new Promise((r) => setTimeout(r, 3000));
-          const poll = await api.get(`/sales/${data.id}`);
-          if (poll.data.status === 'COMPLETED') return poll.data;
-          if (poll.data.status === 'VOIDED') {
-            throw new Error('PayChangu payment failed or was cancelled.');
-          }
-        }
-        return {
-          ...data,
-          paymentPending: true,
-          card3ds: Boolean(data.paychanguAuthLink),
-        };
+        setAwaitingPayment({
+          saleId: data.id,
+          receiptNumber: data.receiptNumber,
+          authLink: data.paychanguAuthLink,
+          method: paymentMethod,
+        });
+        setLastReceipt(data.receiptNumber);
+        setMessage(
+          data.paychanguAuthLink
+            ? `Complete 3D Secure in the opened tab · ${data.receiptNumber}`
+            : paymentMethod === 'CARD'
+              ? `Card payment initiated · ${data.receiptNumber} — waiting for confirmation`
+              : `PayChangu prompt sent to ${customerPhone} · ${data.receiptNumber}`,
+        );
+        setError('');
+        return;
       }
 
-      return data;
-    },
-    onSuccess: (data) => {
       setLastReceipt(data.receiptNumber);
       setMessage(
-        data.paymentPending
-          ? data.card3ds
-            ? `Complete 3D Secure in the opened tab · ${data.receiptNumber} — sale finishes after PayChangu confirms`
-            : paymentMethod === 'CARD'
-              ? `Card payment processing · ${data.receiptNumber} — waiting for PayChangu confirmation`
-              : `PayChangu prompt sent · ${data.receiptNumber} — approve on phone, then refresh`
-          : data.status === 'PENDING_APPROVAL'
-            ? `Awaiting manager approval · ${data.receiptNumber}`
-            : data.status === 'PENDING_PAYMENT'
-              ? paymentMethod === 'CARD'
-                ? `Card charge initiated · ${data.receiptNumber}`
-                : `PayChangu prompt sent to ${customerPhone} · ${data.receiptNumber}`
-              : data.offline
-                ? `Saved offline · ${data.receiptNumber}`
-                : `Sale complete · ${data.receiptNumber}`,
+        data.status === 'PENDING_APPROVAL'
+          ? `Awaiting manager approval · ${data.receiptNumber}`
+          : data.offline
+            ? `Saved offline · ${data.receiptNumber}`
+            : `Sale complete · ${data.receiptNumber}`,
       );
       setError('');
       setBurst(true);
@@ -313,6 +310,97 @@ export function PosPage() {
       setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Could not complete sale');
     },
   });
+
+  useEffect(() => {
+    if (!awaitingPayment) return;
+
+    let cancelled = false;
+    paymentPollRef.current = true;
+
+    const finishPayment = (data: { receiptNumber?: string }) => {
+      setAwaitingPayment(null);
+      setLastReceipt(data.receiptNumber ?? awaitingPayment.receiptNumber);
+      setMessage(`Sale complete · ${data.receiptNumber ?? awaitingPayment.receiptNumber}`);
+      setError('');
+      setBurst(true);
+      window.setTimeout(() => setBurst(false), 600);
+      if (awaitingPayment.method === 'CARD') {
+        setCardNumber('');
+        setCardExpiry('');
+        setCardCvv('');
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+    };
+
+    const failPayment = (reason: string) => {
+      setAwaitingPayment(null);
+      setError(reason);
+      setMessage('');
+    };
+
+    const pollPayment = async () => {
+      try {
+        const { data } = await api.post(
+          `/sales/${awaitingPayment.saleId}/refresh-payment`,
+        );
+        if (cancelled) return;
+        if (data.status === 'COMPLETED') {
+          finishPayment(data);
+        } else if (data.status === 'VOIDED') {
+          failPayment('PayChangu payment failed or was cancelled.');
+        }
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const msg =
+          (err as { response?: { data?: { message?: string | string[] } } })
+            .response?.data?.message;
+        failPayment(
+          Array.isArray(msg) ? msg.join(', ') : msg ?? 'Could not verify payment',
+        );
+      }
+    };
+
+    void pollPayment();
+    const intervalId = window.setInterval(pollPayment, 3000);
+    const timeoutMs = awaitingPayment.method === 'CARD' ? 180_000 : 120_000;
+    const timeoutId = window.setTimeout(async () => {
+      if (cancelled || !paymentPollRef.current) return;
+      try {
+        await api.post(`/sales/${awaitingPayment.saleId}/cancel-payment`);
+        if (!cancelled) {
+          failPayment('Payment timed out. The sale was cancelled — you can try again.');
+        }
+      } catch {
+        if (!cancelled) {
+          failPayment('Payment timed out. Cancel the sale manually or try again.');
+        }
+      }
+    }, timeoutMs);
+
+    return () => {
+      cancelled = true;
+      paymentPollRef.current = false;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [awaitingPayment, queryClient]);
+
+  async function cancelAwaitingPayment() {
+    if (!awaitingPayment) return;
+    paymentPollRef.current = false;
+    try {
+      await api.post(`/sales/${awaitingPayment.saleId}/cancel-payment`);
+      setAwaitingPayment(null);
+      setMessage('Payment cancelled');
+      setError('');
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string | string[] } } })
+          .response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Could not cancel payment');
+    }
+  }
 
   function applySize(next: number) {
     setSize(next);
@@ -659,13 +747,35 @@ export function PosPage() {
 
           <button
             className="btn btn-accent"
+            type={awaitingPayment ? 'button' : 'submit'}
             disabled={saleMutation.isPending}
+            onClick={awaitingPayment ? cancelAwaitingPayment : undefined}
             style={{ fontSize: '1.05rem', padding: '1rem' }}
           >
             {saleMutation.isPending
               ? 'Processing…'
-              : `Charge ${formatMoney(total)}`}
+              : awaitingPayment
+                ? 'Cancel payment'
+                : `Charge ${formatMoney(total)}`}
           </button>
+          {awaitingPayment ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.9rem' }}>
+              Waiting for PayChangu
+              {awaitingPayment.method === 'CARD' ? ' card' : ''} confirmation…
+              {awaitingPayment.authLink ? (
+                <>
+                  {' '}
+                  <a
+                    href={awaitingPayment.authLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open 3D Secure
+                  </a>
+                </>
+              ) : null}
+            </p>
+          ) : null}
         </div>
 
         <div className={`receipt-ticket ${burst ? 'sale-burst' : ''}`}>

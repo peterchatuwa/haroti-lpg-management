@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MaintenanceService } from '../maintenance/maintenance.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PaycService } from '../payc/payc.service';
 import { SafetyService } from '../safety/safety.service';
 import { AgeingService } from '../finance/ageing.service';
 import { TanksService } from '../tanks/tanks.service';
@@ -23,6 +24,7 @@ export class JobsService {
     private readonly safetyService: SafetyService,
     private readonly workflowsService: WorkflowsService,
     private readonly notificationsService: NotificationsService,
+    private readonly paycService: PaycService,
   ) {}
 
   private async track(jobName: string, fn: () => Promise<string>) {
@@ -94,6 +96,15 @@ export class JobsService {
     await this.track('approval-escalation', async () => {
       const result = await this.workflowsService.escalateOverdue();
       return `Escalated ${result.escalated} approval task(s)`;
+    });
+  }
+
+  @Cron('*/15 * * * *')
+  async paycSyncAndAlertsJob() {
+    await this.track('payc-sync-alerts', async () => {
+      const result = await this.paycService.runScheduledSyncAndAlerts();
+      if (typeof result.skipped === 'string') return `Skipped: ${result.skipped}`;
+      return `Synced ${result.synced} meter(s), sent ${result.alertsSent} alert(s)`;
     });
   }
 

@@ -16,6 +16,7 @@ import { PaycPage } from './pages/PaycPage';
 import { PaycMeterDetailPage } from './pages/PaycMeterDetailPage';
 import { PosPage } from './pages/PosPage';
 import { ProcurementPage } from './pages/ProcurementPage';
+import { ProductsPage } from './pages/ProductsPage';
 import { ActionCentrePage } from './pages/ActionCentrePage';
 import { ExecutivePage } from './pages/ExecutivePage';
 import { FinancePage } from './pages/FinancePage';
@@ -127,6 +128,7 @@ export default function App() {
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="network" element={<NetworkMapPage />} />
         <Route path="deliveries" element={<DeliveriesPage />} />
+        <Route path="products" element={<ProductsPage />} />
         <Route path="procurement" element={<ProcurementPage />} />
         <Route path="requisitions" element={<RequisitionsPage />} />
         <Route path="transfers" element={<TransfersPage />} />
