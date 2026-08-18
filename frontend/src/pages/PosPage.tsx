@@ -12,11 +12,11 @@ const SIZES = [3, 5, 6, 9, 12, 14, 19, 45];
 
 const PAYMENTS = [
   { value: 'CASH', label: 'Cash' },
+  { value: 'PAYCHANGU', label: 'PayChangu' },
   { value: 'AIRTEL_MONEY', label: 'Airtel' },
   { value: 'TNM_MPAMBA', label: 'Mpamba' },
   { value: 'BANK_TRANSFER', label: 'Bank' },
   { value: 'CARD', label: 'Card' },
-  { value: 'PAYCHANGU', label: 'PayChangu' },
   { value: 'CUSTOMER_ACCOUNT', label: 'Credit' },
 ];
 
