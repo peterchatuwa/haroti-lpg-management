@@ -61,7 +61,10 @@ export class PaychanguService {
     private readonly webhookRepo: Repository<PaychanguWebhook>,
     private readonly paycService: PaycService,
   ) {
-    this.clientId = config.get('PAYCHANGU_CLIENT_ID') || '';
+    this.clientId =
+      config.get('PAYCHANGU_API_KEY') ||
+      config.get('PAYCHANGU_CLIENT_ID') ||
+      '';
     this.secretKey =
       config.get('PAYCHANGU_SECRET_KEY') ||
       config.get('PAYCHANGU_API_KEY') ||
