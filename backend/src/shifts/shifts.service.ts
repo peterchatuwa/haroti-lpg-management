@@ -145,6 +145,7 @@ export class ShiftsService {
             break;
           case PaymentMethod.AIRTEL_MONEY:
           case PaymentMethod.TNM_MPAMBA:
+          case PaymentMethod.PAYCHANGU:
             mobileMoneySales += amount;
             break;
           case PaymentMethod.BANK_TRANSFER:

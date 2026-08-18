@@ -16,6 +16,7 @@ const PAYMENTS = [
   { value: 'TNM_MPAMBA', label: 'Mpamba' },
   { value: 'BANK_TRANSFER', label: 'Bank' },
   { value: 'CARD', label: 'Card' },
+  { value: 'PAYCHANGU', label: 'PayChangu' },
   { value: 'CUSTOMER_ACCOUNT', label: 'Credit' },
 ];
 
