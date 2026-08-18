@@ -1,6 +1,10 @@
 harotiholdingslimited.com, www.harotiholdingslimited.com {
 	encode gzip
 
+	# Bare /erp must redirect — otherwise it falls through to the marketing site
+	@erpBare path /erp
+	redir @erpBare /erp/ 308
+
 	# ERP API (proxied through the ERP nginx container)
 	handle /api/* {
 		reverse_proxy 127.0.0.1:9081
