@@ -102,7 +102,10 @@ export class PaychanguService {
       currency?: string;
     };
   }): Promise<PaychanguTransaction> {
+    this.logger.log(`Initiating PayChangu payment: amount=${params.amount}, method=${params.paymentMethod}, saleId=${params.saleId}, paycMeterId=${params.paycMeterId}`);
+    
     if (!this.secretKey) {
+      this.logger.error('PayChangu secret key not configured');
       throw new BadRequestException(
         'PayChangu is not configured. Set PAYCHANGU_SECRET_KEY to your sec-test- or sec-live- key on the server.',
       );
@@ -110,6 +113,8 @@ export class PaychanguService {
 
     const paychanguMethod = this.mapPaymentMethod(params.paymentMethod);
     const chargeId = this.generateChargeId();
+
+    this.logger.debug(`Generated charge ID: ${chargeId} for internal ref: ${params.internalRef}`);
 
     const txn = this.txnRepo.create({
       transactionRef: chargeId,
@@ -126,12 +131,14 @@ export class PaychanguService {
     });
 
     const saved = await this.txnRepo.save(txn);
+    this.logger.log(`Created PayChangu transaction ${chargeId} with status PENDING`);
 
     try {
       if (paychanguMethod === PaychanguPaymentMethod.CARD) {
         if (!params.card) {
           throw new BadRequestException('Card details are required');
         }
+        this.logger.debug(`Initiating card charge for ${chargeId}`);
         return await this.initiateCardCharge(saved, {
           amount: params.amount,
           customerEmail: params.customerEmail,
@@ -151,6 +158,7 @@ export class PaychanguService {
         );
       }
 
+      this.logger.debug(`Initiating mobile money payment for ${chargeId}, operator: ${paychanguMethod}`);
       const response = await this.callPaychanguApi<
         PaychanguEnvelope<PaychanguChargeData>
       >('/mobile-money/payments/initialize', {
@@ -166,7 +174,7 @@ export class PaychanguService {
       saved.status = PaychanguTransactionStatus.PROCESSING;
       await this.txnRepo.save(saved);
 
-      this.logger.log(`MoMo payment initiated: ${chargeId}`);
+      this.logger.log(`MoMo payment initiated: ${chargeId}, PayChangu ref: ${saved.paychanguReference}`);
       return saved;
     } catch (error: unknown) {
       saved.status = PaychanguTransactionStatus.FAILED;
@@ -174,6 +182,7 @@ export class PaychanguService {
         error instanceof Error ? error.message : 'Unknown error';
       saved.metadata = { ...saved.metadata, error: errorMessage };
       await this.txnRepo.save(saved);
+      this.logger.error(`Payment initiation failed for ${chargeId}: ${errorMessage}`);
       if (error instanceof BadRequestException) throw error;
       throw new BadRequestException(errorMessage);
     }
@@ -236,6 +245,7 @@ export class PaychanguService {
     if (secret) {
       const bodyForSig = rawBody ?? JSON.stringify(payload);
       if (!signature || !this.verifyWebhookSignature(bodyForSig, signature, secret)) {
+        this.logger.error('Invalid webhook signature received');
         throw new BadRequestException('Invalid webhook signature');
       }
     } else {
@@ -244,8 +254,11 @@ export class PaychanguService {
 
     const chargeId = payload.charge_id;
     if (!chargeId) {
+      this.logger.error('Missing charge_id in webhook payload', payload);
       throw new BadRequestException('Missing charge_id in webhook payload');
     }
+
+    this.logger.log(`Received webhook for charge ${chargeId}, event: ${payload.event_type}`);
 
     const webhook = await this.webhookRepo.save(
       this.webhookRepo.create({
@@ -256,7 +269,14 @@ export class PaychanguService {
       }),
     );
 
-    void this.handleWebhookEvent(webhook.id);
+    // Process webhook synchronously to ensure it completes and catch errors
+    try {
+      await this.handleWebhookEvent(webhook.id);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to process webhook ${webhook.id}: ${errorMessage}`);
+      // Don't throw - webhook is saved and will be retried if needed
+    }
 
     return webhook;
   }
@@ -265,10 +285,18 @@ export class PaychanguService {
     const webhook = await this.webhookRepo.findOne({
       where: { id: webhookId },
     });
-    if (!webhook || webhook.processed) return;
+    if (!webhook) {
+      this.logger.error(`Webhook not found: ${webhookId}`);
+      return;
+    }
+    if (webhook.processed) {
+      this.logger.debug(`Webhook ${webhookId} already processed, skipping`);
+      return;
+    }
 
     try {
       const { eventType, transactionRef, payload } = webhook;
+      this.logger.log(`Processing webhook ${webhookId} for transaction ${transactionRef}, event: ${eventType}`);
 
       const txn = await this.txnRepo.findOne({
         where: { transactionRef },
@@ -276,10 +304,15 @@ export class PaychanguService {
       });
 
       if (!txn) {
-        throw new Error(`Transaction not found: ${transactionRef}`);
+        const error = `Transaction not found: ${transactionRef}`;
+        this.logger.error(error);
+        throw new Error(error);
       }
 
+      this.logger.debug(`Found transaction ${transactionRef}, current status: ${txn.status}, saleId: ${txn.saleId}, paycMeterId: ${txn.paycMeterId}`);
+
       // Re-query PayChangu before fulfilling (recommended by their docs).
+      this.logger.debug(`Verifying payment status with PayChangu for ${transactionRef}`);
       const verified = await this.verifyChargeOnPaychangu(
         transactionRef,
         txn.paymentMethod,
@@ -289,30 +322,36 @@ export class PaychanguService {
         (verified as PaychanguEnvelope).status ??
         payload.status;
 
+      this.logger.log(`Verified status from PayChangu: ${verifiedStatus} (event: ${eventType})`);
+
       if (
         (eventType === 'api.charge.payment' || eventType === 'payment.completed') &&
         (verifiedStatus === 'success' || verifiedStatus === 'successful')
       ) {
+        this.logger.log(`Processing successful payment for ${transactionRef}`);
         await this.handlePaymentCompleted(txn, payload);
       } else if (verifiedStatus === 'failed') {
+        this.logger.warn(`Processing failed payment for ${transactionRef}`);
         await this.handlePaymentFailed(txn, payload);
       } else {
-        this.logger.warn(`Unhandled PayChangu event: ${eventType} / ${verifiedStatus}`);
+        this.logger.warn(`Unhandled PayChangu event: ${eventType} / ${verifiedStatus} for ${transactionRef}`);
       }
 
       webhook.processed = true;
       webhook.processedAt = new Date();
       await this.webhookRepo.save(webhook);
+      this.logger.log(`Successfully processed webhook ${webhookId} for transaction ${transactionRef}`);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `Webhook processing error: ${errorMessage}`,
+        `Webhook processing error for webhook ${webhookId}: ${errorMessage}`,
         errorStack,
       );
       webhook.errorMessage = errorMessage;
       await this.webhookRepo.save(webhook);
+      throw error; // Re-throw to be caught by processWebhook
     }
   }
 
@@ -320,27 +359,53 @@ export class PaychanguService {
     txn: PaychanguTransaction,
     payload: Record<string, unknown>,
   ): Promise<void> {
-    if (txn.completedAt) return;
+    // Check if payment was already processed to prevent double-processing
+    if (txn.completedAt) {
+      this.logger.debug(`Payment ${txn.transactionRef} already completed at ${txn.completedAt}, skipping duplicate processing`);
+      return;
+    }
+
+    this.logger.log(`Marking payment as completed: ${txn.transactionRef}, amount: ${txn.amount}`);
 
     txn.status = PaychanguTransactionStatus.COMPLETED;
     txn.completedAt = new Date();
     txn.metadata = { ...txn.metadata, completion_data: payload };
     await this.txnRepo.save(txn);
 
+    this.logger.debug(`Transaction ${txn.transactionRef} saved with COMPLETED status`);
+
+    // Process PAYC meter top-up if applicable
     if (txn.paycMeterId) {
-      await this.paycService.topUpCredit({
-        meterId: txn.paycMeterId,
-        amountMwk: Number(txn.amount),
-        paymentMethod: PaymentMethod.PAYCHANGU,
-        reference: txn.transactionRef,
-      });
+      this.logger.log(`Processing PAYC meter top-up for meter ${txn.paycMeterId}, amount: ${txn.amount} MWK`);
+      try {
+        await this.paycService.topUpCredit({
+          meterId: txn.paycMeterId,
+          amountMwk: Number(txn.amount),
+          paymentMethod: PaymentMethod.PAYCHANGU,
+          reference: txn.transactionRef,
+        });
+        this.logger.log(`PAYC meter ${txn.paycMeterId} topped up successfully`);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.error(`Failed to top up PAYC meter ${txn.paycMeterId}: ${errorMessage}`);
+        throw error; // Re-throw to mark webhook as failed
+      }
     }
 
+    // Complete the sale if applicable
     if (txn.saleId) {
-      await this.salesService.completePaychanguSale(txn.saleId);
+      this.logger.log(`Completing sale ${txn.saleId} for payment ${txn.transactionRef}`);
+      try {
+        await this.salesService.completePaychanguSale(txn.saleId);
+        this.logger.log(`Sale ${txn.saleId} completed successfully`);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.error(`Failed to complete sale ${txn.saleId}: ${errorMessage}`);
+        throw error; // Re-throw to mark webhook as failed
+      }
     }
 
-    this.logger.log(`Payment completed: ${txn.transactionRef}`);
+    this.logger.log(`Payment completed successfully: ${txn.transactionRef}`);
   }
 
   private async handlePaymentFailed(
@@ -348,6 +413,8 @@ export class PaychanguService {
     payload: Record<string, unknown>,
   ): Promise<void> {
     const reason = payload.status as string | undefined;
+    this.logger.warn(`Processing payment failure for ${txn.transactionRef}, reason: ${reason || 'unknown'}`);
+    
     if (
       txn.status !== PaychanguTransactionStatus.FAILED &&
       txn.status !== PaychanguTransactionStatus.CANCELLED &&
@@ -356,20 +423,35 @@ export class PaychanguService {
       txn.status = PaychanguTransactionStatus.FAILED;
       txn.metadata = { ...txn.metadata, failure_reason: reason };
       await this.txnRepo.save(txn);
+      this.logger.debug(`Transaction ${txn.transactionRef} marked as FAILED`);
+    } else {
+      this.logger.debug(`Transaction ${txn.transactionRef} already in failed state: ${txn.status}`);
     }
 
     if (txn.saleId) {
-      await this.salesService.failPaychanguSale(txn.saleId, reason);
+      this.logger.log(`Failing sale ${txn.saleId} due to payment failure`);
+      try {
+        await this.salesService.failPaychanguSale(txn.saleId, reason);
+        this.logger.log(`Sale ${txn.saleId} marked as failed`);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.error(`Failed to mark sale ${txn.saleId} as failed: ${errorMessage}`);
+      }
     }
 
     this.logger.warn(`Payment failed: ${txn.transactionRef}`);
   }
 
   async queryPayment(transactionRef: string): Promise<PaychanguTransaction> {
+    this.logger.log(`Querying payment status for ${transactionRef}`);
+    
     const txn = await this.txnRepo.findOne({ where: { transactionRef } });
     if (!txn) {
+      this.logger.error(`Transaction not found: ${transactionRef}`);
       throw new BadRequestException('Transaction not found');
     }
+
+    this.logger.debug(`Current transaction status: ${txn.status}`);
 
     const response = await this.verifyChargeOnPaychangu(
       transactionRef,
@@ -377,6 +459,9 @@ export class PaychanguService {
     );
     const remoteStatus =
       response.data?.status ?? (response as PaychanguEnvelope).status ?? '';
+    
+    this.logger.log(`Remote status from PayChangu: ${remoteStatus}`);
+    
     txn.status = this.mapStatusFromPaychangu(remoteStatus);
     if (
       txn.status === PaychanguTransactionStatus.FAILED ||
@@ -390,6 +475,7 @@ export class PaychanguService {
     }
     await this.txnRepo.save(txn);
 
+    this.logger.log(`Transaction ${transactionRef} updated to status: ${txn.status}`);
     await this.applyTransactionOutcome(txn, remoteStatus);
 
     return txn;
