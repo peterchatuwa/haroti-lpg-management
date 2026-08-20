@@ -75,6 +75,27 @@ export class PaycService {
     return meter;
   }
 
+  private async getMeterFlatPrice(meter: Pick<PaycMeter, 'imei'>): Promise<number> {
+    if (meter.imei && this.zhongyiClient.enabled) {
+      try {
+        const archive = await this.zhongyiClient.getAreaArchiveInfo(meter.imei);
+        if (archive.priceInfo?.flatPrice) {
+          return toNumber(archive.priceInfo.flatPrice);
+        }
+      } catch {
+        // Fall back to ERP default price when archive lookup fails.
+      }
+    }
+    return PRICE_PER_KG;
+  }
+
+  private applyPrepaidBalance(meter: PaycMeter, flatPrice: number) {
+    meter.deferredRevenue = asDecimal(
+      round2(toNumber(meter.creditBalanceKg) * flatPrice),
+      2,
+    );
+  }
+
   async telemetryHistory(meterId: string, limit = 30) {
     return this.telemetryRepo.find({
       where: { meterId },
@@ -164,27 +185,13 @@ export class PaycService {
     pushToVendor?: boolean;
   }) {
     const meter = await this.findOne(params.meterId);
-    let flatPrice = PRICE_PER_KG;
-
-    if (meter.imei && this.zhongyiClient.enabled) {
-      try {
-        const archive = await this.zhongyiClient.getAreaArchiveInfo(meter.imei);
-        if (archive.priceInfo?.flatPrice) {
-          flatPrice = toNumber(archive.priceInfo.flatPrice);
-        }
-      } catch {
-        // Fall back to ERP default price when archive lookup fails.
-      }
-    }
+    const flatPrice = await this.getMeterFlatPrice(meter);
 
     const creditKg = round3(params.amountMwk / flatPrice);
     meter.creditBalanceKg = asDecimal(
       toNumber(meter.creditBalanceKg) + creditKg,
     );
-    meter.deferredRevenue = asDecimal(
-      toNumber(meter.deferredRevenue) + params.amountMwk,
-      2,
-    );
+    this.applyPrepaidBalance(meter, flatPrice);
     if (toNumber(meter.creditBalanceKg) >= LOW_CREDIT_KG) {
       meter.status = PaycMeterStatus.ACTIVE;
     }
@@ -308,6 +315,9 @@ export class PaycService {
     });
     if (!meter) return null;
 
+    const previousCreditKg = toNumber(meter.creditBalanceKg);
+    const flatPrice = await this.getMeterFlatPrice(meter);
+
     await this.telemetryRepo.save(
       this.telemetryRepo.create({
         meterId: meter.id,
@@ -326,28 +336,25 @@ export class PaycService {
         ? PaycMeterStatus.LOW_CREDIT
         : PaycMeterStatus.ACTIVE
       : PaycMeterStatus.VALVE_CLOSED;
+    this.applyPrepaidBalance(meter, flatPrice);
 
-    await this.metersRepo.save(meter);
-
-    const revenue = round2(params.burnKg * PRICE_PER_KG);
-    if (revenue > 0) {
+    const consumedKg = round3(
+      Math.max(0, previousCreditKg - params.creditRemainingKg),
+    );
+    const revenue = round2(consumedKg * flatPrice);
+    if (consumedKg > 0.001 && revenue > 0) {
       await this.creditRepo.save(
         this.creditRepo.create({
           meterId: meter.id,
           type: PaycCreditTxnType.BURN,
           amountMwk: asDecimal(revenue, 2),
-          creditKg: asDecimal(params.burnKg),
+          creditKg: asDecimal(consumedKg),
         }),
       );
-      meter.deferredRevenue = asDecimal(
-        Math.max(0, toNumber(meter.deferredRevenue) - revenue),
-        2,
-      );
-      await this.metersRepo.save(meter);
 
       await this.financeService.postEntry({
         eventType: JournalEventType.PAYC_BURN_REVENUE,
-        description: `PAYC daily burn ${params.meterSerial}`,
+        description: `PAYC gas consumed ${params.meterSerial}`,
         referenceType: 'PaycMeter',
         referenceId: meter.id,
         lines: [
@@ -356,6 +363,8 @@ export class PaycService {
         ],
       });
     }
+
+    await this.metersRepo.save(meter);
 
     return meter;
   }
@@ -419,8 +428,10 @@ export class PaycService {
       const serial = row.serialnumber?.trim() || imei;
       if (!serial) continue;
 
-      const balanceMwk = round2(toNumber(row.balance));
       const creditKg = round3(toNumber(row.readings));
+      const flatPrice = imei
+        ? await this.getMeterFlatPrice({ imei })
+        : PRICE_PER_KG;
       const valveOpen = row.valveStatus === 1;
       let status = PaycMeterStatus.ACTIVE;
       if (!valveOpen) status = PaycMeterStatus.VALVE_CLOSED;
@@ -450,7 +461,7 @@ export class PaycService {
         imei: imei || meter?.imei,
         customerId: customerId ?? meter?.customerId ?? null,
         creditBalanceKg: asDecimal(creditKg),
-        deferredRevenue: asDecimal(balanceMwk, 2),
+        deferredRevenue: asDecimal(round2(creditKg * flatPrice), 2),
         status,
         location: row.areaOrgName ?? meter?.location,
         lastTelemetryAt: new Date(),

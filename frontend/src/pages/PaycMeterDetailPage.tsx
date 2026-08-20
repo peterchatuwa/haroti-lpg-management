@@ -68,6 +68,13 @@ interface PaycCommandRow {
   requestedBy?: { fullName: string };
 }
 
+const PAYC_TXN_LABELS: Record<string, string> = {
+  TOPUP: 'Payment received',
+  BURN: 'Gas consumed',
+  REFUND: 'Refund',
+  ADJUSTMENT: 'Adjustment',
+};
+
 export function PaycMeterDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
@@ -128,6 +135,7 @@ export function PaycMeterDetailPage() {
             amountMwk: string;
             creditKg: string;
             paymentMethod?: string;
+            reference?: string;
           }>
         >(`/payc/meters/${id}/credits`)
       ).data,
@@ -471,7 +479,7 @@ export function PaycMeterDetailPage() {
         <div className="panel stat-card accent">
           <h3>Credit</h3>
           <div className="value">{formatKg(Number(meter.creditBalanceKg))}</div>
-          <div className="hint">{formatMoney(Number(meter.deferredRevenue))} deferred</div>
+          <div className="hint">{formatMoney(Number(meter.deferredRevenue))} prepaid value</div>
         </div>
         <div className="panel stat-card">
           <h3>Valve</h3>
@@ -793,10 +801,17 @@ export function PaycMeterDetailPage() {
               {(credits ?? []).map((c) => (
                 <tr key={c.createdAt + c.type}>
                   <td>{new Date(c.createdAt).toLocaleString()}</td>
-                  <td>{c.type}</td>
+                  <td>{PAYC_TXN_LABELS[c.type] ?? c.type}</td>
                   <td>{formatMoney(Number(c.amountMwk))}</td>
                   <td>{formatKg(Number(c.creditKg))}</td>
-                  <td>{c.paymentMethod?.replaceAll('_', ' ') ?? '—'}</td>
+                  <td>
+                    {c.paymentMethod?.replaceAll('_', ' ') ?? (c.type === 'TOPUP' ? 'Manual' : '—')}
+                    {c.reference ? (
+                      <span className="muted" style={{ display: 'block', fontSize: '0.78rem' }}>
+                        {c.reference}
+                      </span>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>

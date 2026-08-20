@@ -129,9 +129,9 @@ export function PaycPage() {
           <div className="hint">{dashboard.totalMeters} installed</div>
         </div>
         <div className="panel stat-card">
-          <h3>Deferred revenue</h3>
+          <h3>Prepaid credit</h3>
           <div className="value">{formatMoney(dashboard.totalDeferredRevenue)}</div>
-          <div className="hint">Prepaid credit liability</div>
+          <div className="hint">MWK value of gas credit on meters</div>
         </div>
         <div className="panel stat-card">
           <h3>Daily burn</h3>
@@ -177,7 +177,7 @@ export function PaycPage() {
                 <th>Location</th>
                 <th>Credit (kg)</th>
                 <th>Valve</th>
-                <th>Deferred MWK</th>
+                <th>Prepaid (MWK)</th>
                 <th>Status</th>
                 <th />
               </tr>
