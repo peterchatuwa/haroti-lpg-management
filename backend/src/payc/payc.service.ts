@@ -567,19 +567,69 @@ export class PaycService {
     userId?: string,
   ) {
     const meter = await this.requireVendorMeter(meterId);
-    const result = await this.zhongyiClient.sendCommand(meter.imei!, commandStr);
+
+    // These NB-IoT LPG meters do not support queryFlowAndStatus via sendCommand;
+    // Zhongyi returns "Unsupported commands!" — read realtime data instead.
+    if (commandStr === 'queryFlowAndStatus') {
+      return this.readFlowAndStatusFromVendor(meter, userId);
+    }
+
+    try {
+      const result = await this.zhongyiClient.sendCommand(meter.imei!, commandStr);
+      const command = await this.commandsRepo.save(
+        this.commandsRepo.create({
+          meterId: meter.id,
+          commandType: commandStr.toUpperCase(),
+          vendorValueId: result.valueId,
+          status: 'PENDING',
+          message: this.initialCommandMessage(commandStr.toUpperCase(), result.errmsg),
+          requestedByUserId: userId ?? null,
+        }),
+      );
+      void this.refreshCommandFromVendor(command.id).catch(() => undefined);
+      return { command, vendorValueId: result.valueId, message: result.errmsg };
+    } catch (err) {
+      const detail =
+        err instanceof Error
+          ? err.message.replace(/^Zhongyi API error:\s*/i, '')
+          : 'Device command failed';
+      throw new BadRequestException(detail);
+    }
+  }
+
+  private async readFlowAndStatusFromVendor(meter: PaycMeter, userId?: string) {
+    const [realtime, valveStatus] = await Promise.all([
+      this.zhongyiClient.queryRealTimeData(meter.imei!),
+      this.zhongyiClient.readValveStatus(meter.imei!).catch(() => null),
+    ]);
+
+    await this.syncMeterFromVendor(meter.id);
+
+    const creditKg = this.zhongyiClient.extractCreditKgFromRealtime(
+      realtime as ZhongyiRealtimeData & Record<string, unknown>,
+    );
+    const valveLabel =
+      valveStatus?.valveStatus ??
+      (this.zhongyiClient.extractValveOpen(realtime) ? 'open' : 'closed');
+    const parts = [
+      `Credit ${creditKg} kg`,
+      `valve ${valveLabel}`,
+    ];
+    if (realtime.battery) parts.push(`battery ${realtime.battery}V`);
+    if (realtime.readTime) parts.push(`read ${realtime.readTime}`);
+
+    const message = `Flow and status read — ${parts.join(', ')}`;
     const command = await this.commandsRepo.save(
       this.commandsRepo.create({
         meterId: meter.id,
-        commandType: commandStr.toUpperCase(),
-        vendorValueId: result.valueId,
-        status: 'PENDING',
-        message: this.initialCommandMessage(commandStr.toUpperCase(), result.errmsg),
+        commandType: 'QUERYFLOWANDSTATUS',
+        status: 'SUCCESS',
+        message,
         requestedByUserId: userId ?? null,
       }),
     );
-    void this.refreshCommandFromVendor(command.id).catch(() => undefined);
-    return { command, vendorValueId: result.valueId, message: result.errmsg };
+
+    return { command, message, instant: true as const };
   }
 
   private isStaleCommandMessage(message?: string | null) {

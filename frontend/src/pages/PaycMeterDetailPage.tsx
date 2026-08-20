@@ -446,11 +446,20 @@ export function PaycMeterDetailPage() {
       (await api.post(`/payc/meters/${id}/command`, { command })).data as {
         vendorValueId?: string;
         message?: string;
+        instant?: boolean;
+        command?: { status?: string };
       },
-    onMutate: () => txnToast.processing('Sending device command…'),
+    onMutate: (command) =>
+      txnToast.processing(
+        command === 'queryFlowAndStatus'
+          ? 'Reading flow and status from Zhongyi…'
+          : 'Sending device command…',
+      ),
     onSuccess: (data) => {
       const detail = data.message ?? 'Device command queued — check command log for result';
-      txnToast.success('Command queued', { detail });
+      const completed =
+        data.instant || data.command?.status === 'SUCCESS' || data.command?.status === 'COMPLETED';
+      txnToast.success(completed ? 'Status updated' : 'Command queued', { detail });
       setMessage(detail);
       setError('');
       invalidate();
@@ -638,7 +647,7 @@ export function PaycMeterDetailPage() {
               disabled={commandMutation.isPending || !meter.imei}
               onClick={() => commandMutation.mutate('queryFlowAndStatus')}
             >
-              Query flow &amp; status
+              Refresh flow &amp; status
             </button>
             <button
               type="button"
