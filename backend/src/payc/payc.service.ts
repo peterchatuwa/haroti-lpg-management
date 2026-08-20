@@ -12,12 +12,15 @@ import {
   PaycCreditTxnType,
   PaycMeterStatus,
   PaymentMethod,
+  IncidentSeverity,
+  IncidentType,
   UserRole,
 } from '../common/enums';
 import { Customer } from '../customers/customer.entity';
 import { FinanceService, GL_ACCOUNTS } from '../finance/finance.service';
 import { Notification } from '../notifications/notification.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SafetyService } from '../safety/safety.service';
 import { User } from '../users/user.entity';
 import { PaycCommand } from './payc-command.entity';
 import { PaycCreditTransaction } from './payc-credit-transaction.entity';
@@ -29,6 +32,7 @@ const OFFLINE_HOURS = 24;
 const LOW_CREDIT_KG = 0.5;
 const PRICE_PER_KG = 1850;
 const ALERT_COOLDOWN_HOURS = 24;
+const LOW_BATTERY_V = 3.5;
 
 const PAYC_OPS_ROLES = [
   UserRole.SYSTEM_ADMIN,
@@ -56,6 +60,7 @@ export class PaycService {
     private readonly notificationsRepo: Repository<Notification>,
     private readonly financeService: FinanceService,
     private readonly notificationsService: NotificationsService,
+    private readonly safetyService: SafetyService,
     private readonly zhongyiClient: ZhongyiMeterClient,
   ) {}
 
@@ -182,6 +187,27 @@ export class PaycService {
           meterSerial: m.meterSerial,
           message: `${m.meterSerial} valve is closed`,
         })),
+        ...meters
+          .filter((m) => m.leakageDetected)
+          .map((m) => ({
+            type: 'LEAK_DETECTED',
+            meterSerial: m.meterSerial,
+            message: `${m.meterSerial} — gas leak reported by meter`,
+          })),
+        ...meters
+          .filter((m) => m.tamperDetected)
+          .map((m) => ({
+            type: 'TAMPER_DETECTED',
+            meterSerial: m.meterSerial,
+            message: `${m.meterSerial} — tamper alarm active`,
+          })),
+        ...meters
+          .filter((m) => m.lowBatteryAlert)
+          .map((m) => ({
+            type: 'LOW_BATTERY',
+            meterSerial: m.meterSerial,
+            message: `${m.meterSerial} — low meter battery`,
+          })),
       ],
       meters: meters.slice(0, 20),
     };
@@ -271,7 +297,12 @@ export class PaycService {
       throw new BadRequestException('Zhongyi vendor API is not configured');
     }
 
+    const previousLeakage = meter.leakageDetected;
     const data = await this.zhongyiClient.queryRealTimeData(meter.imei);
+    const safety = this.zhongyiClient.extractSafetyFlags(
+      data as ZhongyiRealtimeData & Record<string, unknown>,
+      LOW_BATTERY_V,
+    );
     const creditKg = this.zhongyiClient.extractCreditKgFromRealtime(
       data as ZhongyiRealtimeData & Record<string, unknown>,
     );
@@ -282,10 +313,17 @@ export class PaycService {
       meter.cumulativeFlow = asDecimal(toNumber(data.cumulantFlow), 3);
     }
     meter.valveOpen = valveOpen;
+    meter.leakageDetected = safety.leakageDetected;
+    meter.tamperDetected = safety.tamperDetected;
+    meter.lowBatteryAlert = safety.lowBatteryAlert;
+    meter.safetyAlertSummary = safety.summary;
+    meter.safetyCheckedAt = new Date();
     if (data.readTime) {
       const parsed = new Date(data.readTime.replace(' ', 'T'));
       if (!Number.isNaN(parsed.getTime())) meter.vendorReadTime = parsed;
     }
+    await this.metersRepo.save(meter);
+    await this.handleSafetyIncidents(meter, safety, previousLeakage);
 
     const daily = await this.zhongyiClient.queryDailyConsumption([meter.imei]);
     const burnKg = daily[0]?.consumption ?? toNumber(meter.dailyBurnKg);
@@ -295,6 +333,63 @@ export class PaycService {
       burnKg,
       creditRemainingKg: creditKg,
       valveOpen,
+    });
+  }
+
+  async getActiveSafetyAlerts() {
+    const meters = await this.metersRepo.find({
+      relations: { customer: true, station: true },
+      order: { updatedAt: 'DESC' },
+    });
+
+    const incidents = meters
+      .filter(
+        (m) => m.leakageDetected || m.tamperDetected || m.lowBatteryAlert,
+      )
+      .map((m) => {
+        const types: string[] = [];
+        if (m.leakageDetected) types.push('LEAK');
+        if (m.tamperDetected) types.push('TAMPER');
+        if (m.lowBatteryAlert) types.push('LOW_BATTERY');
+        const critical = m.leakageDetected || m.tamperDetected;
+        return {
+          meterId: m.id,
+          meterSerial: m.meterSerial,
+          imei: m.imei,
+          types,
+          severity: critical ? ('critical' as const) : ('warning' as const),
+          summary:
+            m.safetyAlertSummary ??
+            types.map((t) => t.replaceAll('_', ' ')).join(' · '),
+          location: m.location,
+          customerName: m.customer?.fullName,
+          stationName: m.station?.name,
+          safetyCheckedAt: m.safetyCheckedAt,
+        };
+      });
+
+    return {
+      count: incidents.length,
+      criticalCount: incidents.filter((i) => i.severity === 'critical').length,
+      warningCount: incidents.filter((i) => i.severity === 'warning').length,
+      incidents,
+    };
+  }
+
+  private async handleSafetyIncidents(
+    meter: PaycMeter,
+    safety: { leakageDetected: boolean; summary: string | null },
+    previousLeakage: boolean,
+  ) {
+    if (!safety.leakageDetected || previousLeakage) return;
+
+    await this.safetyService.createIncident({
+      type: IncidentType.GAS_LEAK,
+      severity: IncidentSeverity.CRITICAL,
+      stationId: meter.stationId ?? undefined,
+      description: `PAYC smart meter ${meter.meterSerial} (IMEI ${meter.imei ?? '—'}) reported a gas leak via Zhongyi telemetry. ${safety.summary ?? ''}`.trim(),
+      immediateAction:
+        'Verify with customer, dispatch technician, and close the remote valve if safe.',
     });
   }
 
@@ -1014,7 +1109,12 @@ export class PaycService {
     const types: string[] = [];
 
     for (const meter of meters) {
-      const alerts: Array<{ eventType: string; title: string; body: string }> = [];
+      const alerts: Array<{
+        eventType: string;
+        title: string;
+        body: string;
+        mandatory?: boolean;
+      }> = [];
 
       if (meter.status === PaycMeterStatus.LOW_CREDIT) {
         alerts.push({
@@ -1038,6 +1138,31 @@ export class PaycService {
           eventType: 'PAYC_VALVE_CLOSED',
           title: `Valve closed — no credit: ${meter.meterSerial}`,
           body: `${meter.meterSerial} valve is closed with zero credit. Customer may need top-up.`,
+          mandatory: false,
+        });
+      }
+      if (meter.leakageDetected) {
+        alerts.push({
+          eventType: 'PAYC_LEAK_DETECTED',
+          title: `Gas leak: ${meter.meterSerial}`,
+          body: `${meter.meterSerial} reported a gas leak via Zhongyi. ${meter.safetyAlertSummary ?? 'Dispatch immediately.'}`,
+          mandatory: true,
+        });
+      }
+      if (meter.tamperDetected) {
+        alerts.push({
+          eventType: 'PAYC_TAMPER_DETECTED',
+          title: `Tamper alarm: ${meter.meterSerial}`,
+          body: `${meter.meterSerial} tamper/magnet alarm active. ${meter.safetyAlertSummary ?? 'Inspect meter installation.'}`,
+          mandatory: true,
+        });
+      }
+      if (meter.lowBatteryAlert) {
+        alerts.push({
+          eventType: 'PAYC_LOW_BATTERY',
+          title: `Low battery: ${meter.meterSerial}`,
+          body: `${meter.meterSerial} meter battery is low (${meter.batteryVoltage ?? '?'}V). Schedule maintenance before the device goes offline.`,
+          mandatory: false,
         });
       }
 
@@ -1060,7 +1185,7 @@ export class PaycService {
             entityType: 'PaycMeter',
             entityId: meter.id,
             channels: [NotificationChannel.IN_APP],
-            mandatory: true,
+            mandatory: alert.mandatory,
           });
         }
         sent += recipients.length;

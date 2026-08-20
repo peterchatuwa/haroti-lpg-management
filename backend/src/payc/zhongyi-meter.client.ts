@@ -42,6 +42,17 @@ export interface ZhongyiRealtimeData {
   customerName?: string;
   customerPhone?: string;
   ['remaining flow']?: string;
+  leakageMark?: string | boolean;
+  tamperMark?: string | boolean;
+  magnetMark?: string | boolean;
+  tamperAlarm?: string | boolean;
+}
+
+export interface ZhongyiSafetyFlags {
+  leakageDetected: boolean;
+  tamperDetected: boolean;
+  lowBatteryAlert: boolean;
+  summary: string | null;
 }
 
 export interface ZhongyiPriceInfo {
@@ -316,6 +327,39 @@ export class ZhongyiMeterClient {
   extractValveOpen(data: ZhongyiRealtimeData): boolean {
     const state = data.valve ?? data.valveState;
     return state === 1;
+  }
+
+  extractSafetyFlags(
+    data: ZhongyiRealtimeData & Record<string, unknown>,
+    lowBatteryV = 3.5,
+  ): ZhongyiSafetyFlags {
+    const truthy = (value: unknown) =>
+      value === true || value === 'true' || value === '1' || value === 1;
+
+    const leakageDetected =
+      truthy(data.leakageMark) || truthy(data.leakage) || truthy(data.leakAlarm);
+    const tamperDetected =
+      truthy(data.tamperMark) ||
+      truthy(data.tamper) ||
+      truthy(data.magnetMark) ||
+      truthy(data.tamperAlarm) ||
+      truthy(data.magnetAlarm);
+
+    const battery = Number(data.battery);
+    const lowBatteryAlert =
+      Number.isFinite(battery) && battery > 0 && battery < lowBatteryV;
+
+    const parts: string[] = [];
+    if (leakageDetected) parts.push('Gas leak detected');
+    if (tamperDetected) parts.push('Tamper / magnet alarm');
+    if (lowBatteryAlert) parts.push(`Low battery (${battery}V)`);
+
+    return {
+      leakageDetected,
+      tamperDetected,
+      lowBatteryAlert,
+      summary: parts.length ? parts.join(' · ') : null,
+    };
   }
 
   async setValveState(

@@ -4,6 +4,7 @@ import { Customer } from '../customers/customer.entity';
 import { FinanceModule } from '../finance/finance.module';
 import { Notification } from '../notifications/notification.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { SafetyModule } from '../safety/safety.module';
 import { User } from '../users/user.entity';
 import { PaycCommand } from './payc-command.entity';
 import { PaycController } from './payc.controller';
@@ -26,6 +27,7 @@ import { ZhongyiMeterClient } from './zhongyi-meter.client';
     ]),
     FinanceModule,
     NotificationsModule,
+    SafetyModule,
   ],
   controllers: [PaycController],
   providers: [PaycService, ZhongyiMeterClient],

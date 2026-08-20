@@ -12,6 +12,7 @@ import { useAuthStore } from '../store/auth';
 import { useOfflineStore } from '../store/offline';
 import { FlameMark } from './FlameMark';
 import { GlobalSearch } from './GlobalSearch';
+import { SafetyAlertBadges, SafetyAlertBanner } from './SafetyAlertBanner';
 import { SidebarNav } from './SidebarNav';
 
 export function Layout() {
@@ -118,6 +119,7 @@ export function Layout() {
             </span>
           </div>
           <div className="row">
+            <SafetyAlertBadges />
             {isGm && (reqSummary?.pendingGmApproval ?? 0) > 0 && (
               <NavLink to="/requisitions" className="badge warn">
                 {reqSummary?.pendingGmApproval} req. pending
@@ -146,6 +148,7 @@ export function Layout() {
           </div>
           </div>
         </div>
+        <SafetyAlertBanner />
         <Outlet />
       </main>
     </div>

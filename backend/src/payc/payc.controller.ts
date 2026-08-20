@@ -81,6 +81,11 @@ export class PaycController {
     return this.paycService.dashboard();
   }
 
+  @Get('safety-alerts')
+  safetyAlerts() {
+    return this.paycService.getActiveSafetyAlerts();
+  }
+
   @Get('vendor/status')
   @Roles(...PAYC_OPERATORS)
   vendorStatus() {

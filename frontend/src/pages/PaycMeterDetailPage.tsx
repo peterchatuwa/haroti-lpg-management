@@ -32,6 +32,11 @@ interface PaycMeterDetail {
   batteryVoltage?: string | null;
   cumulativeFlow?: string | null;
   vendorReadTime?: string;
+  leakageDetected?: boolean;
+  tamperDetected?: boolean;
+  lowBatteryAlert?: boolean;
+  safetyAlertSummary?: string | null;
+  safetyCheckedAt?: string;
   customer?: { id: string; fullName: string; phone?: string };
   station?: { id: string; name: string; code: string };
 }
@@ -540,6 +545,46 @@ export function PaycMeterDetailPage() {
           {error}
         </p>
       ) : null}
+
+      {(meter.leakageDetected || meter.tamperDetected || meter.lowBatteryAlert) && (
+        <div className="panel safety-alert-banner critical" role="alert">
+          <strong>Safety alert — action required</strong>
+          <p className="muted" style={{ margin: '0.35rem 0 0.75rem' }}>
+            {meter.safetyAlertSummary ??
+              [
+                meter.leakageDetected && 'Gas leak detected',
+                meter.tamperDetected && 'Tamper alarm active',
+                meter.lowBatteryAlert && 'Low meter battery',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+          </p>
+          <div className="pay-chips">
+            {meter.leakageDetected && <span className="badge danger">Leak</span>}
+            {meter.tamperDetected && <span className="badge danger">Tamper</span>}
+            {meter.lowBatteryAlert && <span className="badge warn">Low battery</span>}
+            <Link to="/safety" className="btn btn-sm">
+              Open safety log
+            </Link>
+            <button
+              type="button"
+              className="btn btn-sm btn-danger"
+              disabled={valveMutation.isPending || !meter.imei}
+              onClick={async () => {
+                const ok = await confirmAction({
+                  title: 'Close gas valve?',
+                  detail: `Emergency close for meter ${meter.meterSerial} due to active safety alert.`,
+                  confirmLabel: 'Close valve',
+                  variant: 'danger',
+                });
+                if (ok) valveMutation.mutate(false);
+              }}
+            >
+              Emergency close valve
+            </button>
+          </div>
+        </div>
+      )}
 
       {(meter.status === 'LOW_CREDIT' || meter.status === 'OFFLINE') && (
         <div className="panel warn">

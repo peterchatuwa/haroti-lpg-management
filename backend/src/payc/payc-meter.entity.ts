@@ -92,4 +92,19 @@ export class PaycMeter extends BaseEntity {
 
   @Column({ name: 'vendor_read_time', type: 'timestamptz', nullable: true })
   vendorReadTime?: Date | null;
+
+  @Column({ name: 'leakage_detected', default: false })
+  leakageDetected!: boolean;
+
+  @Column({ name: 'tamper_detected', default: false })
+  tamperDetected!: boolean;
+
+  @Column({ name: 'low_battery_alert', default: false })
+  lowBatteryAlert!: boolean;
+
+  @Column({ name: 'safety_alert_summary', type: 'text', nullable: true })
+  safetyAlertSummary?: string | null;
+
+  @Column({ name: 'safety_checked_at', type: 'timestamptz', nullable: true })
+  safetyCheckedAt?: Date | null;
 }

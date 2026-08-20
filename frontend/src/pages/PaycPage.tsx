@@ -27,6 +27,9 @@ interface PaycMeterRow {
   status: string;
   location?: string;
   valveOpen?: boolean | null;
+  leakageDetected?: boolean;
+  tamperDetected?: boolean;
+  lowBatteryAlert?: boolean;
   customer?: { fullName: string };
 }
 
@@ -179,6 +182,7 @@ export function PaycPage() {
                 <th>Location</th>
                 <th>Credit (kg)</th>
                 <th>Valve</th>
+                <th>Safety</th>
                 <th>Prepaid (MWK)</th>
                 <th>Status</th>
                 <th />
@@ -198,6 +202,17 @@ export function PaycPage() {
                       : m.valveOpen === false
                         ? 'Closed'
                         : '—'}
+                  </td>
+                  <td>
+                    {m.leakageDetected || m.tamperDetected || m.lowBatteryAlert ? (
+                      <span className="pay-chips" style={{ gap: '0.25rem' }}>
+                        {m.leakageDetected && <span className="badge danger">Leak</span>}
+                        {m.tamperDetected && <span className="badge danger">Tamper</span>}
+                        {m.lowBatteryAlert && <span className="badge warn">Battery</span>}
+                      </span>
+                    ) : (
+                      <span className="muted">OK</span>
+                    )}
                   </td>
                   <td>{formatMoney(Number(m.deferredRevenue))}</td>
                   <td>
