@@ -788,6 +788,114 @@ textarea:focus {
   border: 1px solid #fedf89;
 }
 
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(4, 31, 24, 0.42);
+  backdrop-filter: blur(4px);
+  animation: confirm-overlay-in 0.2s var(--ease);
+}
+
+@keyframes confirm-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.confirm-dialog {
+  position: relative;
+  width: min(440px, 100%);
+  padding: 1.5rem 1.5rem 1.35rem;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbf8 100%);
+  border: 1px solid var(--line);
+  box-shadow: 0 28px 60px rgba(4, 31, 24, 0.22);
+  animation: confirm-dialog-in 0.28s var(--ease);
+}
+
+@keyframes confirm-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.confirm-dialog--danger {
+  border-color: #fda29b;
+}
+
+.confirm-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 0.2rem;
+}
+
+.confirm-close:hover {
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.confirm-icon-wrap {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.85rem;
+  background: #ecfdf3;
+  color: var(--forest);
+}
+
+.confirm-dialog--danger .confirm-icon-wrap {
+  background: #fff5f5;
+  color: var(--danger);
+}
+
+.confirm-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.confirm-detail {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1.35rem;
+}
+
+.confirm-actions .btn-danger {
+  background: linear-gradient(135deg, #f97066, #d92d20);
+  color: white;
+  box-shadow: 0 10px 24px rgba(217, 45, 32, 0.22);
+}
+
 .toast-host {
   position: fixed;
   top: 1rem;

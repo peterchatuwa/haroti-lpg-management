@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
 import {
@@ -8,6 +8,7 @@ import {
   type PaymentStatusInfo,
 } from '../components/PaymentStatusBanner';
 import api from '../lib/api';
+import { confirmAction } from '../lib/confirm';
 import { formatKg, formatMoney } from '../lib/format';
 import {
   notifyPaymentStatus,
@@ -36,6 +37,8 @@ interface PaycMeterDetail {
 }
 
 interface VendorSnapshot {
+  flatPriceMwkPerKg?: number | null;
+  priceName?: string | null;
   realtime?: {
     balance: number;
     battery?: string;
@@ -74,6 +77,42 @@ const PAYC_TXN_LABELS: Record<string, string> = {
   REFUND: 'Refund',
   ADJUSTMENT: 'Adjustment',
 };
+
+function commandStatusLabel(status: string) {
+  if (status === 'SUCCESS' || status === 'COMPLETED') return 'Completed';
+  if (status === 'FAILED') return 'Failed';
+  return 'Pending';
+}
+
+function commandMessageNeedsRepair(message?: string) {
+  return /please wait|recharging|successful delivery|^successful$/i.test((message ?? '').trim());
+}
+
+function commandDisplayMessage(command: PaycCommandRow) {
+  if (
+    (command.status === 'SUCCESS' || command.status === 'COMPLETED') &&
+    commandMessageNeedsRepair(command.message)
+  ) {
+    if (command.commandType === 'remotelyTopUp') {
+      const match = command.message?.match(/top-up (\d+(?:\.\d+)?) MWK \(([\d.]+) kg/i);
+      if (match) return `Top-up delivered — ${match[2]} kg credited (${match[1]} MWK)`;
+      return 'Top-up delivered to meter';
+    }
+    if (command.commandType === 'VALVE_OPEN') return 'Valve opened successfully';
+    if (command.commandType === 'VALVE_CLOSE') return 'Valve closed successfully';
+    if (command.commandType === 'QUERYFLOWANDSTATUS') return 'Flow and status read completed';
+    if (command.commandType === 'QUERYBATTERY') return 'Battery query completed';
+    return 'Command completed successfully';
+  }
+  if (command.status === 'PENDING' && commandMessageNeedsRepair(command.message)) {
+    return 'Waiting for meter response…';
+  }
+  return command.message ?? command.vendorValueId ?? '—';
+}
+
+function commandNeedsRefresh(command: PaycCommandRow) {
+  return command.status === 'PENDING' || commandMessageNeedsRepair(command.message);
+}
 
 export function PaycMeterDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -141,12 +180,42 @@ export function PaycMeterDetailPage() {
       ).data,
   });
 
-  const { data: commands } = useQuery({
+  const { data: commands, refetch: refetchCommands } = useQuery({
     queryKey: ['payc-commands', id],
     enabled: !!id,
     queryFn: async () =>
       (await api.get<PaycCommandRow[]>(`/payc/meters/${id}/commands`)).data,
   });
+
+  const hasActiveCommands = useMemo(
+    () => (commands ?? []).some(commandNeedsRefresh),
+    [commands],
+  );
+
+  useEffect(() => {
+    if (!id || !hasActiveCommands) return;
+
+    let cancelled = false;
+    const refreshCommands = async () => {
+      try {
+        const { data } = await api.post<{ commands: PaycCommandRow[] }>(
+          `/payc/meters/${id}/commands/refresh`,
+        );
+        if (!cancelled && data.commands) {
+          queryClient.setQueryData(['payc-commands', id], data.commands);
+        }
+      } catch {
+        if (!cancelled) void refetchCommands();
+      }
+    };
+
+    void refreshCommands();
+    const intervalId = window.setInterval(refreshCommands, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [id, hasActiveCommands, queryClient, refetchCommands]);
 
   const { data: customers } = useQuery({
     queryKey: ['customers-list-payc'],
@@ -493,9 +562,13 @@ export function PaycMeterDetailPage() {
         <div className="panel stat-card">
           <h3>Daily burn</h3>
           <div className="value">{formatKg(Number(meter.dailyBurnKg))}</div>
-          {meter.cumulativeFlow && (
-            <div className="hint">Total flow {Number(meter.cumulativeFlow).toFixed(3)}</div>
-          )}
+          <div className="hint">
+            {vendor?.flatPriceMwkPerKg != null && vendor.flatPriceMwkPerKg > 0
+              ? `Est. ${formatMoney(Number(meter.dailyBurnKg) * vendor.flatPriceMwkPerKg)}/day @ ${formatMoney(vendor.flatPriceMwkPerKg)}/kg`
+              : meter.cumulativeFlow
+                ? `Total flow ${Number(meter.cumulativeFlow).toFixed(3)}`
+                : 'Sync for Zhongyi pricing'}
+          </div>
         </div>
         <div className="panel stat-card">
           <h3>Device</h3>
@@ -514,8 +587,8 @@ export function PaycMeterDetailPage() {
         <div className="panel stack">
           <h3 className="panel-title">Meter control</h3>
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-            Valve and device commands are sent to Zhongyi. Battery-powered meters may take a few
-            minutes to respond.
+            Valve and device commands are sent to Zhongyi. Battery-powered NB-IoT meters
+            may take a few minutes to wake up, execute the command, and report back.
           </p>
           <button
             type="button"
@@ -530,10 +603,13 @@ export function PaycMeterDetailPage() {
               type="button"
               className="btn btn-accent"
               disabled={valveMutation.isPending || !meter.imei}
-              onClick={() => {
-                if (window.confirm(`Open valve on meter ${meter.meterSerial}?`)) {
-                  valveMutation.mutate(true);
-                }
+              onClick={async () => {
+                const ok = await confirmAction({
+                  title: 'Open gas valve?',
+                  detail: `This sends an open command to meter ${meter.meterSerial}. Gas will flow if credit is available and the valve responds.`,
+                  confirmLabel: 'Open valve',
+                });
+                if (ok) valveMutation.mutate(true);
               }}
             >
               Open valve
@@ -542,10 +618,14 @@ export function PaycMeterDetailPage() {
               type="button"
               className="btn"
               disabled={valveMutation.isPending || !meter.imei}
-              onClick={() => {
-                if (window.confirm(`Close valve on meter ${meter.meterSerial}?`)) {
-                  valveMutation.mutate(false);
-                }
+              onClick={async () => {
+                const ok = await confirmAction({
+                  title: 'Close gas valve?',
+                  detail: `This sends a close command to meter ${meter.meterSerial}. Gas supply will stop when the meter responds.`,
+                  confirmLabel: 'Close valve',
+                  variant: 'danger',
+                });
+                if (ok) valveMutation.mutate(false);
               }}
             >
               Close valve
@@ -664,7 +744,23 @@ export function PaycMeterDetailPage() {
             type="button"
             className="btn btn-accent"
             disabled={topupMutation.isPending || !!awaitingPayment}
-            onClick={() => topupMutation.mutate()}
+            onClick={async () => {
+              const priceHint =
+                vendor?.flatPriceMwkPerKg && vendor.flatPriceMwkPerKg > 0
+                  ? ` At ${formatMoney(vendor.flatPriceMwkPerKg)}/kg this credits about ${formatKg(topupAmount / vendor.flatPriceMwkPerKg)}.`
+                  : '';
+              const ok = await confirmAction({
+                title: `Top up ${formatMoney(topupAmount)}?`,
+                detail:
+                  (topupMethod === 'PAYCHANGU'
+                    ? `Send a PayChangu mobile money request for ${formatMoney(topupAmount)} and credit meter ${meter.meterSerial} when payment confirms.`
+                    : `Record a cash top-up of ${formatMoney(topupAmount)} and send credit to meter ${meter.meterSerial}.`) +
+                  priceHint,
+                confirmLabel:
+                  topupMethod === 'PAYCHANGU' ? 'Start PayChangu top-up' : 'Confirm top-up',
+              });
+              if (ok) topupMutation.mutate();
+            }}
           >
             {topupMutation.isPending
               ? 'Processing…'
@@ -679,6 +775,19 @@ export function PaycMeterDetailPage() {
         <div className="panel">
           <h3 className="panel-title">Live Zhongyi data</h3>
           <div className="grid two">
+            <div>
+              <p className="muted" style={{ margin: 0 }}>Zhongyi price</p>
+              <strong>
+                {vendor.flatPriceMwkPerKg != null
+                  ? `${formatMoney(vendor.flatPriceMwkPerKg)}/kg`
+                  : '—'}
+              </strong>
+              {vendor.priceName ? (
+                <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>
+                  {vendor.priceName}
+                </p>
+              ) : null}
+            </div>
             <div>
               <p className="muted" style={{ margin: 0 }}>Balance (MWK)</p>
               <strong>{formatMoney(Number(vendor.realtime?.balance ?? 0))}</strong>
@@ -718,10 +827,20 @@ export function PaycMeterDetailPage() {
                   <td>{new Date(c.createdAt).toLocaleString()}</td>
                   <td>{c.commandType.replaceAll('_', ' ')}</td>
                   <td>
-                    <span className="badge">{c.status}</span>
+                    <span
+                      className={`badge ${
+                        c.status === 'FAILED'
+                          ? 'warn'
+                          : c.status === 'SUCCESS' || c.status === 'COMPLETED'
+                            ? 'ok'
+                            : ''
+                      }`}
+                    >
+                      {commandStatusLabel(c.status)}
+                    </span>
                   </td>
                   <td>{c.requestedBy?.fullName ?? '—'}</td>
-                  <td className="muted">{c.message ?? c.vendorValueId ?? '—'}</td>
+                  <td>{commandDisplayMessage(c)}</td>
                 </tr>
               ))}
             </tbody>

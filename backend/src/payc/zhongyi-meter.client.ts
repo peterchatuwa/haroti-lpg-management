@@ -259,6 +259,7 @@ export class ZhongyiMeterClient {
     amountMwk: number,
   ): Promise<{
     orderId?: string;
+    valueId?: string;
     errmsg: string;
     creditKg: number;
     flatPrice: number;
@@ -289,6 +290,7 @@ export class ZhongyiMeterClient {
     );
     return {
       orderId: response.value?.orderId,
+      valueId: response.valueId,
       errmsg: response.errmsg,
       creditKg,
       flatPrice,

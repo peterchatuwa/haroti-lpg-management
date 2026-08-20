@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { ToastHost } from './components/ToastHost';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { Layout } from './components/Layout';
 import { AccessoriesPage } from './pages/AccessoriesPage';
 import { CylindersPage } from './pages/CylindersPage';
@@ -100,6 +101,7 @@ export default function App() {
   return (
     <>
       <ToastHost />
+      <ConfirmDialog />
       <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/accept-invite" element={<AcceptInvitePage />} />

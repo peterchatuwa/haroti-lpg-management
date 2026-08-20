@@ -63,6 +63,12 @@ export class PaycController {
     return this.paycService.getMeterVendorSnapshot(id);
   }
 
+  @Post('meters/:id/commands/refresh')
+  @Roles(...PAYC_OPERATORS)
+  refreshCommands(@Param('id') id: string) {
+    return this.paycService.refreshMeterCommands(id);
+  }
+
   @Get('commands/:commandId/status')
   @Roles(...PAYC_OPERATORS)
   commandStatus(@Param('commandId') commandId: string) {

@@ -145,6 +145,16 @@ export class PaycService {
     const dailyBurn = round3(
       meters.reduce((s, m) => s + toNumber(m.dailyBurnKg), 0),
     );
+    const estimatedDailyRevenue = round2(
+      (
+        await Promise.all(
+          meters.map(async (m) => {
+            const flatPrice = await this.getMeterFlatPrice(m);
+            return toNumber(m.dailyBurnKg) * flatPrice;
+          }),
+        )
+      ).reduce((s, v) => s + v, 0),
+    );
 
     return {
       totalMeters: meters.length,
@@ -154,7 +164,7 @@ export class PaycService {
       valveClosedMeters: valveClosed.length,
       totalDeferredRevenue: totalDeferred,
       totalCreditKg,
-      estimatedDailyRevenue: round2(dailyBurn * PRICE_PER_KG),
+      estimatedDailyRevenue,
       dailyBurnKg: dailyBurn,
       alerts: [
         ...lowCredit.map((m) => ({
@@ -224,17 +234,26 @@ export class PaycService {
         meter.imei,
         params.amountMwk,
       );
-      await this.commandsRepo.save(
+      const vendorRef = vendorTopUp.valueId ?? vendorTopUp.orderId;
+      const command = await this.commandsRepo.save(
         this.commandsRepo.create({
           meterId: meter.id,
           commandType: 'remotelyTopUp',
-          status: 'COMPLETED',
-          vendorValueId: vendorTopUp.orderId,
-          message: `Zhongyi top-up ${params.amountMwk} MWK (${vendorTopUp.creditKg} kg @ ${vendorTopUp.flatPrice}/kg): ${vendorTopUp.errmsg}`,
+          status: 'PENDING',
+          vendorValueId: vendorRef,
+          message: `Top-up queued — ${vendorTopUp.creditKg} kg for ${params.amountMwk} MWK @ ${vendorTopUp.flatPrice}/kg`,
         }),
       );
+      if (vendorRef) {
+        await this.refreshCommandFromVendor(command.id).catch(() => undefined);
+      }
       try {
         await this.syncMeterFromVendor(meter.id);
+        await this.finalizeStaleTopUpCommand(
+          meter.id,
+          params.amountMwk,
+          vendorTopUp.creditKg,
+        );
       } catch {
         // Device may apply credit when it next connects.
       }
@@ -521,18 +540,23 @@ export class PaycService {
         commandType: open ? 'VALVE_OPEN' : 'VALVE_CLOSE',
         vendorValueId: result.valueId,
         status: 'PENDING',
-        message: result.errmsg,
+        message: this.initialCommandMessage(
+          open ? 'VALVE_OPEN' : 'VALVE_CLOSE',
+          result.errmsg,
+        ),
         requestedByUserId: userId ?? null,
       }),
     );
 
-    meter.status = open
-      ? toNumber(meter.creditBalanceKg) < LOW_CREDIT_KG
-        ? PaycMeterStatus.LOW_CREDIT
-        : PaycMeterStatus.ACTIVE
-      : PaycMeterStatus.VALVE_CLOSED;
-    meter.valveOpen = open;
-    await this.metersRepo.save(meter);
+    void this.refreshCommandFromVendor(command.id)
+      .then(async () => {
+        try {
+          await this.syncMeterFromVendor(meter.id);
+        } catch {
+          // NB-IoT meters may take minutes to respond; scheduled sync will retry.
+        }
+      })
+      .catch(() => undefined);
 
     return { meter, command, vendorValueId: result.valueId, message: result.errmsg };
   }
@@ -550,11 +574,304 @@ export class PaycService {
         commandType: commandStr.toUpperCase(),
         vendorValueId: result.valueId,
         status: 'PENDING',
-        message: result.errmsg,
+        message: this.initialCommandMessage(commandStr.toUpperCase(), result.errmsg),
         requestedByUserId: userId ?? null,
       }),
     );
+    void this.refreshCommandFromVendor(command.id).catch(() => undefined);
     return { command, vendorValueId: result.valueId, message: result.errmsg };
+  }
+
+  private isStaleCommandMessage(message?: string | null) {
+    if (!message) return false;
+    const normalized = message.trim();
+    return /please wait|recharging|successful delivery|^successful$/i.test(normalized);
+  }
+
+  private messageNeedsRepair(message?: string | null) {
+    return this.isStaleCommandMessage(message);
+  }
+
+  private initialCommandMessage(commandType: string, vendorErrmsg?: string) {
+    if (vendorErrmsg && !this.isStaleCommandMessage(vendorErrmsg)) {
+      return vendorErrmsg;
+    }
+    if (commandType === 'VALVE_OPEN') return 'Valve open command queued — waiting for meter…';
+    if (commandType === 'VALVE_CLOSE') return 'Valve close command queued — waiting for meter…';
+    if (commandType === 'QUERYFLOWANDSTATUS') {
+      return 'Flow/status query queued — waiting for meter…';
+    }
+    if (commandType === 'QUERYBATTERY') return 'Battery query queued — waiting for meter…';
+    return 'Command queued — waiting for meter…';
+  }
+
+  private friendlySuccessMessage(commandType: string) {
+    if (commandType === 'remotelyTopUp') return 'Top-up delivered to meter';
+    if (commandType === 'VALVE_OPEN') return 'Valve opened successfully';
+    if (commandType === 'VALVE_CLOSE') return 'Valve closed successfully';
+    if (commandType === 'QUERYFLOWANDSTATUS') return 'Flow and status read completed';
+    if (commandType === 'QUERYBATTERY') return 'Battery query completed';
+    return 'Command completed successfully';
+  }
+
+  private repairLegacyTopUpMessage(message?: string | null) {
+    if (!message) return null;
+    const match = message.match(/top-up (\d+(?:\.\d+)?) MWK \(([\d.]+) kg/i);
+    if (!match) return null;
+    return `Top-up delivered — ${match[2]} kg credited (${match[1]} MWK)`;
+  }
+
+  private repairCommandMessage(command: PaycCommand) {
+    const status = command.status;
+    if (
+      (status === 'SUCCESS' || status === 'COMPLETED') &&
+      this.messageNeedsRepair(command.message)
+    ) {
+      command.status = 'SUCCESS';
+      command.message =
+        command.commandType === 'remotelyTopUp'
+          ? this.repairLegacyTopUpMessage(command.message) ??
+            this.friendlySuccessMessage(command.commandType)
+          : this.friendlySuccessMessage(command.commandType);
+      return true;
+    }
+    if (status === 'FAILED' && this.messageNeedsRepair(command.message)) {
+      command.message = 'Command failed — meter did not confirm';
+      return true;
+    }
+    if (status === 'PENDING' && this.messageNeedsRepair(command.message)) {
+      command.message = 'Waiting for meter response…';
+      return true;
+    }
+    return false;
+  }
+
+  private inferCommandOutcome(vendor: {
+    state?: number;
+    errmsg?: string;
+    jsonParse?: Record<string, unknown>;
+  }): 'SUCCESS' | 'FAILED' | 'PENDING' {
+    const values = vendor.jsonParse?.values;
+    if (Array.isArray(values)) {
+      for (const item of values) {
+        if (!item || typeof item !== 'object') continue;
+        const record = item as Record<string, string>;
+        const impl =
+          record['Implementation results'] ??
+          record['implementation results'];
+        if (impl) {
+          if (/successful/i.test(impl)) return 'SUCCESS';
+          if (/fail|error|reject|unsuccessful/i.test(impl)) return 'FAILED';
+        }
+      }
+      const awaitingDevice = values.some(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          ('Packet1' in item || 'packet1' in (item as object)),
+      );
+      if (awaitingDevice && (vendor.state === 0 || vendor.state == null)) {
+        return 'PENDING';
+      }
+    }
+
+    if (vendor.state === 0 || vendor.state == null) return 'PENDING';
+    if (vendor.state === 1 || vendor.state === 2) return 'SUCCESS';
+    return 'PENDING';
+  }
+
+  private extractImplementationDetail(vendor: {
+    jsonParse?: Record<string, unknown>;
+  }): string | null {
+    const values = vendor.jsonParse?.values;
+    if (!Array.isArray(values)) return null;
+    for (const item of values) {
+      if (!item || typeof item !== 'object') continue;
+      const record = item as Record<string, string>;
+      const impl =
+        record['Implementation results'] ?? record['implementation results'];
+      if (impl) return impl;
+    }
+    return null;
+  }
+
+  private mapVendorCommandState(vendor: {
+    state?: number;
+    errmsg?: string;
+    jsonParse?: Record<string, unknown>;
+  }) {
+    return this.inferCommandOutcome(vendor);
+  }
+
+  private resolveVendorCommandMessage(
+    vendor: { state?: number; errmsg?: string; jsonParse?: Record<string, unknown> },
+    commandType: string,
+    fallback?: string,
+  ) {
+    const mappedStatus = this.mapVendorCommandState(vendor);
+    if (mappedStatus === 'SUCCESS') {
+      const impl = this.extractImplementationDetail(vendor);
+      if (impl && !this.isStaleCommandMessage(impl)) return impl;
+      return this.friendlySuccessMessage(commandType);
+    }
+    if (mappedStatus === 'FAILED') {
+      if (vendor.errmsg && !this.isStaleCommandMessage(vendor.errmsg)) {
+        return vendor.errmsg;
+      }
+      return 'Command failed on meter';
+    }
+    if (vendor.errmsg && !this.isStaleCommandMessage(vendor.errmsg)) {
+      return vendor.errmsg;
+    }
+    if (fallback && !this.isStaleCommandMessage(fallback)) {
+      return fallback;
+    }
+    return 'Waiting for meter response…';
+  }
+
+  private applyPendingCommandContext(command: PaycCommand, meter?: PaycMeter | null) {
+    if (command.status !== 'PENDING') return;
+    const ageMs = Date.now() - command.createdAt.getTime();
+    const ageHours = Math.floor(ageMs / (3600 * 1000));
+    const ageMinutes = Math.floor((ageMs % (3600 * 1000)) / (60 * 1000));
+
+    if (ageMs < 30 * 60 * 1000) return;
+
+    const valveHint =
+      meter?.valveOpen === false
+        ? 'Last sync shows the valve is closed on the meter.'
+        : meter?.valveOpen === true
+          ? 'Last sync shows the valve is still open on the meter.'
+          : 'Sync the meter to refresh live valve status.';
+
+    if (ageMs >= 2 * 3600 * 1000) {
+      command.message = `Meter has not responded after ${ageHours}h ${ageMinutes}m. ${valveHint} NB-IoT devices wake periodically — try Sync from Zhongyi or send the command again.`;
+      return;
+    }
+
+    command.message = `Waiting for meter response (${ageMinutes}m). ${valveHint}`;
+  }
+
+  private async finalizeStaleTopUpCommand(
+    meterId: string,
+    amountMwk: number,
+    creditKg: number,
+  ) {
+    const cmd = await this.commandsRepo.findOne({
+      where: { meterId, commandType: 'remotelyTopUp' },
+      order: { createdAt: 'DESC' },
+    });
+    if (!cmd || cmd.status === 'FAILED' || cmd.vendorValueId) {
+      return;
+    }
+    if (cmd.status !== 'PENDING' && cmd.status !== 'COMPLETED') {
+      return;
+    }
+    cmd.status = 'SUCCESS';
+    cmd.message =
+      this.repairLegacyTopUpMessage(cmd.message) ??
+      `Top-up delivered — ${creditKg} kg credited (${amountMwk} MWK)`;
+    await this.commandsRepo.save(cmd);
+  }
+
+  async refreshCommandFromVendor(commandId: string) {
+    const command = await this.commandsRepo.findOne({
+      where: { id: commandId },
+      relations: { meter: true },
+    });
+    if (!command) throw new NotFoundException('Command not found');
+    if (!command.vendorValueId) return command;
+
+    const vendor = await this.zhongyiClient.queryCommandInfo(command.vendorValueId);
+    command.status = this.mapVendorCommandState(vendor);
+    command.message = this.resolveVendorCommandMessage(
+      vendor,
+      command.commandType,
+      command.message,
+    );
+    this.repairCommandMessage(command);
+    this.applyPendingCommandContext(command, command.meter);
+    await this.commandsRepo.save(command);
+    return command;
+  }
+
+  private async repairMeterCommandMessages(meterId: string) {
+    const commands = await this.commandsRepo.find({
+      where: { meterId },
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
+    let repaired = 0;
+    for (const cmd of commands) {
+      if (this.repairCommandMessage(cmd)) {
+        await this.commandsRepo.save(cmd);
+        repaired++;
+      }
+    }
+    return repaired;
+  }
+
+  async refreshMeterCommands(meterId: string) {
+    await this.findOne(meterId);
+    const commands = await this.commandsRepo.find({
+      where: { meterId },
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
+
+    let updated = 0;
+    for (const cmd of commands) {
+      const shouldRefresh =
+        (cmd.status === 'PENDING' && !!cmd.vendorValueId) ||
+        (this.messageNeedsRepair(cmd.message) && !!cmd.vendorValueId);
+      if (!shouldRefresh) continue;
+      try {
+        await this.refreshCommandFromVendor(cmd.id);
+        updated++;
+      } catch {
+        // Keep polling on next refresh cycle.
+      }
+    }
+
+    updated += await this.repairMeterCommandMessages(meterId);
+
+    return {
+      updated,
+      commands: await this.commandHistory(meterId),
+    };
+  }
+
+  async refreshPendingCommands() {
+    const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+    const pending = await this.commandsRepo.find({
+      where: { status: 'PENDING', createdAt: MoreThan(cutoff) },
+      order: { createdAt: 'ASC' },
+      take: 100,
+    });
+
+    const staleCompleted = await this.commandsRepo.find({
+      where: { status: 'COMPLETED', createdAt: MoreThan(cutoff) },
+      order: { createdAt: 'ASC' },
+      take: 100,
+    });
+
+    let updated = 0;
+    for (const cmd of [...pending, ...staleCompleted]) {
+      if (cmd.vendorValueId) {
+        try {
+          await this.refreshCommandFromVendor(cmd.id);
+          updated++;
+          continue;
+        } catch {
+          // Fall through to local repair.
+        }
+      }
+      if (this.repairCommandMessage(cmd)) {
+        await this.commandsRepo.save(cmd);
+        updated++;
+      }
+    }
+    return { updated };
   }
 
   async getCommandStatus(commandId: string) {
@@ -566,12 +883,8 @@ export class PaycService {
     if (!command.vendorValueId) return { command, vendor: null };
 
     try {
-      const vendor = await this.zhongyiClient.queryCommandInfo(command.vendorValueId);
-      if (vendor.state === 1) command.status = 'SUCCESS';
-      else if (vendor.state === 2) command.status = 'FAILED';
-      command.message = vendor.errmsg ?? command.message;
-      await this.commandsRepo.save(command);
-      return { command, vendor };
+      const refreshed = await this.refreshCommandFromVendor(commandId);
+      return { command: refreshed, vendor: { state: refreshed.status === 'SUCCESS' ? 1 : refreshed.status === 'FAILED' ? 2 : 0 } };
     } catch (err) {
       return {
         command,
@@ -606,10 +919,16 @@ export class PaycService {
           .catch(() => []),
       ]);
 
+    const flatPriceMwkPerKg = archive?.priceInfo?.flatPrice
+      ? toNumber(archive.priceInfo.flatPrice)
+      : null;
+
     return {
       meterId: meter.id,
       meterSerial: meter.meterSerial,
       imei: meter.imei,
+      flatPriceMwkPerKg,
+      priceName: archive?.priceInfo?.priceName ?? null,
       realtime,
       archive,
       valveStatus,
@@ -625,9 +944,11 @@ export class PaycService {
 
     await this.markOfflineMeters();
     const syncResult = await this.syncAllMetersFromVendor();
+    const commandResult = await this.refreshPendingCommands();
     const alertResult = await this.processAlerts();
     return {
       synced: syncResult.synced,
+      commandsUpdated: commandResult.updated,
       alertsSent: alertResult.sent,
       alertTypes: alertResult.types,
     };

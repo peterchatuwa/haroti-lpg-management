@@ -136,7 +136,9 @@ export function PaycPage() {
         <div className="panel stat-card">
           <h3>Daily burn</h3>
           <div className="value">{formatKg(dashboard.dailyBurnKg)}</div>
-          <div className="hint">Est. {formatMoney(dashboard.estimatedDailyRevenue)}/day</div>
+          <div className="hint">
+            Est. {formatMoney(dashboard.estimatedDailyRevenue)}/day at Zhongyi prices
+          </div>
         </div>
         <div className="panel stat-card warn">
           <h3>Alerts</h3>

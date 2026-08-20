@@ -119,6 +119,14 @@ export class JobsService {
     });
   }
 
+  @Cron('*/3 * * * *')
+  async paycCommandRefreshJob() {
+    await this.track('payc-command-refresh', async () => {
+      const result = await this.paycService.refreshPendingCommands();
+      return `Refreshed ${result.updated} pending command(s)`;
+    });
+  }
+
   @Cron('*/2 * * * *')
   async paychanguPendingSyncJob() {
     await this.track('paychangu-pending-sync', async () => {
