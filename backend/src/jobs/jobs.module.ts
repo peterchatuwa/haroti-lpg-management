@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FinanceModule } from '../finance/finance.module';
 import { MaintenanceModule } from '../maintenance/maintenance.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PaycModule } from '../payc/payc.module';
+import { PaychanguModule } from '../paychangu/paychangu.module';
 import { SafetyModule } from '../safety/safety.module';
 import { TanksModule } from '../tanks/tanks.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
@@ -23,6 +24,7 @@ import { JobsService } from './jobs.service';
     WorkflowsModule,
     NotificationsModule,
     PaycModule,
+    forwardRef(() => PaychanguModule),
   ],
   controllers: [JobsController],
   providers: [JobsService],

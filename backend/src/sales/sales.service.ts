@@ -386,6 +386,11 @@ export class SalesService {
           paychanguAuthLink: paychanguTxn.metadata?.threeDsAuthLink as
             | string
             | undefined,
+          paychanguPayment: {
+            transactionRef: paychanguTxn.transactionRef,
+            status: paychanguTxn.status,
+            amount: paychanguTxn.amount,
+          },
         };
       } catch (err) {
         saved.status = SaleStatus.VOIDED;
@@ -542,7 +547,7 @@ export class SalesService {
       sale.status === SaleStatus.COMPLETED ||
       sale.status === SaleStatus.VOIDED
     ) {
-      return sale;
+      return this.withPaychanguPayment(sale);
     }
     if (sale.status !== SaleStatus.PENDING_PAYMENT) {
       throw new BadRequestException('Sale is not awaiting PayChangu payment');
@@ -553,7 +558,7 @@ export class SalesService {
       await this.paychanguService.queryPayment(txn.transactionRef);
     }
 
-    return this.findOne(saleId);
+    return this.withPaychanguPayment(await this.findOne(saleId));
   }
 
   async cancelPendingPayment(saleId: string) {
@@ -562,7 +567,7 @@ export class SalesService {
       sale.status === SaleStatus.COMPLETED ||
       sale.status === SaleStatus.VOIDED
     ) {
-      return sale;
+      return this.withPaychanguPayment(sale);
     }
     if (sale.status !== SaleStatus.PENDING_PAYMENT) {
       throw new BadRequestException('Sale is not awaiting PayChangu payment');
@@ -573,12 +578,28 @@ export class SalesService {
       await this.paychanguService.queryPayment(txn.transactionRef);
       const refreshed = await this.findOne(saleId);
       if (refreshed.status !== SaleStatus.PENDING_PAYMENT) {
-        return refreshed;
+        return this.withPaychanguPayment(refreshed);
       }
     }
 
     await this.failPaychanguSale(saleId, 'Cancelled by cashier');
-    return this.findOne(saleId);
+    return this.withPaychanguPayment(await this.findOne(saleId));
+  }
+
+  private async withPaychanguPayment(sale: Sale) {
+    const txn = await this.paychanguService.findBySaleId(sale.id);
+    return {
+      ...sale,
+      paychanguPayment: txn
+        ? {
+            transactionRef: txn.transactionRef,
+            status: txn.status,
+            amount: txn.amount,
+            failureReason: txn.metadata?.failure_reason as string | undefined,
+            completedAt: txn.completedAt,
+          }
+        : null,
+    };
   }
 
   listPendingDiscounts(stationId?: string) {

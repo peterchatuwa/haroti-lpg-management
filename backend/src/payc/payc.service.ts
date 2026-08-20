@@ -23,7 +23,7 @@ import { PaycCommand } from './payc-command.entity';
 import { PaycCreditTransaction } from './payc-credit-transaction.entity';
 import { PaycMeter } from './payc-meter.entity';
 import { PaycTelemetry } from './payc-telemetry.entity';
-import { ZhongyiMeterClient } from './zhongyi-meter.client';
+import { ZhongyiMeterClient, ZhongyiRealtimeData } from './zhongyi-meter.client';
 
 const OFFLINE_HOURS = 24;
 const LOW_CREDIT_KG = 0.5;
@@ -164,7 +164,20 @@ export class PaycService {
     pushToVendor?: boolean;
   }) {
     const meter = await this.findOne(params.meterId);
-    const creditKg = round3(params.amountMwk / PRICE_PER_KG);
+    let flatPrice = PRICE_PER_KG;
+
+    if (meter.imei && this.zhongyiClient.enabled) {
+      try {
+        const archive = await this.zhongyiClient.getAreaArchiveInfo(meter.imei);
+        if (archive.priceInfo?.flatPrice) {
+          flatPrice = toNumber(archive.priceInfo.flatPrice);
+        }
+      } catch {
+        // Fall back to ERP default price when archive lookup fails.
+      }
+    }
+
+    const creditKg = round3(params.amountMwk / flatPrice);
     meter.creditBalanceKg = asDecimal(
       toNumber(meter.creditBalanceKg) + creditKg,
     );
@@ -200,7 +213,24 @@ export class PaycService {
     });
 
     if (params.pushToVendor !== false && meter.imei && this.zhongyiClient.enabled) {
-      await this.zhongyiClient.remotelyTopUp(meter.imei, params.amountMwk);
+      const vendorTopUp = await this.zhongyiClient.remotelyTopUp(
+        meter.imei,
+        params.amountMwk,
+      );
+      await this.commandsRepo.save(
+        this.commandsRepo.create({
+          meterId: meter.id,
+          commandType: 'remotelyTopUp',
+          status: 'COMPLETED',
+          vendorValueId: vendorTopUp.orderId,
+          message: `Zhongyi top-up ${params.amountMwk} MWK (${vendorTopUp.creditKg} kg @ ${vendorTopUp.flatPrice}/kg): ${vendorTopUp.errmsg}`,
+        }),
+      );
+      try {
+        await this.syncMeterFromVendor(meter.id);
+      } catch {
+        // Device may apply credit when it next connects.
+      }
     }
 
     return meter;
@@ -216,8 +246,10 @@ export class PaycService {
     }
 
     const data = await this.zhongyiClient.queryRealTimeData(meter.imei);
-    const creditKg = round3(toNumber(data.balance) / PRICE_PER_KG);
-    const valveOpen = data.valve === 1;
+    const creditKg = this.zhongyiClient.extractCreditKgFromRealtime(
+      data as ZhongyiRealtimeData & Record<string, unknown>,
+    );
+    const valveOpen = this.zhongyiClient.extractValveOpen(data);
 
     if (data.battery) meter.batteryVoltage = asDecimal(toNumber(data.battery), 2);
     if (data.cumulantFlow) {
@@ -388,7 +420,7 @@ export class PaycService {
       if (!serial) continue;
 
       const balanceMwk = round2(toNumber(row.balance));
-      const creditKg = round3(balanceMwk / PRICE_PER_KG);
+      const creditKg = round3(toNumber(row.readings));
       const valveOpen = row.valveStatus === 1;
       let status = PaycMeterStatus.ACTIVE;
       if (!valveOpen) status = PaycMeterStatus.VALVE_CLOSED;

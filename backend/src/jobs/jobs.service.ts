@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MaintenanceService } from '../maintenance/maintenance.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaycService } from '../payc/payc.service';
+import { PaychanguService } from '../paychangu/paychangu.service';
 import { SafetyService } from '../safety/safety.service';
 import { AgeingService } from '../finance/ageing.service';
 import { TanksService } from '../tanks/tanks.service';
@@ -25,6 +26,8 @@ export class JobsService {
     private readonly workflowsService: WorkflowsService,
     private readonly notificationsService: NotificationsService,
     private readonly paycService: PaycService,
+    @Inject(forwardRef(() => PaychanguService))
+    private readonly paychanguService: PaychanguService,
   ) {}
 
   private async track(jobName: string, fn: () => Promise<string>) {
@@ -113,6 +116,14 @@ export class JobsService {
     await this.track('notification-queue', async () => {
       const result = await this.notificationsService.processQueue();
       return `Processed ${result.processed}, sent ${result.sent}, failed ${result.failed}`;
+    });
+  }
+
+  @Cron('*/2 * * * *')
+  async paychanguPendingSyncJob() {
+    await this.track('paychangu-pending-sync', async () => {
+      const result = await this.paychanguService.syncPendingPayments();
+      return `Checked ${result.checked}, resolved ${result.resolved}, errors ${result.errors}`;
     });
   }
 

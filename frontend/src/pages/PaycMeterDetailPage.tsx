@@ -1,9 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
+import {
+  PaymentStatusBanner,
+  paychanguStatusToBanner,
+  type PaymentStatusInfo,
+} from '../components/PaymentStatusBanner';
 import api from '../lib/api';
 import { formatKg, formatMoney } from '../lib/format';
+import {
+  notifyPaymentStatus,
+  paymentToast,
+  toast,
+  txnToast,
+} from '../lib/toast';
 
 interface PaycMeterDetail {
   id: string;
@@ -69,6 +80,12 @@ export function PaycMeterDetailPage() {
   const [cylinderSerial, setCylinderSerial] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatusInfo | null>(null);
+  const [awaitingPayment, setAwaitingPayment] = useState<{
+    transactionRef: string;
+    amount: number;
+  } | null>(null);
+  const paymentPollRef = useRef(false);
 
   const { data: meter, isLoading } = useQuery({
     queryKey: ['payc-meter', id],
@@ -142,16 +159,32 @@ export function PaycMeterDetailPage() {
 
   const syncMutation = useMutation({
     mutationFn: async () => (await api.post(`/payc/meters/${id}/sync-vendor`)).data,
+    onMutate: () => txnToast.processing('Syncing meter from Zhongyi…'),
     onSuccess: () => {
+      txnToast.success('Meter synced', { detail: 'Latest readings pulled from Zhongyi' });
       setMessage('Synced from Zhongyi');
       setError('');
       invalidate();
     },
-    onError: (err: { response?: { data?: { message?: string } } }) =>
-      setError(err.response?.data?.message ?? 'Sync failed'),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const detail = err.response?.data?.message ?? 'Sync failed';
+      txnToast.failed('Sync failed', { detail });
+      setError(detail);
+    },
   });
 
   const topupMutation = useMutation({
+    onMutate: () => {
+      if (topupMethod === 'PAYCHANGU') {
+        paymentToast.processing('Initiating PayChangu top-up…', {
+          detail: `${formatMoney(topupAmount)} for meter ${meter?.meterSerial ?? ''}`.trim(),
+        });
+        return;
+      }
+      txnToast.processing('Sending top-up to meter…', {
+        detail: `${formatMoney(topupAmount)} via ${topupMethod.replace(/_/g, ' ')}`,
+      });
+    },
     mutationFn: async () => {
       if (topupMethod === 'PAYCHANGU') {
         if (!customerPhone.trim()) throw new Error('Enter customer mobile for PayChangu');
@@ -172,17 +205,140 @@ export function PaycMeterDetailPage() {
       ).data;
     },
     onSuccess: (data) => {
-      setMessage(
-        topupMethod === 'PAYCHANGU'
-          ? `PayChangu prompt sent — ref ${data.transactionRef ?? 'pending'}`
-          : 'Top-up recorded and sent to meter',
-      );
+      if (topupMethod === 'PAYCHANGU' && data.transactionRef) {
+        setAwaitingPayment({
+          transactionRef: data.transactionRef,
+          amount: topupAmount,
+        });
+        const waitingStatus: PaymentStatusInfo = {
+          state: 'waiting',
+          title: 'Waiting for PayChangu',
+          detail: 'Approve the mobile money prompt on the customer phone.',
+          reference: data.transactionRef,
+        };
+        setPaymentStatus(waitingStatus);
+        notifyPaymentStatus(waitingStatus);
+        setMessage('');
+        setError('');
+        return;
+      }
+      txnToast.dismiss();
+      paymentToast.dismiss();
+      setPaymentStatus(null);
+      txnToast.success('Top-up complete', {
+        detail: `${formatMoney(topupAmount)} recorded and sent to meter`,
+      });
+      setMessage('Top-up recorded and sent to meter');
       setError('');
       invalidate();
     },
-    onError: (err: { response?: { data?: { message?: string } }; message?: string }) =>
-      setError(err.response?.data?.message ?? err.message ?? 'Top-up failed'),
+    onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
+      const detail = err.response?.data?.message ?? err.message ?? 'Top-up failed';
+      if (topupMethod === 'PAYCHANGU') {
+        paymentToast.failed('Top-up failed', { detail });
+      } else {
+        txnToast.failed('Top-up failed', { detail });
+      }
+      setError(detail);
+    },
   });
+
+  useEffect(() => {
+    if (!awaitingPayment) return;
+
+    let cancelled = false;
+    paymentPollRef.current = true;
+
+    const pollPayment = async () => {
+      try {
+        const { data } = await api.get(
+          `/paychangu/transaction/${awaitingPayment.transactionRef}`,
+        );
+        if (cancelled) return;
+        const banner = paychanguStatusToBanner(data.status, {
+          amount: awaitingPayment.amount,
+          reference: data.transactionRef,
+          failureReason: data.metadata?.failure_reason,
+        });
+        if (data.status === 'COMPLETED') {
+          setAwaitingPayment(null);
+          const status =
+            banner ?? {
+              state: 'success' as const,
+              title: 'Payment successful',
+              detail: `${formatMoney(awaitingPayment.amount)} credited to meter and Zhongyi.`,
+              reference: data.transactionRef,
+            };
+          setPaymentStatus(status);
+          notifyPaymentStatus(status);
+          setMessage('');
+          setError('');
+          invalidate();
+        } else if (
+          data.status === 'FAILED' ||
+          data.status === 'CANCELLED' ||
+          data.status === 'EXPIRED'
+        ) {
+          setAwaitingPayment(null);
+          const status =
+            banner ?? {
+              state: 'failed' as const,
+              title: 'Payment failed',
+              detail: 'PayChangu payment was not completed.',
+              reference: data.transactionRef,
+            };
+          setPaymentStatus(status);
+          notifyPaymentStatus(status);
+          setMessage('');
+          setError('');
+        } else if (banner) {
+          setPaymentStatus(banner);
+          if (banner.detail) paymentToast.updateDetail(banner.detail);
+        }
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const msg =
+          (err as { response?: { data?: { message?: string | string[] } } })
+            .response?.data?.message;
+        setAwaitingPayment(null);
+        const status: PaymentStatusInfo = {
+          state: 'failed',
+          title: 'Payment failed',
+          detail: Array.isArray(msg) ? msg.join(', ') : msg ?? 'Could not verify payment',
+        };
+        setPaymentStatus(status);
+        notifyPaymentStatus(status);
+        setMessage('');
+        setError('');
+      }
+    };
+
+    void pollPayment();
+    const intervalId = window.setInterval(pollPayment, 3000);
+    const timeoutId = window.setTimeout(() => {
+      if (!cancelled && paymentPollRef.current) {
+        setAwaitingPayment(null);
+        const pendingStatus: PaymentStatusInfo = {
+          state: 'waiting',
+          title: 'Payment still pending',
+          detail:
+            'PayChangu has not confirmed yet. The system will keep checking automatically.',
+          reference: awaitingPayment.transactionRef,
+        };
+        setPaymentStatus(pendingStatus);
+        notifyPaymentStatus(pendingStatus);
+        setMessage('');
+        setError('');
+      }
+    }, 120_000);
+
+    return () => {
+      cancelled = true;
+      paymentPollRef.current = false;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [awaitingPayment, queryClient]);
 
   const valveMutation = useMutation({
     mutationFn: async (open: boolean) =>
@@ -190,16 +346,22 @@ export function PaycMeterDetailPage() {
         vendorValueId?: string;
         message?: string;
       },
+    onMutate: (open) =>
+      txnToast.processing(open ? 'Opening valve…' : 'Closing valve…'),
     onSuccess: (data, open) => {
-      setMessage(
+      const detail =
         data.message ??
-          (open ? 'Open valve command queued on Zhongyi' : 'Close valve command queued on Zhongyi'),
-      );
+        (open ? 'Open valve command queued on Zhongyi' : 'Close valve command queued on Zhongyi');
+      txnToast.success(open ? 'Valve open queued' : 'Valve close queued', { detail });
+      setMessage(detail);
       setError('');
       invalidate();
     },
-    onError: (err: { response?: { data?: { message?: string } } }) =>
-      setError(err.response?.data?.message ?? 'Valve command failed'),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const detail = err.response?.data?.message ?? 'Valve command failed';
+      txnToast.failed('Valve command failed', { detail });
+      setError(detail);
+    },
   });
 
   const commandMutation = useMutation({
@@ -208,22 +370,33 @@ export function PaycMeterDetailPage() {
         vendorValueId?: string;
         message?: string;
       },
+    onMutate: () => txnToast.processing('Sending device command…'),
     onSuccess: (data) => {
-      setMessage(data.message ?? 'Device command queued — check command log for result');
+      const detail = data.message ?? 'Device command queued — check command log for result';
+      txnToast.success('Command queued', { detail });
+      setMessage(detail);
       setError('');
       invalidate();
     },
-    onError: (err: { response?: { data?: { message?: string } } }) =>
-      setError(err.response?.data?.message ?? 'Command failed'),
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      const detail = err.response?.data?.message ?? 'Command failed';
+      txnToast.failed('Command failed', { detail });
+      setError(detail);
+    },
   });
 
   const assignMutation = useMutation({
     mutationFn: async (customerId: string | null) =>
       (await api.patch(`/payc/meters/${id}`, { customerId: customerId || null })).data,
     onSuccess: () => {
+      toast.success('Customer updated', { detail: 'Meter assignment saved' });
       setMessage('Customer assignment updated');
       invalidate();
     },
+    onError: (err: { response?: { data?: { message?: string } } }) =>
+      toast.error('Assignment failed', {
+        detail: err.response?.data?.message ?? 'Could not update customer',
+      }),
   });
 
   const rebindMutation = useMutation({
@@ -232,10 +405,15 @@ export function PaycMeterDetailPage() {
         cylinderSerial: cylinderSerial.trim(),
       })).data,
     onSuccess: () => {
+      toast.success('Cylinder linked', { detail: 'Meter cylinder binding updated' });
       setMessage('Cylinder linked');
       setCylinderSerial('');
       invalidate();
     },
+    onError: (err: { response?: { data?: { message?: string } } }) =>
+      toast.error('Link failed', {
+        detail: err.response?.data?.message ?? 'Could not link cylinder',
+      }),
   });
 
   if (isLoading || !meter) {
@@ -265,8 +443,17 @@ export function PaycMeterDetailPage() {
         }
       />
 
-      {message && <p className="panel" style={{ color: 'var(--ok)', margin: 0 }}>{message}</p>}
-      {error && <p className="panel" style={{ color: 'var(--danger)', margin: 0 }}>{error}</p>}
+      {paymentStatus ? <PaymentStatusBanner status={paymentStatus} /> : null}
+      {message && !paymentStatus ? (
+        <p className="panel" style={{ color: 'var(--ok)', margin: 0 }}>
+          {message}
+        </p>
+      ) : null}
+      {error && !paymentStatus ? (
+        <p className="panel" style={{ color: 'var(--danger)', margin: 0 }}>
+          {error}
+        </p>
+      ) : null}
 
       {(meter.status === 'LOW_CREDIT' || meter.status === 'OFFLINE') && (
         <div className="panel warn">
@@ -468,12 +655,14 @@ export function PaycMeterDetailPage() {
           <button
             type="button"
             className="btn btn-accent"
-            disabled={topupMutation.isPending}
+            disabled={topupMutation.isPending || !!awaitingPayment}
             onClick={() => topupMutation.mutate()}
           >
             {topupMutation.isPending
               ? 'Processing…'
-              : `Top up ${formatMoney(topupAmount)}`}
+              : awaitingPayment
+                ? 'Waiting for PayChangu…'
+                : `Top up ${formatMoney(topupAmount)}`}
           </button>
         </div>
       </div>

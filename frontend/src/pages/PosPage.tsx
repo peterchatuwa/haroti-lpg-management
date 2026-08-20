@@ -2,8 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
+import {
+  PaymentStatusBanner,
+  paychanguStatusToBanner,
+  type PaymentStatusInfo,
+} from '../components/PaymentStatusBanner';
 import api from '../lib/api';
 import { formatMoney } from '../lib/format';
+import { notifyPaymentStatus, paymentToast, toast, txnToast } from '../lib/toast';
 import { readScaleWeight, serialScaleSupported } from '../lib/useSerialScale';
 import { useAuthStore } from '../store/auth';
 import { useOfflineStore } from '../store/offline';
@@ -43,6 +49,7 @@ export function PosPage() {
   const [discount, setDiscount] = useState(0);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatusInfo | null>(null);
   const [lastReceipt, setLastReceipt] = useState('');
   const [burst, setBurst] = useState(false);
   const [posMode, setPosMode] = useState<'refill' | 'accessory' | 'bundle'>('refill');
@@ -136,6 +143,7 @@ export function PosPage() {
     mutationFn: async (saleId: string) =>
       (await api.post(`/sales/${saleId}/approve-discount`)).data,
     onSuccess: () => {
+      toast.success('Discount approved', { detail: 'Sale completed' });
       setMessage('Discount approved — sale completed');
       queryClient.invalidateQueries({ queryKey: ['pending-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -180,6 +188,11 @@ export function PosPage() {
   }
 
   const saleMutation = useMutation({
+    onMutate: () => {
+      txnToast.processing('Processing sale…', {
+        detail: `Total ${formatMoney(total)} · ${PAYMENTS.find((p) => p.value === paymentMethod)?.label ?? paymentMethod}`,
+      });
+    },
     mutationFn: async () => {
       if (!shift?.id) {
         throw new Error('Open a shift before recording sales (Shifts page).');
@@ -272,25 +285,40 @@ export function PosPage() {
           method: paymentMethod,
         });
         setLastReceipt(data.receiptNumber);
-        setMessage(
-          data.paychanguAuthLink
-            ? `Complete 3D Secure in the opened tab · ${data.receiptNumber}`
+        const waitingStatus: PaymentStatusInfo = {
+          state: 'waiting',
+          title: 'Waiting for PayChangu',
+          detail: data.paychanguAuthLink
+            ? 'Complete 3D Secure in the opened tab, then wait for confirmation.'
             : paymentMethod === 'CARD'
-              ? `Card payment initiated · ${data.receiptNumber} — waiting for confirmation`
-              : `PayChangu prompt sent to ${customerPhone} · ${data.receiptNumber}`,
-        );
+              ? 'Complete card verification, then wait for confirmation.'
+              : `Approve the mobile money prompt sent to ${customerPhone}.`,
+          reference:
+            data.paychanguPayment?.transactionRef ?? data.paychanguChargeId,
+        };
+        setPaymentStatus(waitingStatus);
+        notifyPaymentStatus(waitingStatus);
+        setMessage('');
         setError('');
         return;
       }
 
+      txnToast.dismiss();
+      setPaymentStatus(null);
+      paymentToast.dismiss();
       setLastReceipt(data.receiptNumber);
-      setMessage(
+      const successDetail =
         data.status === 'PENDING_APPROVAL'
           ? `Awaiting manager approval · ${data.receiptNumber}`
           : data.offline
             ? `Saved offline · ${data.receiptNumber}`
-            : `Sale complete · ${data.receiptNumber}`,
-      );
+            : `Sale complete · ${data.receiptNumber}`;
+      if (data.status === 'PENDING_APPROVAL') {
+        toast.info('Sale submitted', { detail: successDetail });
+      } else {
+        txnToast.success('Sale complete', { detail: successDetail });
+      }
+      setMessage(successDetail);
       setError('');
       setBurst(true);
       window.setTimeout(() => setBurst(false), 600);
@@ -307,7 +335,11 @@ export function PosPage() {
     },
     onError: (err: { response?: { data?: { message?: string | string[] } } }) => {
       const msg = err.response?.data?.message;
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Could not complete sale');
+      const detail = Array.isArray(msg) ? msg.join(', ') : msg ?? 'Could not complete sale';
+      txnToast.failed('Sale failed', { detail });
+      setPaymentStatus(null);
+      paymentToast.dismiss();
+      setError(detail);
     },
   });
 
@@ -317,10 +349,24 @@ export function PosPage() {
     let cancelled = false;
     paymentPollRef.current = true;
 
-    const finishPayment = (data: { receiptNumber?: string }) => {
+    const finishPayment = (data: {
+      receiptNumber?: string;
+      paychanguPayment?: {
+        transactionRef?: string;
+        amount?: string;
+      };
+    }) => {
       setAwaitingPayment(null);
       setLastReceipt(data.receiptNumber ?? awaitingPayment.receiptNumber);
-      setMessage(`Sale complete · ${data.receiptNumber ?? awaitingPayment.receiptNumber}`);
+      const status: PaymentStatusInfo = {
+        state: 'success',
+        title: 'Payment successful',
+        detail: `Sale complete · ${data.receiptNumber ?? awaitingPayment.receiptNumber}`,
+        reference: data.paychanguPayment?.transactionRef,
+      };
+      setPaymentStatus(status);
+      notifyPaymentStatus(status);
+      setMessage('');
       setError('');
       setBurst(true);
       window.setTimeout(() => setBurst(false), 600);
@@ -333,10 +379,29 @@ export function PosPage() {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
     };
 
-    const failPayment = (reason: string) => {
+    const failPayment = (
+      reason: string,
+      paychangu?: {
+        transactionRef?: string;
+        status?: string;
+        failureReason?: string;
+      },
+    ) => {
       setAwaitingPayment(null);
-      setError(reason);
+      const status =
+        paychanguStatusToBanner(paychangu?.status ?? 'FAILED', {
+          reference: paychangu?.transactionRef,
+          failureReason: paychangu?.failureReason ?? reason,
+        }) ?? {
+          state: 'failed' as const,
+          title: 'Payment failed',
+          detail: reason,
+          reference: paychangu?.transactionRef,
+        };
+      setPaymentStatus(status);
+      notifyPaymentStatus(status);
       setMessage('');
+      setError('');
     };
 
     const pollPayment = async () => {
@@ -345,19 +410,53 @@ export function PosPage() {
           `/sales/${awaitingPayment.saleId}/refresh-payment`,
         );
         if (cancelled) return;
+
+        const pay = data.paychanguPayment as
+          | {
+              status?: string;
+              transactionRef?: string;
+              failureReason?: string;
+              amount?: string;
+            }
+          | undefined;
+
         if (data.status === 'COMPLETED') {
           finishPayment(data);
-        } else if (data.status === 'VOIDED') {
-          failPayment('PayChangu payment failed or was cancelled.');
+          return;
+        }
+
+        if (
+          data.status === 'VOIDED' ||
+          pay?.status === 'FAILED' ||
+          pay?.status === 'CANCELLED' ||
+          pay?.status === 'EXPIRED'
+        ) {
+          failPayment(
+            pay?.failureReason ??
+              data.notes ??
+              'PayChangu payment failed or was cancelled.',
+            pay,
+          );
+          return;
+        }
+
+        if (pay?.status) {
+          const banner = paychanguStatusToBanner(pay.status, {
+            amount: pay.amount ? Number(pay.amount) : undefined,
+            reference: pay.transactionRef,
+            failureReason: pay.failureReason,
+          });
+          if (banner) {
+            setPaymentStatus(banner);
+            if (banner.detail) paymentToast.updateDetail(banner.detail);
+          }
         }
       } catch (err: unknown) {
         if (cancelled) return;
         const msg =
           (err as { response?: { data?: { message?: string | string[] } } })
             .response?.data?.message;
-        failPayment(
-          Array.isArray(msg) ? msg.join(', ') : msg ?? 'Could not verify payment',
-        );
+        failPayment(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Could not verify payment');
       }
     };
 
@@ -369,7 +468,7 @@ export function PosPage() {
       try {
         await api.post(`/sales/${awaitingPayment.saleId}/cancel-payment`);
         if (!cancelled) {
-          failPayment('Payment timed out. The sale was cancelled — you can try again.');
+          failPayment('Payment timed out before PayChangu confirmed.');
         }
       } catch {
         if (!cancelled) {
@@ -392,7 +491,14 @@ export function PosPage() {
     try {
       await api.post(`/sales/${awaitingPayment.saleId}/cancel-payment`);
       setAwaitingPayment(null);
-      setMessage('Payment cancelled');
+      const status: PaymentStatusInfo = {
+        state: 'failed',
+        title: 'Payment cancelled',
+        detail: 'The pending sale was cancelled. You can try again.',
+      };
+      setPaymentStatus(status);
+      notifyPaymentStatus(status);
+      setMessage('');
       setError('');
     } catch (err: unknown) {
       const msg =
@@ -479,8 +585,9 @@ export function PosPage() {
         ))}
       </div>
 
-      {message && <div className="success">{message}</div>}
-      {error && <div className="error">{error}</div>}
+      {paymentStatus ? <PaymentStatusBanner status={paymentStatus} /> : null}
+      {message && !paymentStatus ? <div className="success">{message}</div> : null}
+      {error && !paymentStatus ? <div className="error">{error}</div> : null}
 
       <form className="grid two" onSubmit={onSubmit}>
         <div className="panel stack">

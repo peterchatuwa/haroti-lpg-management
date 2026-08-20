@@ -37,8 +37,19 @@ export interface ZhongyiRealtimeData {
   readTime?: string;
   cumulantFlow?: string;
   valve?: number;
+  valveState?: number;
+  reading?: string;
   customerName?: string;
   customerPhone?: string;
+  ['remaining flow']?: string;
+}
+
+export interface ZhongyiPriceInfo {
+  id?: number;
+  flatPrice?: number;
+  priceName?: string;
+  ladderType?: number;
+  state?: number;
 }
 
 export interface ZhongyiArchiveRow {
@@ -87,6 +98,7 @@ export interface ZhongyiArchiveDetail {
   balance?: number;
   phone?: string;
   areaOrgName?: string;
+  priceInfo?: ZhongyiPriceInfo;
 }
 
 export interface ZhongyiVendorConfig {
@@ -245,19 +257,63 @@ export class ZhongyiMeterClient {
   async remotelyTopUp(
     imei: string,
     amountMwk: number,
-  ): Promise<{ orderId?: string; errmsg: string }> {
+  ): Promise<{
+    orderId?: string;
+    errmsg: string;
+    creditKg: number;
+    flatPrice: number;
+  }> {
+    const archive = await this.getAreaArchiveInfo(imei);
+    const flatPrice = Number(archive.priceInfo?.flatPrice ?? 0);
+    if (!flatPrice) {
+      throw new Error(
+        `Zhongyi meter ${imei} has no flatPrice — configure pricing in Zhongyi portal`,
+      );
+    }
+
+    const creditKg = Math.round((amountMwk / flatPrice) * 1000) / 1000;
+    this.logger.log(
+      `Zhongyi remotelyTopUp IMEI ${imei}: ${amountMwk} MWK -> ${creditKg} kg @ ${flatPrice}/kg`,
+    );
+
     const response = await this.call<{ orderId?: string }>(
       'zlMeter',
       'remotelyTopUp',
       {
         nbonetNetImei: imei,
         topUpAmount: String(amountMwk),
-        topUpToDeviceAmount: String(amountMwk),
+        topUpToDeviceAmount: creditKg.toFixed(3),
       },
       true,
       'param',
     );
-    return { orderId: response.value?.orderId, errmsg: response.errmsg };
+    return {
+      orderId: response.value?.orderId,
+      errmsg: response.errmsg,
+      creditKg,
+      flatPrice,
+    };
+  }
+
+  extractCreditKgFromRealtime(
+    data: ZhongyiRealtimeData & Record<string, unknown>,
+  ): number {
+    const remainingFlow = data['remaining flow'];
+    if (remainingFlow != null && String(remainingFlow) !== '') {
+      return Math.round(Number(remainingFlow) * 1000) / 1000;
+    }
+    if (data.readings != null && String(data.readings) !== '') {
+      return Math.round(Number(data.readings) * 1000) / 1000;
+    }
+    if (data.reading != null && String(data.reading) !== '') {
+      return Math.round(Number(data.reading) * 1000) / 1000;
+    }
+    return 0;
+  }
+
+  extractValveOpen(data: ZhongyiRealtimeData): boolean {
+    const state = data.valve ?? data.valveState;
+    return state === 1;
   }
 
   async setValveState(

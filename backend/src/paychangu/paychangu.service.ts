@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { createHmac, randomBytes } from 'crypto';
 import {
   PaychanguTransaction,
@@ -486,6 +486,48 @@ export class PaychanguService {
       where: { saleId },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async syncPendingPayments(): Promise<{
+    checked: number;
+    resolved: number;
+    errors: number;
+  }> {
+    const pending = await this.txnRepo.find({
+      where: {
+        status: In([
+          PaychanguTransactionStatus.PENDING,
+          PaychanguTransactionStatus.PROCESSING,
+        ]),
+      },
+      order: { createdAt: 'ASC' },
+      take: 100,
+    });
+
+    let resolved = 0;
+    let errors = 0;
+
+    for (const txn of pending) {
+      try {
+        const previousStatus = txn.status;
+        await this.queryPayment(txn.transactionRef);
+        const updated = await this.txnRepo.findOne({
+          where: { transactionRef: txn.transactionRef },
+        });
+        if (updated && updated.status !== previousStatus) {
+          resolved++;
+        }
+      } catch (error: unknown) {
+        errors++;
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        this.logger.warn(
+          `Pending PayChangu sync failed for ${txn.transactionRef}: ${errorMessage}`,
+        );
+      }
+    }
+
+    return { checked: pending.length, resolved, errors };
   }
 
   private async applyTransactionOutcome(
