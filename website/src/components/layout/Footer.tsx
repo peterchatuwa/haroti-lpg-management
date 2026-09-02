@@ -80,7 +80,7 @@ export const Footer = () => {
         </div>
 
         <div className="border-t border-haroti-leaf/20 mt-8 pt-8 text-center text-sm text-white/60">
-          <p>&copy; {new Date().getFullYear()} Haroti Holdings Limited (T/A Haroti Gas). All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Haroti Holdings Limited. All rights reserved.</p>
           <p className="mt-2">Registered in Malawi | Committed to clean cooking and sustainable energy</p>
         </div>
       </div>

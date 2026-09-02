@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X, Phone, Mail } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, Phone, Mail, ShoppingCart } from 'lucide-react';
 import { CONTACT_EMAIL, PRIMARY_PHONE } from '../../config/contact';
+import { useCart } from '../../store/cart-context';
 
 export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { itemCount } = useCart();
+  const navigate = useNavigate();
 
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'About Us', href: '/about' },
     { name: 'Products & PAYC', href: '/products' },
+    { name: 'Store', href: '/store' },
     { name: 'Find a Station', href: '/stations' },
     { name: 'Franchise', href: '/franchise' },
     { name: 'Impact & ESG', href: '/impact' },
@@ -55,19 +59,32 @@ export const Header = () => {
             </div>
           </Link>
 
-          <div className="hidden lg:flex items-center space-x-1">
+          <div className="hidden lg:flex items-center space-x-1 flex-1 justify-center mx-4">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
-                className="px-3 py-2 text-sm font-medium text-haroti-ink/90 hover:text-haroti-flame hover:bg-haroti-mist rounded-md transition-colors"
+                className="px-2 py-2 text-sm font-medium text-haroti-ink/90 hover:text-haroti-flame hover:bg-haroti-mist rounded-md transition-colors whitespace-nowrap"
               >
                 {item.name}
               </Link>
             ))}
           </div>
 
-          <div className="hidden lg:block">
+          <div className="hidden lg:flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/store/checkout')}
+              className="relative p-2 rounded-md text-haroti-ink/90 hover:bg-haroti-mist transition-colors"
+              aria-label="View cart"
+            >
+              <ShoppingCart size={22} />
+              {itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 bg-haroti-orange text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {itemCount}
+                </span>
+              )}
+            </button>
             <Link to="/franchise" className="btn-primary text-sm py-2 px-4">
               Apply for Franchise
             </Link>

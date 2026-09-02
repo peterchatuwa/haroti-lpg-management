@@ -9,6 +9,7 @@ import { Station } from '../stations/station.entity';
 import { PublicCatalogService } from './public-catalog.service';
 import { PublicController } from './public.controller';
 import { PublicFormsService } from './public-forms.service';
+import { PublicOrdersService } from './public-orders.service';
 
 @Module({
   imports: [
@@ -22,6 +23,6 @@ import { PublicFormsService } from './public-forms.service';
     NotificationsModule,
   ],
   controllers: [PublicController],
-  providers: [PublicCatalogService, PublicFormsService],
+  providers: [PublicCatalogService, PublicFormsService, PublicOrdersService],
 })
 export class PublicModule {}

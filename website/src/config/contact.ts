@@ -1,7 +1,7 @@
 export const CONTACT_EMAIL = 'info@harotiholdingslimited.com';
 
 export const CONTACT_ADDRESS_LINES = [
-  'Haroti Holdings Limited (T/A Haroti Gas)',
+  'Haroti Holdings Limited',
   'Area 15, P.O. Box E246',
   'Lilongwe, Malawi',
 ] as const;

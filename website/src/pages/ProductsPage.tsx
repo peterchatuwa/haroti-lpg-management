@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Flame, Shield, Phone, CreditCard, Smartphone, DollarSign, Check, AlertTriangle } from 'lucide-react';
 import { PRIMARY_PHONE } from '../config/contact';
 import {
@@ -7,8 +8,11 @@ import {
   formatMwk,
 } from '../data/product-display';
 import { fetchCatalog, type CatalogItem } from '../lib/api';
+import { useCart } from '../store/cart-context';
 
 export const ProductsPage = () => {
+  const navigate = useNavigate();
+  const { addItem } = useCart();
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [catalogError, setCatalogError] = useState(false);
 
@@ -39,10 +43,18 @@ export const ProductsPage = () => {
       (meta.sku === 'BURNER-STD' ? catalogBySku.get('BURNER-DBL') : undefined);
     return {
       ...meta,
+      catalogItem: item,
       price: item ? formatMwk(item.unitPrice) : 'MWK —',
       inStock: item?.inStock ?? false,
     };
   });
+
+  const orderProduct = (sku: string, altSku?: string) => {
+    const item = catalogBySku.get(sku) ?? (altSku ? catalogBySku.get(altSku) : undefined);
+    if (!item?.inStock) return;
+    addItem(item);
+    navigate('/store/checkout');
+  };
 
   const paycFeatures = [
     'No large upfront payment',
@@ -218,6 +230,7 @@ export const ProductsPage = () => {
                   <button
                     type="button"
                     disabled={!cylinder.inStock}
+                    onClick={() => orderProduct(cylinder.sku)}
                     className={`mt-6 w-full font-semibold py-2 px-4 rounded-lg transition-colors ${
                       cylinder.inStock
                         ? 'bg-haroti-orange hover:bg-haroti-flame-hot text-white'
@@ -366,6 +379,12 @@ export const ProductsPage = () => {
                 <button
                   type="button"
                   disabled={!accessory.inStock}
+                  onClick={() =>
+                    orderProduct(
+                      accessory.sku,
+                      accessory.sku === 'BURNER-STD' ? 'BURNER-DBL' : undefined,
+                    )
+                  }
                   className={`w-full text-sm font-semibold py-2 px-3 rounded-lg transition-colors ${
                     accessory.inStock
                       ? 'bg-haroti-orange hover:bg-haroti-flame-hot text-white'

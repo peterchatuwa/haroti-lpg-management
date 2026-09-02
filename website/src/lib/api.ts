@@ -10,6 +10,34 @@ export interface CatalogItem {
   inStock: boolean;
 }
 
+export interface PublicStation {
+  code: string;
+  name: string;
+  district: string;
+  address: string | null;
+}
+
+export interface OrderLinePayload {
+  sku: string;
+  quantity: number;
+}
+
+export interface SubmitOrderPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  nationalId?: string;
+  fulfillmentType: 'pickup' | 'delivery' | 'installation';
+  preferredStationCode?: string;
+  deliveryAddress?: string;
+  deliveryArea?: string;
+  deliveryDistrict?: string;
+  installationNotes?: string;
+  customerNotes?: string;
+  lines: OrderLinePayload[];
+}
+
 async function parseJson<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as T & {
     message?: string | string[];
@@ -27,6 +55,20 @@ async function parseJson<T>(res: Response): Promise<T> {
 
 export function fetchCatalog(): Promise<CatalogItem[]> {
   return fetch(`${API_BASE}/public/catalog`).then((res) => parseJson(res));
+}
+
+export function fetchStations(): Promise<PublicStation[]> {
+  return fetch(`${API_BASE}/public/stations`).then((res) => parseJson(res));
+}
+
+export function submitOrder(payload: SubmitOrderPayload) {
+  return fetch(`${API_BASE}/public/orders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then((res) =>
+    parseJson<{ ok: boolean; orderReference: string; orderTotal: number }>(res),
+  );
 }
 
 export function submitContactForm(payload: Record<string, string>) {
