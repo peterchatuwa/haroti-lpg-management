@@ -4,23 +4,27 @@ import { FormInput } from '../components/forms/FormInput';
 import { FormTextarea } from '../components/forms/FormTextarea';
 import { FormSelect } from '../components/forms/FormSelect';
 import { PRIMARY_PHONE } from '../config/contact';
+import { formDataToObject, submitFranchiseForm } from '../lib/api';
 
 export const FranchisePage = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setFormSubmitted(true);
-    
-    // Scroll to success message
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSubmitError(null);
+    try {
+      await submitFranchiseForm(formDataToObject(e.currentTarget));
+      setFormSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      e.currentTarget.reset();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to submit application');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const benefits = [
@@ -236,6 +240,7 @@ export const FranchisePage = () => {
 
             <div className="bg-haroti-paper rounded-xl shadow-lg p-8">
               <form onSubmit={handleSubmit} className="space-y-6">
+                <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
                 {/* Personal Information */}
                 <div>
                   <h3 className="text-xl font-bold mb-4 pb-2 border-b">Personal Information</h3>
@@ -409,6 +414,10 @@ export const FranchisePage = () => {
                     </>
                   )}
                 </button>
+
+                {submitError && (
+                  <p className="text-sm text-red-600 text-center">{submitError}</p>
+                )}
 
                 <p className="text-center text-sm text-haroti-muted">
                   Applications are typically reviewed within 5 business days. You will receive 

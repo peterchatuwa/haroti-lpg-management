@@ -1,14 +1,48 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Flame, Shield, Phone, CreditCard, Smartphone, DollarSign, Check, AlertTriangle } from 'lucide-react';
 import { PRIMARY_PHONE } from '../config/contact';
+import {
+  ACCESSORY_DISPLAY,
+  CYLINDER_DISPLAY,
+  formatMwk,
+} from '../data/product-display';
+import { fetchCatalog, type CatalogItem } from '../lib/api';
 
 export const ProductsPage = () => {
-  const cylinders = [
-    { size: '6kg', price: 'MWK XXXX', usage: 'Perfect for 1-2 people', duration: '2-3 weeks' },
-    { size: '9kg', price: 'MWK XXXX', usage: 'Ideal for small families', duration: '3-4 weeks' },
-    { size: '13kg', price: 'MWK XXXX', usage: 'Most popular choice', duration: '4-6 weeks', popular: true },
-    { size: '19kg', price: 'MWK XXXX', usage: 'Large families', duration: '6-8 weeks' },
-    { size: '48kg', price: 'MWK XXXX', usage: 'Commercial & bulk users', duration: '12+ weeks' },
-  ];
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [catalogError, setCatalogError] = useState(false);
+
+  useEffect(() => {
+    fetchCatalog()
+      .then(setCatalog)
+      .catch(() => setCatalogError(true));
+  }, []);
+
+  const catalogBySku = useMemo(
+    () => new Map(catalog.map((item) => [item.sku, item])),
+    [catalog],
+  );
+
+  const cylinders = CYLINDER_DISPLAY.map((meta) => {
+    const item = catalogBySku.get(meta.sku);
+    return {
+      ...meta,
+      size: item?.nominalKg ? `${item.nominalKg}kg` : meta.sku.replace('CYL-', '').replace('KG', 'kg'),
+      price: item ? formatMwk(item.unitPrice) : 'MWK —',
+      inStock: item?.inStock ?? false,
+    };
+  });
+
+  const accessories = ACCESSORY_DISPLAY.map((meta) => {
+    const item =
+      catalogBySku.get(meta.sku) ??
+      (meta.sku === 'BURNER-STD' ? catalogBySku.get('BURNER-DBL') : undefined);
+    return {
+      ...meta,
+      price: item ? formatMwk(item.unitPrice) : 'MWK —',
+      inStock: item?.inStock ?? false,
+    };
+  });
 
   const paycFeatures = [
     'No large upfront payment',
@@ -159,7 +193,7 @@ export const ProductsPage = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             {cylinders.map((cylinder) => (
               <div
-                key={cylinder.size}
+                key={cylinder.sku}
                 className={`relative bg-haroti-paper rounded-xl shadow-md p-6 hover:shadow-xl transition-shadow ${
                   cylinder.popular ? 'ring-2 ring-haroti-orange' : ''
                 }`}
@@ -181,8 +215,16 @@ export const ProductsPage = () => {
                     <p className="font-semibold">{cylinder.usage}</p>
                     <p>Lasts: {cylinder.duration}</p>
                   </div>
-                  <button className="mt-6 w-full bg-haroti-orange hover:bg-haroti-flame-hot text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                    Order Now
+                  <button
+                    type="button"
+                    disabled={!cylinder.inStock}
+                    className={`mt-6 w-full font-semibold py-2 px-4 rounded-lg transition-colors ${
+                      cylinder.inStock
+                        ? 'bg-haroti-orange hover:bg-haroti-flame-hot text-white'
+                        : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {cylinder.inStock ? 'Order Now' : 'Out of Stock'}
                   </button>
                 </div>
               </div>
@@ -191,8 +233,13 @@ export const ProductsPage = () => {
 
           <div className="mt-12 text-center">
             <p className="text-haroti-muted mb-4">
-              * Prices and availability may vary by location. Contact your nearest station for current pricing.
+              * Prices and availability are loaded from our live inventory. Contact your nearest station to place an order.
             </p>
+            {catalogError && (
+              <p className="text-sm text-amber-700">
+                Live stock is temporarily unavailable — please call us for current availability.
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -310,33 +357,25 @@ export const ProductsPage = () => {
           </div>
 
           <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-            <div className="bg-haroti-paper rounded-lg p-6 text-center shadow-sm">
-              <div className="h-32 bg-gradient-to-br from-haroti-forest to-haroti-leaf-bright rounded-lg mb-4"></div>
-              <h3 className="font-bold mb-2">Regulators</h3>
-              <p className="text-sm text-haroti-muted mb-3">Certified safety regulators</p>
-              <p className="font-semibold text-haroti-orange">MWK XXX</p>
-            </div>
-
-            <div className="bg-haroti-paper rounded-lg p-6 text-center shadow-sm">
-              <div className="h-32 bg-gradient-to-br from-haroti-orange to-haroti-flame-hot rounded-lg mb-4"></div>
-              <h3 className="font-bold mb-2">Gas Stoves</h3>
-              <p className="text-sm text-haroti-muted mb-3">Single & double burner</p>
-              <p className="font-semibold text-haroti-orange">MWK XXX</p>
-            </div>
-
-            <div className="bg-haroti-paper rounded-lg p-6 text-center shadow-sm">
-              <div className="h-32 bg-gradient-to-br from-haroti-green to-green-600 rounded-lg mb-4"></div>
-              <h3 className="font-bold mb-2">Hoses</h3>
-              <p className="text-sm text-haroti-muted mb-3">High-quality gas hoses</p>
-              <p className="font-semibold text-haroti-orange">MWK XXX</p>
-            </div>
-
-            <div className="bg-haroti-paper rounded-lg p-6 text-center shadow-sm">
-              <div className="h-32 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg mb-4"></div>
-              <h3 className="font-bold mb-2">Starter Kits</h3>
-              <p className="text-sm text-haroti-muted mb-3">Complete cooking solution</p>
-              <p className="font-semibold text-haroti-orange">MWK XXX</p>
-            </div>
+            {accessories.map((accessory) => (
+              <div key={accessory.sku} className="bg-haroti-paper rounded-lg p-6 text-center shadow-sm">
+                <div className={`h-32 bg-gradient-to-br ${accessory.gradient} rounded-lg mb-4`} />
+                <h3 className="font-bold mb-2">{accessory.title}</h3>
+                <p className="text-sm text-haroti-muted mb-3">{accessory.description}</p>
+                <p className="font-semibold text-haroti-orange mb-3">{accessory.price}</p>
+                <button
+                  type="button"
+                  disabled={!accessory.inStock}
+                  className={`w-full text-sm font-semibold py-2 px-3 rounded-lg transition-colors ${
+                    accessory.inStock
+                      ? 'bg-haroti-orange hover:bg-haroti-flame-hot text-white'
+                      : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {accessory.inStock ? 'Order Now' : 'Out of Stock'}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </section>

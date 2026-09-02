@@ -3,19 +3,28 @@ import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
 import { FormInput } from '../components/forms/FormInput';
 import { FormTextarea } from '../components/forms/FormTextarea';
 import { FormSelect } from '../components/forms/FormSelect';
-import { CONTACT_EMAIL, CONTACT_PHONES } from '../config/contact';
+import { CONTACT_ADDRESS_LINES, CONTACT_EMAIL, CONTACT_PHONES } from '../config/contact';
+import { formDataToObject, submitContactForm } from '../lib/api';
 
 export const ContactPage = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setFormSubmitted(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSubmitError(null);
+    try {
+      await submitContactForm(formDataToObject(e.currentTarget));
+      setFormSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      e.currentTarget.reset();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to send message');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -51,9 +60,12 @@ export const ContactPage = () => {
                   <div>
                     <h3 className="font-bold mb-1">Head Office</h3>
                     <p className="text-haroti-muted">
-                      Haroti Holdings Limited (T/A Haroti Gas)
-                      <br />
-                      Lilongwe, Malawi
+                      {CONTACT_ADDRESS_LINES.map((line, index) => (
+                        <span key={line}>
+                          {line}
+                          {index < CONTACT_ADDRESS_LINES.length - 1 && <br />}
+                        </span>
+                      ))}
                     </p>
                   </div>
                 </div>
@@ -117,6 +129,7 @@ export const ContactPage = () => {
               <h2 className="text-2xl font-bold mb-6">Send us a Message</h2>
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
                 <div className="grid md:grid-cols-2 gap-6">
                   <FormInput label="First Name" name="firstName" required />
                   <FormInput label="Last Name" name="lastName" required />
@@ -164,6 +177,9 @@ export const ContactPage = () => {
                     </>
                   )}
                 </button>
+                {submitError && (
+                  <p className="text-sm text-red-600 text-center">{submitError}</p>
+                )}
               </form>
             </div>
           </div>

@@ -300,6 +300,45 @@ export class NotificationsService {
     }
   }
 
+  async sendDirectEmail(
+    to: string,
+    subject: string,
+    body: string,
+    replyTo?: string,
+  ): Promise<{ ok: boolean; ref?: string; error?: string }> {
+    const enabled = this.config.get<string>('EMAIL_ENABLED', 'false') === 'true';
+    const host = this.config.get<string>('EMAIL_SMTP_HOST');
+    if (!to) {
+      return { ok: false, error: 'Missing recipient' };
+    }
+    if (!enabled || !host) {
+      this.logger.log(`[Email] ${to}: ${subject}\n${body}`);
+      return { ok: true, ref: 'log' };
+    }
+
+    try {
+      const transporter = this.getMailTransporter();
+      const from = this.config.get<string>(
+        'EMAIL_FROM',
+        'Haroti Gas ERP <noreply@harotiholdingslimited.com>',
+      );
+      const info = await transporter.sendMail({
+        from,
+        to,
+        replyTo: replyTo || undefined,
+        subject,
+        text: body,
+        html: body.replace(/\n/g, '<br/>'),
+      });
+      return { ok: true, ref: info.messageId };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
   private async sendEmail(
     to: string | undefined,
     subject: string,

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { BrandFooter } from '../BrandFooter';
-import { CONTACT_EMAIL, CONTACT_PHONES } from '../../config/contact';
+import { CONTACT_ADDRESS_LINES, CONTACT_EMAIL, CONTACT_PHONES } from '../../config/contact';
 
 export const Footer = () => {
   return (
@@ -53,9 +53,12 @@ export const Footer = () => {
               <li className="flex items-start gap-2">
                 <MapPin size={16} className="mt-1 flex-shrink-0 text-haroti-orange" />
                 <span>
-                  Haroti Holdings Limited
-                  <br />
-                  Lilongwe, Malawi
+                  {CONTACT_ADDRESS_LINES.map((line, index) => (
+                    <span key={line}>
+                      {line}
+                      {index < CONTACT_ADDRESS_LINES.length - 1 && <br />}
+                    </span>
+                  ))}
                 </span>
               </li>
               {CONTACT_PHONES.map((phone) => (

@@ -86,6 +86,7 @@ import { SearchModule } from './search/search.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { UsersModule } from './users/users.module';
 import { PaychanguModule } from './paychangu/paychangu.module';
+import { PublicModule } from './public/public.module';
 
 @Module({
   imports: [
@@ -154,6 +155,7 @@ import { PaychanguModule } from './paychangu/paychangu.module';
     SearchModule,
     UsersModule,
     PaychanguModule,
+    PublicModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -69,6 +69,7 @@ services:
       EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-}
       EMAIL_SMTP_PASS: ${EMAIL_SMTP_PASS:-}
       EMAIL_FROM: ${EMAIL_FROM:-Haroti Gas ERP <noreply@harotiholdingslimited.com>}
+      WEBSITE_OPERATIONS_EMAIL: ${WEBSITE_OPERATIONS_EMAIL:-operations@harotiholdingslimited.com}
       PAYCHANGU_CLIENT_ID: ${PAYCHANGU_CLIENT_ID:-}
       PAYCHANGU_API_KEY: ${PAYCHANGU_API_KEY:-}
       PAYCHANGU_SECRET_KEY: ${PAYCHANGU_SECRET_KEY:-}
@@ -82,6 +83,8 @@ services:
       ZHONGYI_AREA_ID: ${ZHONGYI_AREA_ID:-}
       ZHONGYI_EQUIPMENT_MODEL_ID: ${ZHONGYI_EQUIPMENT_MODEL_ID:-}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - haroti_net
     # API is only reachable via the ERP web container proxy (no host port)

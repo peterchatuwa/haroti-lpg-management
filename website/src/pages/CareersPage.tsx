@@ -4,19 +4,28 @@ import { FormInput } from '../components/forms/FormInput';
 import { FormTextarea } from '../components/forms/FormTextarea';
 import { FormSelect } from '../components/forms/FormSelect';
 import { openPositions } from '../data/careers';
+import { formDataToObject, submitCareersForm } from '../lib/api';
 
 export const CareersPage = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [expandedJob, setExpandedJob] = useState<number | null>(0);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setFormSubmitted(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSubmitError(null);
+    try {
+      await submitCareersForm(formDataToObject(e.currentTarget));
+      setFormSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      e.currentTarget.reset();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to submit application');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -142,6 +151,7 @@ export const CareersPage = () => {
           <h2 className="section-heading text-center mb-8">Apply for a Position</h2>
           <div className="bg-haroti-paper rounded-xl shadow-lg p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
+              <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
               <div className="grid md:grid-cols-2 gap-6">
                 <FormInput label="First Name" name="firstName" required />
                 <FormInput label="Last Name" name="lastName" required />
@@ -183,6 +193,9 @@ export const CareersPage = () => {
                 )}
                 <span>{isSubmitting ? 'Submitting...' : 'Submit Application'}</span>
               </button>
+              {submitError && (
+                <p className="text-sm text-red-600 text-center">{submitError}</p>
+              )}
             </form>
           </div>
         </div>
