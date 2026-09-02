@@ -1,4 +1,5 @@
 import { Flame, Shield, Phone, CreditCard, Smartphone, DollarSign, Check, AlertTriangle } from 'lucide-react';
+import { PRIMARY_PHONE } from '../config/contact';
 
 export const ProductsPage = () => {
   const cylinders = [
@@ -284,7 +285,12 @@ export const ProductsPage = () => {
                     <li>Turn off the gas cylinder immediately</li>
                     <li>Do not light matches or switch electrical appliances</li>
                     <li>Open windows and doors for ventilation</li>
-                    <li>Leave the area and call our emergency line: <strong>+265 XXX XXX XXX</strong></li>
+                    <li>
+                      Leave the area and call our emergency line:{' '}
+                      <a href={`tel:${PRIMARY_PHONE.href}`} className="font-bold underline hover:text-red-900">
+                        {PRIMARY_PHONE.display}
+                      </a>
+                    </li>
                   </ol>
                 </div>
               </div>

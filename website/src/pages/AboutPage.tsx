@@ -1,4 +1,5 @@
 import { Target, Heart, Users, Award, TrendingUp, Leaf } from 'lucide-react';
+import { STATION_COUNT } from '../data/stations';
 
 export const AboutPage = () => {
   return (
@@ -49,7 +50,7 @@ export const AboutPage = () => {
                   <div className="text-white/80">Target PAYC Households</div>
                 </div>
                 <div>
-                  <div className="text-5xl font-bold mb-2">8</div>
+                  <div className="text-5xl font-bold mb-2">{STATION_COUNT}</div>
                   <div className="text-white/80">Stations Across Malawi</div>
                 </div>
                 <div>
@@ -179,7 +180,7 @@ export const AboutPage = () => {
               <Target className="text-indigo-600 mb-4" size={32} />
               <h3 className="text-xl font-bold mb-3">Nationwide Reach</h3>
               <p className="text-haroti-ink/90">
-                8 strategically located stations across Salima, Lilongwe, and Blantyre with 
+                {STATION_COUNT} strategically located stations across Lilongwe and Blantyre with 
                 plans for continued expansion.
               </p>
             </div>

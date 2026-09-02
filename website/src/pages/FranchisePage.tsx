@@ -3,6 +3,7 @@ import { Users, TrendingUp, Heart, Award, Check, Send } from 'lucide-react';
 import { FormInput } from '../components/forms/FormInput';
 import { FormTextarea } from '../components/forms/FormTextarea';
 import { FormSelect } from '../components/forms/FormSelect';
+import { PRIMARY_PHONE } from '../config/contact';
 
 export const FranchisePage = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -263,7 +264,7 @@ export const FranchisePage = () => {
                       name="phone"
                       type="tel"
                       required
-                      placeholder="+265 XXX XXX XXX"
+                      placeholder={PRIMARY_PHONE.display}
                     />
                     <FormInput
                       label="National ID Number"
@@ -432,8 +433,11 @@ export const FranchisePage = () => {
             <a href="/contact" className="btn-primary">
               Contact Us
             </a>
-            <a href="tel:+265" className="bg-haroti-paper text-haroti-forest hover:bg-haroti-mist font-semibold py-3 px-6 rounded-lg transition-colors">
-              Call +265 XXX XXX XXX
+            <a
+              href={`tel:${PRIMARY_PHONE.href}`}
+              className="bg-haroti-paper text-haroti-forest hover:bg-haroti-mist font-semibold py-3 px-6 rounded-lg transition-colors"
+            >
+              Call {PRIMARY_PHONE.display}
             </a>
           </div>
         </div>

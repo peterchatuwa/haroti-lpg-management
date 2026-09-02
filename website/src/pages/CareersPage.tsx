@@ -1,32 +1,26 @@
 import { useState } from 'react';
-import { Briefcase, Users, TrendingUp, Heart, Send, Upload } from 'lucide-react';
+import { Briefcase, Users, TrendingUp, Heart, Send, Upload, ChevronDown, ChevronUp } from 'lucide-react';
 import { FormInput } from '../components/forms/FormInput';
 import { FormTextarea } from '../components/forms/FormTextarea';
 import { FormSelect } from '../components/forms/FormSelect';
+import { openPositions } from '../data/careers';
 
 export const CareersPage = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expandedJob, setExpandedJob] = useState<number | null>(0);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     setIsSubmitting(false);
     setFormSubmitted(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const openPositions = [
-    { title: 'Station Manager', location: 'Lilongwe', type: 'Full-time', department: 'Operations' },
-    { title: 'PAYC Sales Representative', location: 'Blantyre', type: 'Full-time', department: 'Sales' },
-    { title: 'Finance Officer', location: 'Salima', type: 'Full-time', department: 'Finance' },
-    { title: 'IT Support Specialist', location: 'Lilongwe', type: 'Full-time', department: 'Technology' },
-  ];
-
   return (
     <div className="bg-haroti-paper">
-      {/* Hero */}
       <section className="relative bg-gradient-to-r from-haroti-orange to-haroti-flame-hot text-white py-16 md:py-24">
         <div className="container-custom">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Careers at Haroti Gas</h1>
@@ -44,7 +38,6 @@ export const CareersPage = () => {
         </section>
       )}
 
-      {/* Why Join Us */}
       <section className="py-16">
         <div className="container-custom">
           <h2 className="section-heading text-center mb-12">Why Work at Haroti Gas?</h2>
@@ -81,33 +74,69 @@ export const CareersPage = () => {
         </div>
       </section>
 
-      {/* Open Positions */}
       <section className="py-16 bg-haroti-paper">
         <div className="container-custom">
-          <h2 className="section-heading text-center mb-12">Current Openings</h2>
+          <h2 className="section-heading text-center mb-4">Current Openings</h2>
+          <p className="text-center text-haroti-muted mb-12 max-w-2xl mx-auto">
+            We are actively recruiting for the roles below. Click a position to view details, then
+            apply using the form at the bottom of the page.
+          </p>
           <div className="max-w-4xl mx-auto space-y-4">
             {openPositions.map((job, idx) => (
-              <div key={idx} className="bg-haroti-paper rounded-lg p-6 shadow-md flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-lg mb-1">{job.title}</h3>
-                  <div className="flex gap-4 text-sm text-haroti-muted">
-                    <span>{job.location}</span>
-                    <span>•</span>
-                    <span>{job.type}</span>
-                    <span>•</span>
-                    <span>{job.department}</span>
+              <div key={job.title} className="bg-haroti-paper rounded-lg shadow-md overflow-hidden">
+                <button
+                  type="button"
+                  className="w-full p-6 flex items-center justify-between text-left hover:bg-haroti-mist/30 transition-colors"
+                  onClick={() => setExpandedJob(expandedJob === idx ? null : idx)}
+                >
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">{job.title}</h3>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-haroti-muted">
+                      <span>{job.location}</span>
+                      <span>•</span>
+                      <span>{job.type}</span>
+                      <span>•</span>
+                      <span>{job.department}</span>
+                    </div>
                   </div>
-                </div>
-                <a href="#apply" className="btn-secondary text-sm py-2 px-4">
-                  Apply Now
-                </a>
+                  {expandedJob === idx ? (
+                    <ChevronUp className="text-haroti-muted flex-shrink-0" size={20} />
+                  ) : (
+                    <ChevronDown className="text-haroti-muted flex-shrink-0" size={20} />
+                  )}
+                </button>
+                {expandedJob === idx && (
+                  <div className="px-6 pb-6 border-t border-haroti-muted/20">
+                    <p className="text-haroti-ink/90 mt-4 mb-6">{job.summary}</p>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-bold mb-2">Key responsibilities</h4>
+                        <ul className="list-disc pl-5 space-y-1 text-sm text-haroti-muted">
+                          {job.responsibilities.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="font-bold mb-2">Requirements</h4>
+                        <ul className="list-disc pl-5 space-y-1 text-sm text-haroti-muted">
+                          {job.requirements.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <a href="#apply" className="btn-secondary inline-block mt-6 text-sm py-2 px-4">
+                      Apply for this role
+                    </a>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Application Form */}
       <section id="apply" className="py-16">
         <div className="container-custom max-w-3xl">
           <h2 className="section-heading text-center mb-8">Apply for a Position</h2>
@@ -122,10 +151,16 @@ export const CareersPage = () => {
               <FormSelect
                 label="Position Applying For"
                 name="position"
-                options={openPositions.map(job => ({ value: job.title, label: job.title }))}
+                options={openPositions.map((job) => ({ value: job.title, label: job.title }))}
                 required
               />
-              <FormTextarea label="Cover Letter" name="coverLetter" required rows={6} placeholder="Tell us why you're a great fit..." />
+              <FormTextarea
+                label="Cover Letter"
+                name="coverLetter"
+                required
+                rows={6}
+                placeholder="Tell us why you're a great fit..."
+              />
               <div>
                 <label className="block text-sm font-semibold text-haroti-ink/90 mb-2">
                   Upload CV/Resume <span className="text-red-500">*</span>
@@ -136,8 +171,16 @@ export const CareersPage = () => {
                   <p className="text-xs text-haroti-muted">PDF, DOC, DOCX (Max 5MB)</p>
                 </div>
               </div>
-              <button type="submit" disabled={isSubmitting} className="w-full btn-primary flex items-center justify-center gap-2">
-                {isSubmitting ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Send size={20} />}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full btn-primary flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send size={20} />
+                )}
                 <span>{isSubmitting ? 'Submitting...' : 'Submit Application'}</span>
               </button>
             </form>

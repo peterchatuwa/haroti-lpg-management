@@ -1,3 +1,5 @@
+import { CONTACT_EMAIL, CONTACT_PHONES } from '../config/contact';
+
 export const PrivacyPage = () => {
   return (
     <div className="bg-haroti-paper">
@@ -111,8 +113,20 @@ export const PrivacyPage = () => {
               <div className="mt-4 p-6 bg-haroti-paper rounded-lg">
                 <p className="font-semibold">Data Protection Officer</p>
                 <p className="text-haroti-ink/90">Haroti Holdings Limited</p>
-                <p className="text-haroti-ink/90">Email: privacy@harotiholdingslimited.com</p>
-                <p className="text-haroti-ink/90">Phone: +265 XXX XXX XXX</p>
+                <p className="text-haroti-ink/90">
+                  Email:{' '}
+                  <a href={`mailto:${CONTACT_EMAIL}`} className="text-haroti-forest hover:text-haroti-orange">
+                    {CONTACT_EMAIL}
+                  </a>
+                </p>
+                {CONTACT_PHONES.map((phone) => (
+                  <p key={phone.href} className="text-haroti-ink/90">
+                    Phone:{' '}
+                    <a href={`tel:${phone.href}`} className="text-haroti-forest hover:text-haroti-orange">
+                      {phone.display}
+                    </a>
+                  </p>
+                ))}
               </div>
             </section>
           </div>

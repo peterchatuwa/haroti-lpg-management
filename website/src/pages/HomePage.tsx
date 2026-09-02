@@ -1,5 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Flame, Users, MapPin, Leaf, TrendingUp, Award, ArrowRight, Phone, Download } from 'lucide-react';
+import { STATION_COUNT } from '../data/stations';
+import { newsArticles } from '../data/news';
+
+const categoryGradients: Record<string, string> = {
+  announcement: 'from-haroti-forest to-haroti-leaf-bright',
+  milestone: 'from-haroti-orange to-haroti-flame-hot',
+  partnership: 'from-haroti-green to-green-600',
+  expansion: 'from-purple-500 to-purple-600',
+};
 
 export const HomePage = () => {
   return (
@@ -60,7 +69,7 @@ export const HomePage = () => {
               <div className="text-haroti-muted">Target PAYC Households by Year 5</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-haroti-orange mb-2">8</div>
+              <div className="text-4xl font-bold text-haroti-orange mb-2">{STATION_COUNT}</div>
               <div className="text-haroti-muted">Stations Across Malawi</div>
             </div>
             <div className="text-center">
@@ -109,7 +118,7 @@ export const HomePage = () => {
               </div>
               <h3 className="text-xl font-bold mb-3">Nationwide Network</h3>
               <p className="text-haroti-muted mb-4">
-                8 stations across Salima, Lilongwe, and Blantyre, with a growing franchise 
+                {STATION_COUNT} stations across Lilongwe and Blantyre, with a growing franchise 
                 network bringing LPG closer to your community.
               </p>
               <Link to="/stations" className="text-haroti-orange font-semibold inline-flex items-center gap-1 hover:gap-2 transition-all">
@@ -210,48 +219,30 @@ export const HomePage = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Placeholder news items - will be dynamic */}
-            <div className="bg-haroti-paper rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-              <div className="h-48 bg-gradient-to-br from-haroti-forest to-haroti-leaf-bright"></div>
-              <div className="p-6">
-                <div className="text-sm text-haroti-muted mb-2">August 1, 2026</div>
-                <h3 className="font-bold text-lg mb-2">Expanding to 150,000 Households</h3>
-                <p className="text-haroti-muted text-sm mb-4">
-                  Haroti Gas announces ambitious expansion plan to reach 150,000 PAYC households by Year 5...
-                </p>
-                <Link to="/news" className="text-haroti-orange font-semibold text-sm inline-flex items-center gap-1">
-                  Read More <ArrowRight size={14} />
-                </Link>
+            {newsArticles.slice(0, 3).map((article) => (
+              <div
+                key={article.id}
+                className="bg-haroti-paper rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+              >
+                <div
+                  className={`h-48 bg-gradient-to-br ${categoryGradients[article.category] ?? 'from-haroti-forest to-haroti-leaf-bright'}`}
+                />
+                <div className="p-6">
+                  <div className="text-sm text-haroti-muted mb-2">
+                    {new Date(article.date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </div>
+                  <h3 className="font-bold text-lg mb-2">{article.title}</h3>
+                  <p className="text-haroti-muted text-sm mb-4">{article.excerpt}</p>
+                  <Link to="/news" className="text-haroti-orange font-semibold text-sm inline-flex items-center gap-1">
+                    Read More <ArrowRight size={14} />
+                  </Link>
+                </div>
               </div>
-            </div>
-
-            <div className="bg-haroti-paper rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-              <div className="h-48 bg-gradient-to-br from-haroti-green to-green-600"></div>
-              <div className="p-6">
-                <div className="text-sm text-haroti-muted mb-2">July 25, 2026</div>
-                <h3 className="font-bold text-lg mb-2">Carbon Finance Partnership</h3>
-                <p className="text-haroti-muted text-sm mb-4">
-                  New partnership with WESM to advance clean cooking and carbon reduction...
-                </p>
-                <Link to="/news" className="text-haroti-orange font-semibold text-sm inline-flex items-center gap-1">
-                  Read More <ArrowRight size={14} />
-                </Link>
-              </div>
-            </div>
-
-            <div className="bg-haroti-paper rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-              <div className="h-48 bg-gradient-to-br from-haroti-orange to-haroti-flame-hot"></div>
-              <div className="p-6">
-                <div className="text-sm text-haroti-muted mb-2">July 15, 2026</div>
-                <h3 className="font-bold text-lg mb-2">New Station Opening in Blantyre</h3>
-                <p className="text-haroti-muted text-sm mb-4">
-                  Haroti Gas opens new franchise station in Blantyre Zingwangwa...
-                </p>
-                <Link to="/news" className="text-haroti-orange font-semibold text-sm inline-flex items-center gap-1">
-                  Read More <ArrowRight size={14} />
-                </Link>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
