@@ -80,7 +80,7 @@ export function PaycPage() {
         title="Pay-As-You-Cook (PAYC)"
         subtitle="Manage Zhongyi smart meters from Haroti ERP — fleet, top-ups, valve control & sync"
         action={
-          <div className="pay-chips">
+          <div className="row">
             <button
               type="button"
               className="btn btn-primary"
@@ -91,7 +91,7 @@ export function PaycPage() {
             </button>
             <button
               type="button"
-              className="btn"
+              className="btn btn-ghost"
               disabled={syncAllMutation.isPending || !vendor?.connected}
               onClick={() => syncAllMutation.mutate()}
             >

@@ -628,6 +628,8 @@ export class PaycService {
       throw new BadRequestException('Zhongyi vendor API is not configured');
     }
 
+    await this.assertNoPendingValveCommand(meterId);
+
     const result = await this.zhongyiClient.setValveState(meter.imei, open ? 1 : 0);
     const command = await this.commandsRepo.save(
       this.commandsRepo.create({
@@ -937,7 +939,41 @@ export class PaycService {
     this.repairCommandMessage(command);
     this.applyPendingCommandContext(command, command.meter);
     await this.commandsRepo.save(command);
+
+    if (
+      command.status === 'SUCCESS' &&
+      (command.commandType === 'VALVE_OPEN' ||
+        command.commandType === 'VALVE_CLOSE') &&
+      command.meterId
+    ) {
+      try {
+        await this.syncMeterFromVendor(command.meterId);
+      } catch {
+        // Valve state will refresh on the next scheduled sync.
+      }
+    }
+
     return command;
+  }
+
+  private async assertNoPendingValveCommand(meterId: string) {
+    const pending = await this.commandsRepo.findOne({
+      where: {
+        meterId,
+        status: 'PENDING',
+        commandType: In(['VALVE_OPEN', 'VALVE_CLOSE']),
+      },
+      order: { createdAt: 'DESC' },
+    });
+    if (!pending) return;
+
+    const ageMinutes = Math.floor(
+      (Date.now() - pending.createdAt.getTime()) / (60 * 1000),
+    );
+    const action = pending.commandType.replaceAll('_', ' ').toLowerCase();
+    throw new BadRequestException(
+      `A ${action} command is already waiting on the meter (${ageMinutes}m). NB-IoT devices connect periodically — wait for it to finish before sending another valve command, then Sync from Zhongyi.`,
+    );
   }
 
   private async repairMeterCommandMessages(meterId: string) {

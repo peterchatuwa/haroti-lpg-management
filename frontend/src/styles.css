@@ -716,7 +716,7 @@ textarea:focus {
   gap: 0.5rem;
 }
 
-.pay-chips button {
+.pay-chips button:not(.btn-primary):not(.btn-accent):not(.btn-danger):not(.btn-ghost) {
   border: 1px solid var(--line);
   background: white;
   border-radius: 12px;

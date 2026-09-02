@@ -641,9 +641,24 @@ export function PaycMeterDetailPage() {
         <div className="panel stack">
           <h3 className="panel-title">Meter control</h3>
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-            Valve and device commands are sent to Zhongyi. Battery-powered NB-IoT meters
-            may take a few minutes to wake up, execute the command, and report back.
+            Top-ups update ERP credit immediately, but the valve only changes when the
+            physical NB-IoT meter next connects to Zhongyi. That can take minutes to
+            hours if the device is asleep — not because of credit balance.
           </p>
+          {commands?.some(
+            (c) =>
+              c.status === 'PENDING' &&
+              (c.commandType === 'VALVE_OPEN' || c.commandType === 'VALVE_CLOSE'),
+          ) ? (
+            <div className="panel warn" style={{ margin: 0, padding: '0.65rem 0.85rem' }}>
+              <strong>Valve command pending on Zhongyi network</strong>
+              <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>
+                The packet is queued. The valve will change when the meter wakes and
+                responds. Use Sync from Zhongyi to refresh status — do not send duplicate
+                open/close commands.
+              </p>
+            </div>
+          ) : null}
           <button
             type="button"
             className="btn btn-primary"
@@ -656,12 +671,20 @@ export function PaycMeterDetailPage() {
             <button
               type="button"
               className="btn btn-accent"
-              disabled={valveMutation.isPending || !meter.imei}
+              disabled={
+                valveMutation.isPending ||
+                !meter.imei ||
+                commands?.some(
+                  (c) =>
+                    c.status === 'PENDING' &&
+                    (c.commandType === 'VALVE_OPEN' || c.commandType === 'VALVE_CLOSE'),
+                )
+              }
               onClick={async () => {
                 const ok = await confirmAction({
                   title: 'Open gas valve?',
-                  detail: `This sends an open command to meter ${meter.meterSerial}. Gas will flow if credit is available and the valve responds.`,
-                  confirmLabel: 'Open valve',
+                  detail: `This queues an open command on Zhongyi for meter ${meter.meterSerial}. The valve only moves when the meter next connects — unlike top-ups, which update ERP credit right away.`,
+                  confirmLabel: 'Queue open valve',
                 });
                 if (ok) valveMutation.mutate(true);
               }}
@@ -671,12 +694,20 @@ export function PaycMeterDetailPage() {
             <button
               type="button"
               className="btn"
-              disabled={valveMutation.isPending || !meter.imei}
+              disabled={
+                valveMutation.isPending ||
+                !meter.imei ||
+                commands?.some(
+                  (c) =>
+                    c.status === 'PENDING' &&
+                    (c.commandType === 'VALVE_OPEN' || c.commandType === 'VALVE_CLOSE'),
+                )
+              }
               onClick={async () => {
                 const ok = await confirmAction({
                   title: 'Close gas valve?',
-                  detail: `This sends a close command to meter ${meter.meterSerial}. Gas supply will stop when the meter responds.`,
-                  confirmLabel: 'Close valve',
+                  detail: `This queues a close command on Zhongyi for meter ${meter.meterSerial}. Credit on the meter does not block the command — the valve closes when the device wakes and executes it.`,
+                  confirmLabel: 'Queue close valve',
                   variant: 'danger',
                 });
                 if (ok) valveMutation.mutate(false);
