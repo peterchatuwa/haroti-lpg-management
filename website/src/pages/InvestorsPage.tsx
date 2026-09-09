@@ -1,5 +1,10 @@
 import { TrendingUp, Target, Shield, Users, Mail, Lock } from 'lucide-react';
-import { BUSINESS_STRATEGY_SUMMARY, WESM_FULL_NAME } from '../config/company';
+import {
+  BUSINESS_STRATEGY_SUMMARY,
+  GETF_FULL_NAME,
+  MEDF_FULL_NAME,
+  WESM_FULL_NAME,
+} from '../config/company';
 
 export const InvestorsPage = () => {
   return (
@@ -135,8 +140,8 @@ export const InvestorsPage = () => {
               <div className="bg-haroti-paper rounded-xl p-8 shadow-md border-l-4 border-haroti-green">
                 <h3 className="text-xl font-bold mb-3">Policy Support</h3>
                 <p className="text-haroti-ink/90">
-                  Government commitment to clean energy, carbon finance initiatives, and support from DFIs 
-                  (MEDF/GETF facility) create a favorable environment for growth.
+                  Government commitment to clean energy, carbon finance initiatives, and support from DFIs
+                  including MEDF and GETF create a favorable environment for growth.
                 </p>
               </div>
             </div>
@@ -284,7 +289,7 @@ export const InvestorsPage = () => {
         <div className="container-custom">
           <h2 className="section-heading text-center mb-12">Current Partners & Supporters</h2>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 max-w-5xl mx-auto">
             <div className="bg-haroti-paper rounded-lg p-6 text-center border-2 border-haroti-mist">
               <div className="font-bold text-lg text-haroti-muted">DFI Partners</div>
               <p className="text-sm text-haroti-muted mt-2">Development Finance</p>
@@ -293,12 +298,16 @@ export const InvestorsPage = () => {
             <div className="bg-haroti-paper rounded-lg p-6 text-center border-2 border-haroti-mist">
               <div className="font-bold text-lg text-haroti-green">WESM</div>
               <p className="text-sm text-haroti-muted mt-2">{WESM_FULL_NAME}</p>
-              <p className="text-xs text-haroti-muted mt-1">Carbon Finance</p>
             </div>
 
             <div className="bg-haroti-paper rounded-lg p-6 text-center border-2 border-haroti-mist">
-              <div className="font-bold text-lg text-haroti-muted">MEDF/GETF</div>
-              <p className="text-sm text-haroti-muted mt-2">Enterprise Development</p>
+              <div className="font-bold text-lg text-haroti-green">MEDF</div>
+              <p className="text-sm text-haroti-muted mt-2">{MEDF_FULL_NAME}</p>
+            </div>
+
+            <div className="bg-haroti-paper rounded-lg p-6 text-center border-2 border-haroti-mist">
+              <div className="font-bold text-lg text-haroti-blue">GETF</div>
+              <p className="text-sm text-haroti-muted mt-2">{GETF_FULL_NAME}</p>
             </div>
 
             <div className="bg-haroti-paper rounded-lg p-6 text-center border-2 border-haroti-mist">

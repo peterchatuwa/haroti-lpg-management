@@ -8,6 +8,10 @@ export const BRAND = {
 /** Wildlife and Environmental Society of Malawi */
 export const WESM_FULL_NAME = 'Wildlife and Environmental Society of Malawi';
 
+export const MEDF_FULL_NAME = 'Malawi Enterprise Development Fund';
+
+export const GETF_FULL_NAME = 'Green Economic Transition Facility';
+
 export const CARBON_FINANCE_PARTNERSHIP_TEXT =
   'Our partnership with WESM (Wildlife and Environmental Society of Malawi) enables carbon credit generation from avoided deforestation and emission reductions.';
 

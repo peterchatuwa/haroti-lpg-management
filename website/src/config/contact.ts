@@ -12,3 +12,8 @@ export const CONTACT_PHONES = [
 ] as const;
 
 export const PRIMARY_PHONE = CONTACT_PHONES[0];
+
+/** Haroti Gas PAYC USSD short code */
+export const PAYC_USSD_CODE = '4420';
+export const PAYC_USSD_DIAL = `*${PAYC_USSD_CODE}#`;
+export const PAYC_USSD_HREF = `tel:${encodeURIComponent(PAYC_USSD_DIAL)}`;

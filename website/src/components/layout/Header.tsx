@@ -14,7 +14,7 @@ export const Header = () => {
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'About Us', href: '/about' },
-    { name: 'Products & PAYC', href: '/products' },
+    { name: 'PAYC', href: '/payc' },
     { name: 'Store', href: '/store' },
     { name: 'Find a Station', href: '/stations' },
     { name: 'Franchise', href: '/franchise' },

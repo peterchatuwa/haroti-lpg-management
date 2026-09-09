@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Flame, Users, MapPin, Leaf, TrendingUp, Award, ArrowRight, Phone, Download } from 'lucide-react';
+import { PAYC_USSD_DIAL, PAYC_USSD_HREF } from '../config/contact';
 import { STATION_COUNT } from '../data/stations';
 import { newsArticles } from '../data/news';
 
@@ -35,9 +36,12 @@ export const HomePage = () => {
                 <MapPin size={20} />
                 Find a Station Near You
               </Link>
-              <Link to="/products" className="btn-outline inline-flex items-center justify-center gap-2 bg-haroti-paper/10 border-white text-white hover:bg-haroti-paper hover:text-haroti-forest">
+              <Link to="/payc" className="btn-outline inline-flex items-center justify-center gap-2 bg-haroti-paper/10 border-white text-white hover:bg-haroti-paper hover:text-haroti-forest">
                 <Flame size={20} />
                 Learn About PAYC
+              </Link>
+              <Link to="/store" className="btn-outline inline-flex items-center justify-center gap-2 bg-haroti-paper/10 border-white text-white hover:bg-haroti-paper hover:text-haroti-forest">
+                Shop Products
               </Link>
             </div>
             
@@ -45,9 +49,9 @@ export const HomePage = () => {
             <div className="mt-8 pt-8 border-t border-white/20">
               <p className="text-sm text-white/80 mb-3">Get started with PAYC today:</p>
               <div className="flex flex-col sm:flex-row gap-3 text-sm">
-                <a href="tel:*XXX#" className="flex items-center gap-2 hover:text-haroti-orange transition-colors">
+                <a href={PAYC_USSD_HREF} className="flex items-center gap-2 hover:text-haroti-orange transition-colors">
                   <Phone size={16} />
-                  <span>Dial <strong>*XXX#</strong> (USSD)</span>
+                  <span>Dial <strong>{PAYC_USSD_DIAL}</strong> (USSD)</span>
                 </a>
                 <span className="hidden sm:inline text-white/80">|</span>
                 <a href="#" className="flex items-center gap-2 hover:text-haroti-orange transition-colors">
@@ -106,7 +110,7 @@ export const HomePage = () => {
                 Affordable micro-installment model that lets you pay for LPG as you use it. 
                 No large upfront costs, just clean cooking made accessible.
               </p>
-              <Link to="/products" className="text-haroti-orange font-semibold inline-flex items-center gap-1 hover:gap-2 transition-all">
+              <Link to="/payc" className="text-haroti-orange font-semibold inline-flex items-center gap-1 hover:gap-2 transition-all">
                 Learn More <ArrowRight size={16} />
               </Link>
             </div>
@@ -166,7 +170,7 @@ export const HomePage = () => {
                 USSD and mobile app for easy onboarding, mobile-money payments, and 
                 24/7 customer support. Modern solutions for modern needs.
               </p>
-              <Link to="/products" className="text-haroti-orange font-semibold inline-flex items-center gap-1 hover:gap-2 transition-all">
+              <Link to="/payc" className="text-haroti-orange font-semibold inline-flex items-center gap-1 hover:gap-2 transition-all">
                 Digital Platform <ArrowRight size={16} />
               </Link>
             </div>

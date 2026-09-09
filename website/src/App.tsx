@@ -4,6 +4,7 @@ import { CartProvider } from './store/cart-context';
 import { HomePage } from './pages/HomePage';
 import { AboutPage } from './pages/AboutPage';
 import { ProductsPage } from './pages/ProductsPage';
+import { PaycPage } from './pages/PaycPage';
 import { StorePage } from './pages/StorePage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { StationsPage } from './pages/StationsPage';
@@ -25,6 +26,7 @@ function App() {
             <Route index element={<HomePage />} />
             <Route path="about" element={<AboutPage />} />
             <Route path="products" element={<ProductsPage />} />
+            <Route path="payc" element={<PaycPage />} />
             <Route path="store" element={<StorePage />} />
             <Route path="store/checkout" element={<CheckoutPage />} />
           <Route path="stations" element={<StationsPage />} />

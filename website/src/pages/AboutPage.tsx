@@ -6,6 +6,8 @@ import {
   VALUE_PROPOSITION,
   VALUES,
   VISION,
+  GETF_FULL_NAME,
+  MEDF_FULL_NAME,
   WESM_FULL_NAME,
 } from '../config/company';
 
@@ -276,7 +278,7 @@ export const AboutPage = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             <div className="bg-haroti-paper border-2 border-haroti-mist rounded-lg p-6 text-center hover:border-haroti-forest transition-colors">
               <div className="text-gray-400 font-bold text-lg">DFI Partners</div>
               <p className="text-sm text-haroti-muted mt-2">Development Finance Institutions</p>
@@ -284,11 +286,14 @@ export const AboutPage = () => {
             <div className="bg-haroti-paper border-2 border-haroti-mist rounded-lg p-6 text-center hover:border-haroti-green transition-colors">
               <div className="text-haroti-green font-bold text-lg">WESM</div>
               <p className="text-sm text-haroti-muted mt-2">{WESM_FULL_NAME}</p>
-              <p className="text-xs text-haroti-muted mt-1">Carbon Finance Partnership</p>
             </div>
             <div className="bg-haroti-paper border-2 border-haroti-mist rounded-lg p-6 text-center hover:border-haroti-forest transition-colors">
-              <div className="text-gray-400 font-bold text-lg">MEDF/GETF</div>
-              <p className="text-sm text-haroti-muted mt-2">Malawi Enterprise Development Fund</p>
+              <div className="text-haroti-green font-bold text-lg">MEDF</div>
+              <p className="text-sm text-haroti-muted mt-2">{MEDF_FULL_NAME}</p>
+            </div>
+            <div className="bg-haroti-paper border-2 border-haroti-mist rounded-lg p-6 text-center hover:border-haroti-blue transition-colors">
+              <div className="text-haroti-blue font-bold text-lg">GETF</div>
+              <p className="text-sm text-haroti-muted mt-2">{GETF_FULL_NAME}</p>
             </div>
             <div className="bg-haroti-paper border-2 border-haroti-mist rounded-lg p-6 text-center hover:border-haroti-forest transition-colors">
               <div className="text-gray-400 font-bold text-lg">Local Partners</div>
