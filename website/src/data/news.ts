@@ -23,9 +23,9 @@ export const newsArticles: NewsArticle[] = [
     id: '2',
     title: 'New Carbon Finance Partnership with WESM',
     excerpt:
-      "Haroti Gas partners with World's Energy Solutions for Malawi to generate carbon credits from avoided deforestation.",
+      'Haroti Gas partners with the Wildlife and Environmental Society of Malawi (WESM) to generate carbon credits from avoided deforestation.',
     content:
-      'Our partnership with WESM supports verified carbon outcomes linked to clean cooking adoption, helping finance PAYC expansion while reducing pressure on Malawi\'s forests.',
+      'Our partnership with WESM (Wildlife and Environmental Society of Malawi) supports verified carbon outcomes linked to clean cooking adoption, helping finance PAYC expansion while reducing pressure on Malawi\'s forests.',
     date: '2026-07-25',
     category: 'partnership',
   },

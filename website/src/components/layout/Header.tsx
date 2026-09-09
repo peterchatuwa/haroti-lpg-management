@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Phone, Mail, ShoppingCart } from 'lucide-react';
+import { HarotiLogo } from '../HarotiLogo';
+import { BRAND } from '../../config/company';
 import { CONTACT_EMAIL, PRIMARY_PHONE } from '../../config/contact';
 import { useCart } from '../../store/cart-context';
 
@@ -43,21 +45,13 @@ export const Header = () => {
               <span className="hidden md:inline">{CONTACT_EMAIL}</span>
             </a>
           </div>
-          <span className="hidden md:inline text-xs">Powering Clean Cooking Across Malawi</span>
+          <span className="hidden md:inline text-xs">{BRAND.tagline} — Clean LPG across Malawi</span>
         </div>
       </div>
 
       <nav className="container-custom py-4">
         <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-12 h-12 bg-haroti-orange rounded-full flex items-center justify-center text-white font-bold text-xl">
-              HG
-            </div>
-            <div className="hidden sm:block">
-              <div className="font-bold text-xl text-haroti-forest">HAROTI GAS</div>
-              <div className="text-xs text-haroti-muted">Powering the World</div>
-            </div>
-          </Link>
+          <HarotiLogo />
 
           <div className="hidden lg:flex items-center space-x-1 flex-1 justify-center mx-4">
             {navigation.map((item) => (

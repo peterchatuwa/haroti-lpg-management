@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { BrandFooter } from '../BrandFooter';
+import { HarotiLogo } from '../HarotiLogo';
+import { BRAND } from '../../config/company';
 import { CONTACT_ADDRESS_LINES, CONTACT_EMAIL, CONTACT_PHONES } from '../../config/contact';
 
 export const Footer = () => {
@@ -9,18 +11,12 @@ export const Footer = () => {
       <div className="container-custom py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-haroti-orange rounded-full flex items-center justify-center text-white font-bold">
-                HG
-              </div>
-              <div>
-                <div className="font-bold text-lg">HAROTI GAS</div>
-                <div className="text-xs text-gray-400">Powering the World</div>
-              </div>
+            <div className="mb-4">
+              <HarotiLogo variant="dark" linkToHome />
             </div>
             <p className="text-gray-400 text-sm mb-4">
-              Leading provider of clean LPG energy solutions across Malawi,
-              committed to sustainable and affordable cooking for all.
+              {BRAND.legalName} — leading provider of clean LPG and renewable energy solutions
+              across Malawi, committed to sustainable and affordable cooking for all.
             </p>
           </div>
 

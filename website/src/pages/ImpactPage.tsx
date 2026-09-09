@@ -1,4 +1,9 @@
-import { Leaf, Users, TrendingDown, Heart, Globe, Target } from 'lucide-react';
+import { Leaf, Users, TrendingDown, Heart, Globe, Target, Shield } from 'lucide-react';
+import {
+  CARBON_FINANCE_PARTNERSHIP_TEXT,
+  ESG_IMPACT,
+  ESG_PILLARS,
+} from '../config/company';
 
 export const ImpactPage = () => {
   const sdgs = [
@@ -56,6 +61,74 @@ export const ImpactPage = () => {
               <div className="text-4xl font-bold text-haroti-orange mb-2">245</div>
               <div className="text-haroti-muted font-semibold mb-1">Jobs Created</div>
               <div className="text-sm text-haroti-muted">65% women, 40% youth</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ESG Framework */}
+      <section className="py-16">
+        <div className="container-custom">
+          <div className="text-center mb-12">
+            <h2 className="section-heading">ESG Framework</h2>
+            <p className="section-subheading max-w-3xl mx-auto">
+              Environmental stewardship, social responsibility, and strong governance at the heart of our operations
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ESG_PILLARS.map((pillar) => (
+              <div key={pillar.title} className="bg-haroti-paper rounded-xl p-8 shadow-md">
+                <h3 className="text-xl font-bold mb-3 text-haroti-green">{pillar.title}</h3>
+                <p className="text-haroti-muted">{pillar.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ESG Impact Summary */}
+      <section className="py-16 bg-haroti-mist">
+        <div className="container-custom">
+          <h2 className="section-heading text-center mb-12">ESG & Development Impact</h2>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="bg-haroti-paper rounded-xl p-8 shadow-md">
+              <Leaf className="text-haroti-green mb-4" size={40} />
+              <h3 className="text-xl font-bold mb-4">Environmental</h3>
+              <ul className="space-y-2 text-haroti-muted">
+                {ESG_IMPACT.environmental.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="text-haroti-green mt-1">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-haroti-paper rounded-xl p-8 shadow-md">
+              <Users className="text-haroti-blue mb-4" size={40} />
+              <h3 className="text-xl font-bold mb-4">Social</h3>
+              <ul className="space-y-2 text-haroti-muted">
+                {ESG_IMPACT.social.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="text-haroti-blue mt-1">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-haroti-paper rounded-xl p-8 shadow-md">
+              <Shield className="text-haroti-green mb-4" size={40} />
+              <h3 className="text-xl font-bold mb-4">Governance</h3>
+              <ul className="space-y-2 text-haroti-muted">
+                {ESG_IMPACT.governance.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="text-haroti-green mt-1">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
@@ -160,10 +233,7 @@ export const ImpactPage = () => {
             <div className="max-w-3xl mx-auto text-center">
               <Globe className="mx-auto mb-6" size={64} />
               <h2 className="text-3xl font-bold mb-4">Carbon Finance Partnership</h2>
-              <p className="text-xl text-white/80 mb-6">
-                Our partnership with WESM (World's Energy Solutions for Malawi) enables carbon credit 
-                generation from avoided deforestation and emission reductions.
-              </p>
+              <p className="text-xl text-white/80 mb-6">{CARBON_FINANCE_PARTNERSHIP_TEXT}</p>
               <p className="text-white/80">
                 These carbon credits support programme expansion, making clean cooking accessible to 
                 more households while contributing to global climate goals.

@@ -14,13 +14,13 @@ export const HomePage = () => {
   return (
     <div className="bg-haroti-paper">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-haroti-forest to-haroti-forest-deep py-20 text-white md:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-r from-haroti-green to-haroti-blue text-white py-20 md:py-32">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: 'url(/brand/malawian-mother.png)' }}
           aria-hidden
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-haroti-forest/95 via-haroti-forest-deep/85 to-haroti-forest-deep/75" />
+        <div className="absolute inset-0 bg-gradient-to-r from-haroti-green/95 via-haroti-blue/85 to-haroti-blue-dark/80" />
         <div className="container-custom relative z-10">
           <div className="max-w-3xl">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">

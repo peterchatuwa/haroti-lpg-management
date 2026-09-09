@@ -1,5 +1,13 @@
 import { Target, Heart, Users, Award, TrendingUp, Leaf } from 'lucide-react';
 import { STATION_COUNT } from '../data/stations';
+import {
+  BUSINESS_STRATEGY_SUMMARY,
+  MISSION,
+  VALUE_PROPOSITION,
+  VALUES,
+  VISION,
+  WESM_FULL_NAME,
+} from '../config/company';
 
 export const AboutPage = () => {
   return (
@@ -77,10 +85,7 @@ export const AboutPage = () => {
                 <Target className="text-haroti-forest" size={32} />
               </div>
               <h3 className="text-2xl font-bold mb-4 text-center">Our Vision</h3>
-              <p className="text-haroti-muted text-center">
-                To be the leading provider of clean, affordable LPG energy solutions in Malawi, 
-                powering sustainable development and improving lives in every community we serve.
-              </p>
+              <p className="text-haroti-muted text-center">{VISION}</p>
             </div>
 
             {/* Mission */}
@@ -89,11 +94,7 @@ export const AboutPage = () => {
                 <Heart className="text-haroti-orange" size={32} />
               </div>
               <h3 className="text-2xl font-bold mb-4 text-center">Our Mission</h3>
-              <p className="text-haroti-muted text-center">
-                To make clean cooking accessible to every Malawian household through innovative 
-                payment models, reliable distribution, and a commitment to safety, sustainability, 
-                and community empowerment.
-              </p>
+              <p className="text-haroti-muted text-center">{MISSION}</p>
             </div>
 
             {/* Values */}
@@ -103,29 +104,46 @@ export const AboutPage = () => {
               </div>
               <h3 className="text-2xl font-bold mb-4 text-center">Our Values</h3>
               <ul className="text-haroti-muted space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-haroti-green mt-1">•</span>
-                  <span><strong>Safety First:</strong> In everything we do</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-haroti-green mt-1">•</span>
-                  <span><strong>Accessibility:</strong> Energy for all</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-haroti-green mt-1">•</span>
-                  <span><strong>Innovation:</strong> Leading with technology</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-haroti-green mt-1">•</span>
-                  <span><strong>Empowerment:</strong> Supporting communities</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-haroti-green mt-1">•</span>
-                  <span><strong>Sustainability:</strong> Protecting our planet</span>
-                </li>
+                {VALUES.map((value) => (
+                  <li key={value.title} className="flex items-start gap-2">
+                    <span className="text-haroti-green mt-1">•</span>
+                    <span>
+                      <strong>{value.title}:</strong> {value.description}
+                    </span>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Value Proposition */}
+      <section className="py-16 md:py-24">
+        <div className="container-custom">
+          <div className="text-center mb-12">
+            <h2 className="section-heading">Our Value Proposition</h2>
+            <p className="section-subheading max-w-2xl mx-auto">
+              Sustainable energy, quality assurance, and community-centred growth
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {VALUE_PROPOSITION.map((item) => (
+              <div key={item.title} className="bg-haroti-paper rounded-xl p-8 shadow-md border-l-4 border-haroti-blue">
+                <h3 className="text-xl font-bold mb-3 text-haroti-green">{item.title}</h3>
+                <p className="text-haroti-muted">{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Business Strategy */}
+      <section className="py-16 bg-gradient-to-r from-haroti-green to-haroti-blue text-white">
+        <div className="container-custom max-w-4xl text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Business Strategy</h2>
+          <p className="text-lg md:text-xl text-white/90 leading-relaxed">{BUSINESS_STRATEGY_SUMMARY}</p>
         </div>
       </section>
 
@@ -263,9 +281,10 @@ export const AboutPage = () => {
               <div className="text-gray-400 font-bold text-lg">DFI Partners</div>
               <p className="text-sm text-haroti-muted mt-2">Development Finance Institutions</p>
             </div>
-            <div className="bg-haroti-paper border-2 border-haroti-mist rounded-lg p-6 text-center hover:border-haroti-forest transition-colors">
-              <div className="text-gray-400 font-bold text-lg">WESM</div>
-              <p className="text-sm text-haroti-muted mt-2">Carbon Finance Partnership</p>
+            <div className="bg-haroti-paper border-2 border-haroti-mist rounded-lg p-6 text-center hover:border-haroti-green transition-colors">
+              <div className="text-haroti-green font-bold text-lg">WESM</div>
+              <p className="text-sm text-haroti-muted mt-2">{WESM_FULL_NAME}</p>
+              <p className="text-xs text-haroti-muted mt-1">Carbon Finance Partnership</p>
             </div>
             <div className="bg-haroti-paper border-2 border-haroti-mist rounded-lg p-6 text-center hover:border-haroti-forest transition-colors">
               <div className="text-gray-400 font-bold text-lg">MEDF/GETF</div>

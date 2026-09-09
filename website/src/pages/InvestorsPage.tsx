@@ -1,4 +1,5 @@
 import { TrendingUp, Target, Shield, Users, Mail, Lock } from 'lucide-react';
+import { BUSINESS_STRATEGY_SUMMARY, WESM_FULL_NAME } from '../config/company';
 
 export const InvestorsPage = () => {
   return (
@@ -51,6 +52,24 @@ export const InvestorsPage = () => {
               <p className="text-haroti-ink/90 text-sm">
                 Women & youth empowerment, deforestation reduction, health benefits
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Business Strategy */}
+      <section className="py-16 bg-gradient-to-r from-haroti-green to-haroti-blue text-white">
+        <div className="container-custom max-w-4xl">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">Business Strategy Summary</h2>
+          <p className="text-lg md:text-xl text-white/90 leading-relaxed text-center">{BUSINESS_STRATEGY_SUMMARY}</p>
+          <div className="grid md:grid-cols-2 gap-6 mt-10">
+            <div className="bg-white/10 rounded-xl p-6 text-center">
+              <h3 className="font-bold text-lg mb-2">Forest Restoration</h3>
+              <p className="text-white/80 text-sm">Directly enables forest restoration success through avoided deforestation from LPG adoption.</p>
+            </div>
+            <div className="bg-white/10 rounded-xl p-6 text-center">
+              <h3 className="font-bold text-lg mb-2">Social Impact</h3>
+              <p className="text-white/80 text-sm">Delivers transformational social impact through clean cooking, jobs, and community empowerment.</p>
             </div>
           </div>
         </div>
@@ -272,8 +291,9 @@ export const InvestorsPage = () => {
             </div>
 
             <div className="bg-haroti-paper rounded-lg p-6 text-center border-2 border-haroti-mist">
-              <div className="font-bold text-lg text-haroti-muted">WESM</div>
-              <p className="text-sm text-haroti-muted mt-2">Carbon Finance</p>
+              <div className="font-bold text-lg text-haroti-green">WESM</div>
+              <p className="text-sm text-haroti-muted mt-2">{WESM_FULL_NAME}</p>
+              <p className="text-xs text-haroti-muted mt-1">Carbon Finance</p>
             </div>
 
             <div className="bg-haroti-paper rounded-lg p-6 text-center border-2 border-haroti-mist">
