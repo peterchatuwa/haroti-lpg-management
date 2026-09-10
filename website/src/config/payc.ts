@@ -15,7 +15,7 @@ export const PAYC_BENEFITS = [
   },
   {
     title: 'Safe smart-meter solution',
-    description: 'Zhongyi smart meters with built-in safety features and remote monitoring.',
+    description: 'Haroti PAYC smart meters with built-in safety features and remote monitoring.',
   },
   {
     title: 'Never run out of gas',
