@@ -35,9 +35,17 @@ export const NewsPage = () => {
                 key={article.id}
                 className="bg-haroti-paper rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow flex flex-col"
               >
-                <div
-                  className={`h-48 bg-gradient-to-br ${categoryGradients[article.category] ?? 'from-haroti-forest to-haroti-leaf-bright'}`}
-                />
+                {article.imageUrl ? (
+                  <img
+                    src={article.imageUrl}
+                    alt=""
+                    className="h-48 w-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className={`h-48 bg-gradient-to-br ${categoryGradients[article.category] ?? 'from-haroti-forest to-haroti-leaf-bright'}`}
+                  />
+                )}
                 <div className="p-6 flex flex-col flex-1">
                   <div className="flex items-center gap-4 mb-3 text-sm text-haroti-muted">
                     <div className="flex items-center gap-1">
@@ -59,6 +67,13 @@ export const NewsPage = () => {
                   <p className="text-haroti-muted mb-4">{article.excerpt}</p>
                   {expandedId === article.id && (
                     <div className="text-haroti-ink/90 text-sm mb-4 whitespace-pre-line">
+                      {article.imageUrl && (
+                        <img
+                          src={article.imageUrl}
+                          alt=""
+                          className="w-full rounded-lg mb-4 max-h-72 object-cover"
+                        />
+                      )}
                       {formatContent(article.content)}
                     </div>
                   )}

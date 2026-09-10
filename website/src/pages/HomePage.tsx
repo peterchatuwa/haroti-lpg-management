@@ -228,9 +228,17 @@ export const HomePage = () => {
                 key={article.id}
                 className="bg-haroti-paper rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
               >
-                <div
-                  className={`h-48 bg-gradient-to-br ${categoryGradients[article.category] ?? 'from-haroti-forest to-haroti-leaf-bright'}`}
-                />
+                {article.imageUrl ? (
+                  <img
+                    src={article.imageUrl}
+                    alt=""
+                    className="h-48 w-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className={`h-48 bg-gradient-to-br ${categoryGradients[article.category] ?? 'from-haroti-forest to-haroti-leaf-bright'}`}
+                  />
+                )}
                 <div className="p-6">
                   <div className="text-sm text-haroti-muted mb-2">
                     {new Date(article.date).toLocaleDateString('en-US', {

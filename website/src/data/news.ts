@@ -10,6 +10,21 @@ export interface NewsArticle {
 
 export const newsArticles: NewsArticle[] = [
   {
+    id: '5',
+    title: 'Haroti Gas Supplies 16,000 LPG Cylinders for Malawi Electoral Commission Project',
+    excerpt:
+      'In 2025, Haroti Gas delivered LPG supply and cylinder logistics across all three regions of Malawi for the Malawi Electoral Commission (MEC).',
+    content:
+      'Haroti Gas was proud to support Malawi\'s democratic process through a major LPG supply contract for the Malawi Electoral Commission (MEC).\n\n' +
+      '**National scope** — The project required reliable LPG supply across Malawi\'s three regions — Northern, Central, and Southern — ensuring electoral operations had clean cooking fuel where it was needed.\n\n' +
+      '**16,000 cylinders** — Haroti mobilised, staged, and supplied 16,000 LPG cylinders as part of this commission-led programme, drawing on our bulk import, storage, and nationwide distribution capability.\n\n' +
+      '**Delivered in 2025** — Completed in 2025, the project demonstrated Haroti\'s ability to execute large-scale, multi-region LPG logistics for institutional clients while maintaining safety and quality standards.\n\n' +
+      'This milestone reflects our growing role as a trusted national LPG partner — from household PAYC programmes to high-volume public-sector supply.',
+    date: '2026-09-10',
+    category: 'milestone',
+    imageUrl: '/news/mec-2025-lpg-cylinders.jpeg',
+  },
+  {
     id: '1',
     title: 'Haroti Gas Announces Ambitious Expansion to 150,000 Households',
     excerpt:
