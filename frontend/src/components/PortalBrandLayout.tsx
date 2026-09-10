@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { HarotiLogo } from './HarotiLogo';
 
 export function PortalBrandLayout({ children }: { children: ReactNode }) {
   return (
@@ -9,7 +10,8 @@ export function PortalBrandLayout({ children }: { children: ReactNode }) {
           alt="Haroti Gas customer cooking with smart metered LPG"
         />
         <div className="portal-brand-banner-copy">
-          <p>Haroti Gas</p>
+          <HarotiLogo size={56} className="portal-brand-logo" />
+          <p>Powering the world</p>
           <h1>Safe, smart LPG for every home</h1>
         </div>
       </div>

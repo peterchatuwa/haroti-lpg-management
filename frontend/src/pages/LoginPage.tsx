@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { FlameMark } from '../components/FlameMark';
+import { HarotiLogo } from '../components/HarotiLogo';
 import api from '../lib/api';
 import { landingRouteForRole } from '../lib/landing-route';
 import { useAuthStore } from '../store/auth';
@@ -45,8 +45,8 @@ export function LoginPage() {
           />
           <div className="login-hero-overlay" />
           <div className="login-hero-content">
-            <FlameMark size={64} />
-            <h1>Haroti Holdings</h1>
+            <HarotiLogo size={72} />
+            <h1>Haroti Gas</h1>
             <p className="lede">
               Clean, smart LPG for households and businesses across Salima, Lilongwe
               and Blantyre — safe cooking, reliable supply, and enterprise operations
@@ -71,7 +71,7 @@ export function LoginPage() {
 
         <section className="login-panel">
           <form className="login-card" onSubmit={onSubmit}>
-          <FlameMark size={44} />
+          <HarotiLogo size={52} />
           <h2>Sign in</h2>
           <p>Access the LPG operations console for your role and station.</p>
           {error && <div className="error">{error}</div>}

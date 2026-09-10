@@ -10,7 +10,7 @@ import api from '../lib/api';
 import { landingRouteForRole } from '../lib/landing-route';
 import { useAuthStore } from '../store/auth';
 import { useOfflineStore } from '../store/offline';
-import { FlameMark } from './FlameMark';
+import { HarotiLogo } from './HarotiLogo';
 import { GlobalSearch } from './GlobalSearch';
 import { SafetyAlertBadges, SafetyAlertBanner } from './SafetyAlertBanner';
 import { SidebarNav } from './SidebarNav';
@@ -62,7 +62,7 @@ export function Layout() {
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-row">
-            <FlameMark size={46} />
+            <HarotiLogo size={46} />
             <div>
               <h1>Haroti Gas</h1>
               <p>Enterprise ERP</p>
