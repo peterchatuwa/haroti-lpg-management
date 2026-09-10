@@ -57,7 +57,7 @@ export const PAYC_ACQUISITION_STEPS = [
   },
   {
     step: '06',
-    title: 'Free scheduled cylinder change',
+    title: 'Scheduled cylinder change',
     description:
       'When your smart meter reports low fuel, our team schedules a cylinder swap at a time that suits you.',
   },
